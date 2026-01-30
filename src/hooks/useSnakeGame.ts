@@ -94,7 +94,7 @@ export const useSnakeGame = () => {
           ...prevState,
           snake: newSnake,
           food: generateFood(newSnake),
-          score: prevState.score + 1,
+          score: prevState.score + 10,
           direction,
         };
       }
