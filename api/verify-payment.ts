@@ -20,7 +20,7 @@ interface PaymentVerificationResponse {
 
 export default async function handler(
   req: VercelRequest,
-  res: VercelResponse<PaymentVerificationResponse>
+  res: VercelResponse
 ) {
   // Only allow POST requests
   if (req.method !== 'POST') {
