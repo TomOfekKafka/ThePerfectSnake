@@ -1,0 +1,71 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #282c34;
+  color: white;
+  padding: 20px;
+}
+
+h1 {
+  margin-bottom: 20px;
+  font-size: 2.5rem;
+  color: #2d8f2d;
+}
+
+.game-info {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.score {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.message {
+  font-size: 1.2rem;
+  color: #61dafb;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.message.game-over {
+  color: #e74c3c;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.instructions {
+  margin-top: 20px;
+  text-align: center;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.instructions p {
+  margin: 5px 0;
+}
