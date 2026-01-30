@@ -126,15 +126,19 @@ export const useSnakeGame = () => {
 
       switch (e.key) {
         case 'ArrowUp':
+          e.preventDefault();
           if (currentDirection !== 'DOWN') directionRef.current = 'UP';
           break;
         case 'ArrowDown':
+          e.preventDefault();
           if (currentDirection !== 'UP') directionRef.current = 'DOWN';
           break;
         case 'ArrowLeft':
+          e.preventDefault();
           if (currentDirection !== 'RIGHT') directionRef.current = 'LEFT';
           break;
         case 'ArrowRight':
+          e.preventDefault();
           if (currentDirection !== 'LEFT') directionRef.current = 'RIGHT';
           break;
       }
