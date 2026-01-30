@@ -22,7 +22,7 @@ export default function PayPalButton() {
             label: 'pay'
           }}
           disabled={status === 'processing' || status === 'success'}
-          createOrder={(data, actions) => {
+          createOrder={(_data, actions) => {
             return actions.order.create({
               intent: 'CAPTURE',
               purchase_units: [
@@ -35,13 +35,17 @@ export default function PayPalButton() {
               ]
             });
           }}
-          onApprove={async (data, actions) => {
+          onApprove={async (_data, actions) => {
             setStatus('processing');
             setMessage('Processing your payment...');
 
             try {
               // Capture the order
               const order = await actions.order!.capture();
+
+              if (!order.id) {
+                throw new Error('Order ID not found');
+              }
 
               // Verify payment with our backend
               const verification = await verifyPayment({
