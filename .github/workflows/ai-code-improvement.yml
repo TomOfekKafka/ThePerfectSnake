@@ -29,6 +29,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run database migration
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: node scripts/run-migration.js || echo "Migration may have already run"
+
       - name: Run AI code improvement (Agent)
         env:
           ORDER_ID: ${{ github.event.client_payload.order_id }}
