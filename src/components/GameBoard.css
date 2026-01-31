@@ -1,31 +1,231 @@
 .game-board {
   display: grid;
-  gap: 1px;
-  background-color: #333;
-  padding: 1px;
-  border: 2px solid #333;
+  gap: 2px;
+  background: linear-gradient(135deg, #1a0033 0%, #330066 50%, #1a0033 100%);
+  background-size: 400% 400%;
+  padding: 4px;
+  border: 3px solid;
+  border-image: linear-gradient(135deg, #ff00ff, #00ffff, #ff00ff) 1;
   width: 500px;
   height: 500px;
+  box-shadow: 
+    0 0 20px rgba(255, 0, 255, 0.5),
+    0 0 40px rgba(0, 255, 255, 0.3),
+    inset 0 0 20px rgba(255, 0, 255, 0.1);
+  border-radius: 10px;
+  animation: boardGradient 8s ease infinite;
+}
+
+@keyframes boardGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .cell {
-  background-color: #f0f0f0;
-  border-radius: 2px;
-}
-
-.cell.snake-head {
-  background-color: #1a5f1a;
-}
-
-.cell.snake-body {
-  background-color: #2d8f2d;
-}
-
-.cell.food {
-  background-color: #e74c3c;
-  border-radius: 50%;
+  background-color: #0f0f1e;
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.15s ease;
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
 }
 
 .cell.empty {
-  background-color: #f0f0f0;
+  background-color: #0f0f1e;
+  background-image: 
+    radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.03) 0%, transparent 50%);
+}
+
+.cell.empty::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 0, 255, 0.05) 0%,
+    rgba(0, 255, 255, 0.05) 100%
+  );
+  animation: gridPulse 4s ease-in-out infinite;
+}
+
+@keyframes gridPulse {
+  0%, 100% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.cell.snake-head {
+  background: radial-gradient(circle at 30% 30%, #ff00ff, #ff0080);
+  box-shadow: 
+    0 0 10px rgba(255, 0, 255, 0.8),
+    0 0 20px rgba(255, 0, 255, 0.5),
+    0 0 30px rgba(255, 128, 0, 0.3),
+    inset 0 0 5px rgba(255, 255, 255, 0.4);
+  animation: snakeHeadGlow 0.6s ease-in-out infinite;
+  border-radius: 50%;
+  transform: scale(1);
+}
+
+@keyframes snakeHeadGlow {
+  0%, 100% {
+    box-shadow: 
+      0 0 10px rgba(255, 0, 255, 0.8),
+      0 0 20px rgba(255, 0, 255, 0.5),
+      0 0 30px rgba(255, 128, 0, 0.3),
+      inset 0 0 5px rgba(255, 255, 255, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 
+      0 0 15px rgba(255, 0, 255, 1),
+      0 0 30px rgba(255, 0, 255, 0.7),
+      0 0 45px rgba(255, 128, 0, 0.5),
+      inset 0 0 10px rgba(255, 255, 255, 0.6);
+    transform: scale(1.05);
+  }
+}
+
+.cell.snake-body {
+  background: linear-gradient(135deg, #00ff88, #00ffff);
+  background-size: 200% 200%;
+  box-shadow: 
+    0 0 8px rgba(0, 255, 136, 0.6),
+    0 0 15px rgba(0, 255, 255, 0.4),
+    inset 0 0 3px rgba(255, 255, 255, 0.3);
+  animation: snakeBodyFlow 2s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+@keyframes snakeBodyFlow {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+.cell.food {
+  background: radial-gradient(circle at 35% 35%, #ffff00, #ff6600);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 12px rgba(255, 255, 0, 0.9),
+    0 0 25px rgba(255, 102, 0, 0.7),
+    0 0 40px rgba(255, 0, 0, 0.5),
+    inset 0 0 8px rgba(255, 255, 255, 0.5);
+  animation: foodPulse 0.5s ease-in-out infinite;
+  transform: scale(1);
+}
+
+@keyframes foodPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 
+      0 0 12px rgba(255, 255, 0, 0.9),
+      0 0 25px rgba(255, 102, 0, 0.7),
+      0 0 40px rgba(255, 0, 0, 0.5),
+      inset 0 0 8px rgba(255, 255, 255, 0.5);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 
+      0 0 20px rgba(255, 255, 0, 1),
+      0 0 40px rgba(255, 102, 0, 0.9),
+      0 0 60px rgba(255, 0, 0, 0.7),
+      inset 0 0 12px rgba(255, 255, 255, 0.7);
+  }
+}
+
+/* Particle effect for food collection */
+.food-collected {
+  animation: foodExplode 0.6s ease-out forwards;
+}
+
+@keyframes foodExplode {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2) translateY(-20px);
+    opacity: 0;
+  }
+}
+
+/* Glow effect on snake movement */
+.cell.snake-head,
+.cell.snake-body {
+  position: relative;
+}
+
+.cell.snake-head::after,
+.cell.snake-body::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.cell.snake-head::after {
+  box-shadow: 0 0 15px rgba(255, 0, 255, 0.4);
+  animation: headRadiate 1s ease-out infinite;
+}
+
+.cell.snake-body::after {
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+  animation: bodyRadiate 1.2s ease-out infinite;
+}
+
+@keyframes headRadiate {
+  0% {
+    box-shadow: 0 0 15px rgba(255, 0, 255, 0.6), 0 0 0 0 rgba(255, 0, 255, 0.3);
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(255, 0, 255, 0.1), 0 0 20px 0 rgba(255, 0, 255, 0);
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+
+@keyframes bodyRadiate {
+  0% {
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.4), 0 0 0 0 rgba(0, 255, 136, 0.2);
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(0, 255, 136, 0.1), 0 0 15px 0 rgba(0, 255, 136, 0);
+    transform: translate(-50%, -50%) scale(1.3);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .game-board {
+    width: 90vw;
+    height: 90vw;
+    max-width: 400px;
+    max-height: 400px;
+  }
 }
