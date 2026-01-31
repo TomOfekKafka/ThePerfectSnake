@@ -5,13 +5,19 @@ Your task: Make ONE small, meaningful improvement to the codebase.
 REQUIREMENTS:
 - Make ONLY ONE focused improvement (don't try multiple things)
 - Budget: Use maximum $4 worth of tokens for this response
-- **PRIORITY: Make VISIBLE UI changes** (colors, styling, animations, layout) so the improvement is immediately noticeable
-- Focus areas: visual polish, UI enhancements, user experience, animations, or styling
-- Secondary focus: code quality, performance, or gameplay (but UI changes are preferred)
-- Keep changes minimal and safe
+- **CRITICAL: Make BOLD, DRAMATIC, IMMEDIATELY OBVIOUS visual changes that are IMPOSSIBLE TO MISS**
+- Examples of good changes:
+  * Change main colors (background, title, game board colors) to something noticeably different
+  * Add prominent animations (pulse, bounce, glow effects, fade-ins)
+  * Change layout or sizing significantly
+  * Add gradient backgrounds or bold borders
+  * Change font sizes, weights, or add striking visual effects
+- BAD examples (too subtle): small shadows, minor spacing tweaks, subtle opacity changes
+- The change must be so obvious that anyone can immediately see something is different
+- Focus areas: dramatic visual changes, bold colors, eye-catching animations, layout transformations
+- Keep changes safe and functional
 - DON'T break existing functionality
 - Ensure TypeScript compiles correctly
-- Maintain existing code style
 - The game has arrow key controls and PayPal payment integration - don't break these
 
 CODEBASE:
