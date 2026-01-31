@@ -5,7 +5,9 @@ Your task: Make ONE small, meaningful improvement to the codebase.
 REQUIREMENTS:
 - Make ONLY ONE focused improvement (don't try multiple things)
 - Budget: Use maximum $4 worth of tokens for this response
-- Focus areas: code quality, performance, user experience, visual polish, or gameplay
+- **PRIORITY: Make VISIBLE UI changes** (colors, styling, animations, layout) so the improvement is immediately noticeable
+- Focus areas: visual polish, UI enhancements, user experience, animations, or styling
+- Secondary focus: code quality, performance, or gameplay (but UI changes are preferred)
 - Keep changes minimal and safe
 - DON'T break existing functionality
 - Ensure TypeScript compiles correctly
