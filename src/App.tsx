@@ -2,6 +2,7 @@ import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { useSnakeGame } from './hooks/useSnakeGame';
 import { GameBoard } from './components/GameBoard';
 import PayPalButton from './components/PayPalButton';
+import { DeploymentInfo } from './components/DeploymentInfo';
 import './App.css';
 import { useEffect, useRef } from 'react';
 
@@ -127,6 +128,8 @@ function App() {
             <p className="mobile-only">Swipe or use buttons to move</p>
             <p className="desktop-only">Press SPACE or click Start button</p>
           </div>
+
+          <DeploymentInfo />
         </div>
 
         <aside className="payment-sidebar">

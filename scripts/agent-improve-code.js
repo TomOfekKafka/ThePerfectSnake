@@ -414,6 +414,31 @@ Start by exploring the codebase!`;
       WHERE order_id = ${ORDER_ID}
     `;
 
+    // Fetch job details for metadata
+    const jobDetails = await sql`
+      SELECT completed_at, payer_first_name, total_cost_usd
+      FROM code_improvement_jobs
+      WHERE order_id = ${ORDER_ID}
+    `;
+
+    // Write deployment metadata file
+    const metadata = {
+      lastDeployment: {
+        timestamp: jobDetails.rows[0]?.completed_at || new Date().toISOString(),
+        contributor: jobDetails.rows[0]?.payer_first_name || 'Anonymous',
+        cost: parseFloat(jobDetails.rows[0]?.total_cost_usd || totalCost).toFixed(2),
+        orderId: ORDER_ID
+      }
+    };
+
+    await fs.writeFile(
+      'public/deployment-metadata.json',
+      JSON.stringify(metadata, null, 2),
+      'utf-8'
+    );
+
+    console.log('📝 Deployment metadata written to public/deployment-metadata.json');
+
     return { success: true };
   } else {
     console.log('\n❌ Agent could not complete successfully');

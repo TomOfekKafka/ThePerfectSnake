@@ -89,6 +89,7 @@ export default async function handler(
     const amount = orderData.purchase_units?.[0]?.amount?.value;
     const payerId = orderData.payer?.payer_id;
     const payerEmail = orderData.payer?.email_address;
+    const payerFirstName = orderData.payer?.name?.given_name || 'Anonymous';
 
     // Validate that order is completed
     if (status !== 'COMPLETED') {
@@ -131,6 +132,7 @@ export default async function handler(
           orderId,
           payerId,
           payerEmail,
+          payerFirstName,
           amount
         })
       });

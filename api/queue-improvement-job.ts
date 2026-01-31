@@ -5,6 +5,7 @@ interface QueueJobRequest {
   orderId: string;
   payerId: string;
   payerEmail: string;
+  payerFirstName?: string;
   amount: string;
 }
 
@@ -16,7 +17,7 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { orderId, payerId, payerEmail, amount } = req.body as QueueJobRequest;
+  const { orderId, payerId, payerEmail, payerFirstName, amount } = req.body as QueueJobRequest;
 
   if (!orderId || !amount) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -28,9 +29,9 @@ export default async function handler(
     // Insert job into database
     await sql`
       INSERT INTO code_improvement_jobs
-        (order_id, payer_id, payer_email, amount, status)
+        (order_id, payer_id, payer_email, payer_first_name, amount, status)
       VALUES
-        (${orderId}, ${payerId}, ${payerEmail}, ${amount}, 'pending')
+        (${orderId}, ${payerId}, ${payerEmail}, ${payerFirstName || 'Anonymous'}, ${amount}, 'pending')
       ON CONFLICT (order_id) DO NOTHING
     `;
 
