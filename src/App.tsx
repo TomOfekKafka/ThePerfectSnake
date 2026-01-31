@@ -17,15 +17,15 @@ function App() {
     >
       <div className="app">
         <div className="game-container">
-          <h1>The Perfect Snake</h1>
+          <h1 className="game-title">The Perfect Snake 🐍</h1>
 
           <div className="game-info">
             <div className="score">Score: {gameState.score}</div>
             {!gameState.gameStarted && (
-              <div className="message">Press SPACE to start</div>
+              <div className="message pulse">Press SPACE to start</div>
             )}
             {gameState.gameOver && (
-              <div className="message game-over">
+              <div className="message game-over bounce">
                 Game Over! Press SPACE to restart
               </div>
             )}
