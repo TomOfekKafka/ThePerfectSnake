@@ -55,6 +55,7 @@ h1 {
   margin-bottom: 20px;
   font-size: 2.5rem;
   color: #2d8f2d;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .game-info {
@@ -66,12 +67,14 @@ h1 {
   font-size: 1.5rem;
   font-weight: bold;
   margin-bottom: 10px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .message {
   font-size: 1.2rem;
   color: #61dafb;
   animation: pulse 1.5s ease-in-out infinite;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .message.game-over {
@@ -92,6 +95,7 @@ h1 {
   text-align: center;
   color: #888;
   font-size: 0.9rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .instructions p {
@@ -113,11 +117,13 @@ h1 {
   color: #2d8f2d;
   margin-bottom: 10px;
   font-size: 1.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .payment-section p {
   color: #ccc;
   margin-bottom: 15px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .payment-status {
@@ -125,6 +131,7 @@ h1 {
   padding: 10px;
   border-radius: 4px;
   font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .payment-status.success {
