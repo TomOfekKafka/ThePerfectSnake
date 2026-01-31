@@ -155,5 +155,21 @@ export const useSnakeGame = () => {
     return () => clearInterval(gameLoop);
   }, [gameState.gameStarted, gameState.gameOver, moveSnake]);
 
-  return { gameState, resetGame, gridSize: GRID_SIZE };
+  const changeDirection = useCallback((newDirection: Direction) => {
+    if (!gameState.gameStarted || gameState.gameOver) return;
+
+    const currentDirection = directionRef.current;
+
+    // Prevent reversing direction
+    if (
+      (newDirection === 'UP' && currentDirection !== 'DOWN') ||
+      (newDirection === 'DOWN' && currentDirection !== 'UP') ||
+      (newDirection === 'LEFT' && currentDirection !== 'RIGHT') ||
+      (newDirection === 'RIGHT' && currentDirection !== 'LEFT')
+    ) {
+      directionRef.current = newDirection;
+    }
+  }, [gameState.gameStarted, gameState.gameOver]);
+
+  return { gameState, resetGame, changeDirection, gridSize: GRID_SIZE };
 };
