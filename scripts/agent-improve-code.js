@@ -17,9 +17,9 @@ const BUDGET = {
   PER_ATTEMPT: 1.50
 };
 
-// Claude 3 Haiku pricing
-const HAIKU_INPUT_PRICE = 0.25 / 1_000_000;
-const HAIKU_OUTPUT_PRICE = 1.25 / 1_000_000;
+// Claude Haiku 4.5 pricing
+const HAIKU_INPUT_PRICE = 1.00 / 1_000_000;
+const HAIKU_OUTPUT_PRICE = 5.00 / 1_000_000;
 
 const MAX_ATTEMPTS = 3;
 let currentAttempt = 0;
@@ -158,7 +158,7 @@ async function callClaude(messages, systemPrompt) {
   });
 
   const response = await anthropic.messages.create({
-    model: 'claude-3-haiku-20240307',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 4096,
     system: systemPrompt,
     tools: tools,
