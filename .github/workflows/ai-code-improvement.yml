@@ -57,9 +57,10 @@ jobs:
           git config --global user.name "AI Code Improver"
           git config --global user.email "ai-improver@the-perfect-snake.app"
           git add .
-          git commit -m "AI improvement from payment ${{ github.event.client_payload.order_id || github.event.inputs.order_id }}
+          ORDER_ID="${{ github.event.client_payload.order_id || github.event.inputs.order_id }}"
+          git commit -m "AI improvement from payment ${ORDER_ID}
 
-Co-Authored-By: Claude Haiku <ai@anthropic.com>"
+          Co-Authored-By: Claude Haiku <ai@anthropic.com>"
           git push origin main
 
       - name: No changes to commit
