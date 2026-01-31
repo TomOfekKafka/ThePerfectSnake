@@ -120,7 +120,29 @@ export default async function handler(
       payerEmail
     });
 
-    // Step 5: Return success response
+    // Step 5: Queue AI code improvement job
+    try {
+      const queueResponse = await fetch(`${req.headers.host?.startsWith('localhost') ? 'http' : 'https'}://${req.headers.host}/api/queue-improvement-job`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          orderId,
+          payerId,
+          payerEmail,
+          amount
+        })
+      });
+
+      const queueResult = await queueResponse.json();
+      console.log('Queue job result:', queueResult);
+    } catch (queueError) {
+      // Don't fail the payment verification if queueing fails
+      console.error('Failed to queue improvement job:', queueError);
+    }
+
+    // Step 6: Return success response
     return res.status(200).json({
       success: true,
       message: 'Payment verified successfully',
