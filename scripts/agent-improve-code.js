@@ -409,12 +409,13 @@ Start by exploring the codebase!`;
     console.log('\n❌ Agent could not complete successfully');
 
     // Update database
+    const errorMessage = `Agent failed to pass all checks after ${currentAttempt} attempts`;
     await sql`
       UPDATE code_improvement_jobs
       SET
         status = 'failed',
         total_cost_usd = ${totalCost},
-        error_message = 'Agent failed to pass all checks after ${currentAttempt} attempts',
+        error_message = ${errorMessage},
         completed_at = NOW(),
         build_success = false
       WHERE order_id = ${ORDER_ID}
