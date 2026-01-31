@@ -98,11 +98,11 @@ export default async function handler(
       });
     }
 
-    // Validate that amount is exactly $10.00
-    if (amount !== '10.00') {
+    // Validate that amount is exactly $5.00
+    if (amount !== '5.00') {
       return res.status(400).json({
         success: false,
-        message: `Invalid payment amount: $${amount}, expected $10.00`
+        message: `Invalid payment amount: $${amount}, expected $5.00`
       });
     }
 

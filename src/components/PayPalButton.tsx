@@ -11,7 +11,7 @@ export default function PayPalButton() {
   return (
     <div className="payment-section">
       <h2>Support The Perfect Snake</h2>
-      <p>Enjoy the game? Support development for just $10!</p>
+      <p>Enjoy the game? Support development for just $5!</p>
 
       <div style={{ maxWidth: '400px', margin: '20px auto' }}>
         <PayPalButtons
@@ -29,7 +29,7 @@ export default function PayPalButton() {
                 {
                   amount: {
                     currency_code: 'USD',
-                    value: '10.00'
+                    value: '5.00'
                   }
                 }
               ]
