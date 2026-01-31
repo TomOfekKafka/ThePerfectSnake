@@ -63,13 +63,13 @@ function App() {
     >
       <div className="app">
         <div className="game-container">
-          <h1 className="game-title pulse">The Perfect Snake 🐍</h1>
+          <h1 className="game-title pulse glow">The Perfect Snake 🐍</h1>
 
           <div className="game-info">
-            <div className="score bounce">Score: {gameState.score}</div>
+            <div className="score bounce glow">Score: {gameState.score}</div>
             {!gameState.gameStarted && (
               <div className="message glow">
-                <button className="start-button" onClick={resetGame}>
+                <button className="start-button glow" onClick={resetGame}>
                   Start Game
                 </button>
               </div>
@@ -77,7 +77,7 @@ function App() {
             {gameState.gameOver && (
               <div className="message game-over glow">
                 <div>Game Over!</div>
-                <button className="start-button" onClick={resetGame}>
+                <button className="start-button glow" onClick={resetGame}>
                   Play Again
                 </button>
               </div>
@@ -90,7 +90,7 @@ function App() {
           <div className="mobile-controls">
             <div className="control-row">
               <button
-                className="control-btn glow"
+                className="control-btn glow pulse"
                 onClick={() => changeDirection('UP')}
                 disabled={!gameState.gameStarted || gameState.gameOver}
               >
@@ -99,21 +99,21 @@ function App() {
             </div>
             <div className="control-row">
               <button
-                className="control-btn glow"
+                className="control-btn glow pulse"
                 onClick={() => changeDirection('LEFT')}
                 disabled={!gameState.gameStarted || gameState.gameOver}
               >
                 ◀
               </button>
               <button
-                className="control-btn glow"
+                className="control-btn glow pulse"
                 onClick={() => changeDirection('DOWN')}
                 disabled={!gameState.gameStarted || gameState.gameOver}
               >
                 ▼
               </button>
               <button
-                className="control-btn glow"
+                className="control-btn glow pulse"
                 onClick={() => changeDirection('RIGHT')}
                 disabled={!gameState.gameStarted || gameState.gameOver}
               >
