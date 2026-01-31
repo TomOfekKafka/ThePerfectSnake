@@ -29,12 +29,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run AI code improvement
+      - name: Run AI code improvement (Agent)
         env:
           ORDER_ID: ${{ github.event.client_payload.order_id }}
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: node scripts/improve-code.js
+        run: node scripts/agent-improve-code.js
 
       - name: Check for changes
         id: check_changes
