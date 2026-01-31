@@ -18,7 +18,12 @@ REQUIREMENTS:
 - Keep changes safe and functional
 - DON'T break existing functionality
 - Ensure TypeScript compiles correctly
-- The game has arrow key controls and PayPal payment integration - don't break these
+- **CRITICAL: Maintain mobile compatibility** - The game works on both desktop and mobile devices
+  * Don't break touch/swipe controls
+  * Don't break on-screen control buttons
+  * Keep responsive layout working
+  * Test that changes work on small screens
+- The game has arrow key controls, touch controls, and PayPal payment integration - don't break these
 
 CODEBASE:
 {CODEBASE_CONTENT}
