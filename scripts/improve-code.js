@@ -18,9 +18,9 @@ const BUDGET = {
   TOTAL_MAX: 5.00
 };
 
-// Claude 3.5 Sonnet pricing (as of 2024)
-const SONNET_INPUT_PRICE = 3.00 / 1_000_000;  // $3.00 per million tokens
-const SONNET_OUTPUT_PRICE = 15.00 / 1_000_000; // $15.00 per million tokens
+// Claude 3 Haiku pricing
+const HAIKU_INPUT_PRICE = 0.25 / 1_000_000;  // $0.25 per million tokens
+const HAIKU_OUTPUT_PRICE = 1.25 / 1_000_000; // $1.25 per million tokens
 
 async function main() {
   console.log(`\n🚀 Starting AI improvement for order: ${ORDER_ID}\n`);
@@ -174,7 +174,7 @@ async function callClaude(prompt, maxBudget) {
   });
 
   const message = await anthropic.messages.create({
-    model: 'claude-3-5-sonnet-latest',
+    model: 'claude-3-haiku-20240307',
     max_tokens: 8192,
     messages: [{
       role: 'user',
@@ -185,7 +185,7 @@ async function callClaude(prompt, maxBudget) {
   // Calculate cost
   const inputTokens = message.usage.input_tokens;
   const outputTokens = message.usage.output_tokens;
-  const cost = (inputTokens * SONNET_INPUT_PRICE) + (outputTokens * SONNET_OUTPUT_PRICE);
+  const cost = (inputTokens * HAIKU_INPUT_PRICE) + (outputTokens * HAIKU_OUTPUT_PRICE);
 
   if (cost > maxBudget) {
     throw new Error(`Cost $${cost.toFixed(2)} exceeds budget $${maxBudget.toFixed(2)}`);
