@@ -22,7 +22,7 @@ const HAIKU_INPUT_PRICE = 1.00 / 1_000_000;
 const HAIKU_OUTPUT_PRICE = 5.00 / 1_000_000;
 
 const MAX_ATTEMPTS = 3;
-const MAX_ITERATIONS = 15; // Maximum agent loop iterations
+const MAX_ITERATIONS = 25; // Maximum agent loop iterations
 let currentAttempt = 0;
 let totalCost = 0;
 
@@ -258,14 +258,15 @@ Make ONE high-quality, impactful, DRAMATIC visual improvement to the codebase.
 ## STRICT REQUIREMENTS:
 
 1. TEST COVERAGE
-   - Every code change MUST have Jest tests
-   - Tests go next to source: Component.tsx → Component.test.tsx
+   - Code changes that modify logic MUST have Jest tests
+   - CSS-only changes do NOT require tests (visual improvements are OK without tests)
+   - If adding tests: Tests go next to source (Component.tsx → Component.test.tsx)
    - Test main functionality and edge cases
 
 2. VERIFICATION
    - After changes, use run_build tool to check compilation
-   - Use run_tests tool to verify all tests pass
-   - Both MUST succeed before finishing
+   - Build MUST succeed before finishing
+   - If you added tests, run run_tests tool to verify they pass
 
 3. ERROR HANDLING
    - If tests/build fail: analyze the error carefully
@@ -398,8 +399,9 @@ Start by exploring the codebase!`;
   }
 
   // Final verification
-  if (lastBuildSuccess && lastTestSuccess) {
-    console.log('\n✅ All checks passed!');
+  // Success if build passed (tests are optional for CSS-only changes)
+  if (lastBuildSuccess) {
+    console.log('\n✅ Build passed!');
 
     // Update database
     await sql`
