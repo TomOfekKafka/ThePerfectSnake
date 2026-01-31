@@ -4,6 +4,10 @@ on:
   repository_dispatch:
     types: [ai-code-improvement]
 
+concurrency:
+  group: ai-improvements
+  cancel-in-progress: false
+
 jobs:
   improve-code:
     runs-on: ubuntu-latest
