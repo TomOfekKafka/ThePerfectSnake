@@ -152,6 +152,53 @@ async function executeTool(toolName, toolInput) {
   }
 }
 
+// Estimate token count (rough approximation: 1 token ≈ 4 characters)
+function estimateTokens(text) {
+  return Math.ceil(text.length / 4);
+}
+
+// Manage context window by truncating old messages if needed
+function manageContextWindow(messages, systemPrompt, maxTokens = 180000) {
+  // Estimate total tokens
+  let totalTokens = estimateTokens(systemPrompt);
+
+  for (const msg of messages) {
+    if (Array.isArray(msg.content)) {
+      for (const block of msg.content) {
+        if (block.type === 'text') {
+          totalTokens += estimateTokens(block.text);
+        } else if (block.type === 'tool_result') {
+          totalTokens += estimateTokens(JSON.stringify(block));
+        } else if (block.type === 'tool_use') {
+          totalTokens += estimateTokens(JSON.stringify(block));
+        }
+      }
+    } else {
+      totalTokens += estimateTokens(msg.content || '');
+    }
+  }
+
+  console.log(`   📏 Estimated tokens: ${totalTokens.toLocaleString()}`);
+
+  // If under limit, return as-is
+  if (totalTokens < maxTokens) {
+    return messages;
+  }
+
+  console.log(`   ⚠️  Context too large, truncating old messages...`);
+
+  // Keep first message (initial request) and last 3 exchanges (6 messages)
+  const keepRecent = Math.min(6, messages.length - 1);
+  const truncated = [
+    messages[0], // Keep initial user message
+    ...messages.slice(-keepRecent) // Keep recent messages
+  ];
+
+  console.log(`   ✂️  Truncated from ${messages.length} to ${truncated.length} messages`);
+
+  return truncated;
+}
+
 async function callClaude(messages, systemPrompt) {
   const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY
@@ -239,13 +286,19 @@ Make ONE high-quality, impactful, DRAMATIC visual improvement to the codebase.
 - run_tests: Run Jest tests
 
 ## WORKFLOW:
-1. Explore codebase (read key files)
+1. Explore codebase (read ONLY essential files - be selective!)
 2. Plan the improvement
 3. Implement code changes
 4. Write/update tests
 5. Run build + tests
 6. Fix if needed (max 3 attempts)
 7. Say "DONE" when all tests pass
+
+## IMPORTANT CONSTRAINTS:
+- Be VERY selective when reading files - only read what you absolutely need
+- Don't read large files unnecessarily
+- Focus on the most relevant files for your improvement
+- The context window is limited, so be efficient!
 
 Start by exploring the codebase!`;
 
@@ -262,6 +315,13 @@ Start by exploring the codebase!`;
 
   while (continueLoop && currentAttempt < MAX_ATTEMPTS && totalCost < BUDGET.TOTAL_MAX) {
     console.log(`\n🔄 Agent iteration ${messages.length / 2 + 1}`);
+
+    // Manage context window before making API call
+    const truncatedMessages = manageContextWindow(messages, systemPrompt);
+    if (truncatedMessages.length < messages.length) {
+      messages.length = 0;
+      messages.push(...truncatedMessages);
+    }
 
     const response = await callClaude(messages, systemPrompt);
 
