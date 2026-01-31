@@ -11,9 +11,14 @@
   box-shadow: 
     0 0 20px rgba(255, 0, 255, 0.5),
     0 0 40px rgba(0, 255, 255, 0.3),
-    inset 0 0 20px rgba(255, 0, 255, 0.1);
+    inset 0 0 20px rgba(255, 0, 255, 0.1),
+    0 20px 60px rgba(255, 0, 255, 0.4),
+    0 -20px 60px rgba(0, 255, 255, 0.3);
   border-radius: 10px;
-  animation: boardGradient 8s ease infinite;
+  animation: boardGradient 8s ease infinite, board3DFloat 6s ease-in-out infinite;
+  transform-style: preserve-3d;
+  position: relative;
+  perspective: 1000px;
 }
 
 @keyframes boardGradient {
@@ -25,6 +30,15 @@
   }
   100% {
     background-position: 0% 50%;
+  }
+}
+
+@keyframes board3DFloat {
+  0%, 100% {
+    transform: translateZ(0) rotateX(5deg) rotateY(-5deg);
+  }
+  50% {
+    transform: translateZ(20px) rotateX(-5deg) rotateY(5deg);
   }
 }
 
@@ -74,10 +88,12 @@
     0 0 10px rgba(255, 0, 255, 0.8),
     0 0 20px rgba(255, 0, 255, 0.5),
     0 0 30px rgba(255, 128, 0, 0.3),
-    inset 0 0 5px rgba(255, 255, 255, 0.4);
+    inset 0 0 5px rgba(255, 255, 255, 0.4),
+    0 0 40px rgba(255, 0, 255, 0.6);
   animation: snakeHeadGlow 0.6s ease-in-out infinite;
   border-radius: 50%;
-  transform: scale(1);
+  transform: scale(1) translateZ(5px);
+  position: relative;
 }
 
 @keyframes snakeHeadGlow {
@@ -86,16 +102,18 @@
       0 0 10px rgba(255, 0, 255, 0.8),
       0 0 20px rgba(255, 0, 255, 0.5),
       0 0 30px rgba(255, 128, 0, 0.3),
-      inset 0 0 5px rgba(255, 255, 255, 0.4);
-    transform: scale(1);
+      inset 0 0 5px rgba(255, 255, 255, 0.4),
+      0 0 40px rgba(255, 0, 255, 0.6);
+    transform: scale(1) translateZ(5px);
   }
   50% {
     box-shadow: 
       0 0 15px rgba(255, 0, 255, 1),
       0 0 30px rgba(255, 0, 255, 0.7),
       0 0 45px rgba(255, 128, 0, 0.5),
-      inset 0 0 10px rgba(255, 255, 255, 0.6);
-    transform: scale(1.05);
+      inset 0 0 10px rgba(255, 255, 255, 0.6),
+      0 0 60px rgba(255, 0, 255, 0.8);
+    transform: scale(1.05) translateZ(10px);
   }
 }
 
@@ -105,9 +123,11 @@
   box-shadow: 
     0 0 8px rgba(0, 255, 136, 0.6),
     0 0 15px rgba(0, 255, 255, 0.4),
-    inset 0 0 3px rgba(255, 255, 255, 0.3);
+    inset 0 0 3px rgba(255, 255, 255, 0.3),
+    0 0 25px rgba(0, 255, 136, 0.4);
   animation: snakeBodyFlow 2s ease-in-out infinite;
   border-radius: 4px;
+  transform: translateZ(3px);
 }
 
 @keyframes snakeBodyFlow {
@@ -129,27 +149,30 @@
     0 0 12px rgba(255, 255, 0, 0.9),
     0 0 25px rgba(255, 102, 0, 0.7),
     0 0 40px rgba(255, 0, 0, 0.5),
-    inset 0 0 8px rgba(255, 255, 255, 0.5);
+    inset 0 0 8px rgba(255, 255, 255, 0.5),
+    0 0 50px rgba(255, 255, 0, 0.6);
   animation: foodPulse 0.5s ease-in-out infinite;
-  transform: scale(1);
+  transform: scale(1) translateZ(8px);
 }
 
 @keyframes foodPulse {
   0%, 100% {
-    transform: scale(1);
+    transform: scale(1) translateZ(8px);
     box-shadow: 
       0 0 12px rgba(255, 255, 0, 0.9),
       0 0 25px rgba(255, 102, 0, 0.7),
       0 0 40px rgba(255, 0, 0, 0.5),
-      inset 0 0 8px rgba(255, 255, 255, 0.5);
+      inset 0 0 8px rgba(255, 255, 255, 0.5),
+      0 0 50px rgba(255, 255, 0, 0.6);
   }
   50% {
-    transform: scale(1.15);
+    transform: scale(1.15) translateZ(15px);
     box-shadow: 
       0 0 20px rgba(255, 255, 0, 1),
       0 0 40px rgba(255, 102, 0, 0.9),
       0 0 60px rgba(255, 0, 0, 0.7),
-      inset 0 0 12px rgba(255, 255, 255, 0.7);
+      inset 0 0 12px rgba(255, 255, 255, 0.7),
+      0 0 70px rgba(255, 255, 0, 0.8);
   }
 }
 
@@ -160,11 +183,11 @@
 
 @keyframes foodExplode {
   0% {
-    transform: scale(1);
+    transform: scale(1) translateZ(8px);
     opacity: 1;
   }
   100% {
-    transform: scale(2) translateY(-20px);
+    transform: scale(2) translateY(-20px) translateZ(30px);
     opacity: 0;
   }
 }
@@ -227,5 +250,6 @@
     height: 90vw;
     max-width: 400px;
     max-height: 400px;
+    animation: boardGradient 8s ease infinite;
   }
 }

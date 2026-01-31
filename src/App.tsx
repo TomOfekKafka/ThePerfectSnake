@@ -3,6 +3,7 @@ import { useSnakeGame } from './hooks/useSnakeGame';
 import { GameBoard } from './components/GameBoard';
 import PayPalButton from './components/PayPalButton';
 import { DeploymentInfo } from './components/DeploymentInfo';
+import { ParticleBackground } from './components/ParticleBackground';
 import './App.css';
 import { useEffect, useRef } from 'react';
 
@@ -62,6 +63,7 @@ function App() {
         intent: 'capture'
       }}
     >
+      <ParticleBackground />
       <div className="app">
         <div className="game-container">
           <h1 className="game-title pulse glow">The Perfect Snake 🐍</h1>
