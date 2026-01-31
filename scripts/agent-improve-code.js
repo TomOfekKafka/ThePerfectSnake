@@ -22,6 +22,7 @@ const HAIKU_INPUT_PRICE = 1.00 / 1_000_000;
 const HAIKU_OUTPUT_PRICE = 5.00 / 1_000_000;
 
 const MAX_ATTEMPTS = 3;
+const MAX_ITERATIONS = 15; // Maximum agent loop iterations
 let currentAttempt = 0;
 let totalCost = 0;
 
@@ -312,9 +313,11 @@ Start by exploring the codebase!`;
   let continueLoop = true;
   let lastBuildSuccess = false;
   let lastTestSuccess = false;
+  let iterationCount = 0;
 
-  while (continueLoop && currentAttempt < MAX_ATTEMPTS && totalCost < BUDGET.TOTAL_MAX) {
-    console.log(`\n🔄 Agent iteration ${messages.length / 2 + 1}`);
+  while (continueLoop && currentAttempt < MAX_ATTEMPTS && totalCost < BUDGET.TOTAL_MAX && iterationCount < MAX_ITERATIONS) {
+    iterationCount++;
+    console.log(`\n🔄 Agent iteration ${iterationCount}`);
 
     // Manage context window before making API call
     const truncatedMessages = manageContextWindow(messages, systemPrompt);
@@ -385,6 +388,11 @@ Start by exploring the codebase!`;
     // Check if we should stop
     if (currentAttempt >= MAX_ATTEMPTS) {
       console.log(`\n⚠️  Maximum attempts (${MAX_ATTEMPTS}) reached`);
+      continueLoop = false;
+    }
+
+    if (iterationCount >= MAX_ITERATIONS) {
+      console.log(`\n⚠️  Maximum iterations (${MAX_ITERATIONS}) reached`);
       continueLoop = false;
     }
   }
