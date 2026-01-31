@@ -37,7 +37,7 @@ jobs:
 
       - name: Run AI code improvement
         env:
-          ORDER_ID: ${{ github.event.client_payload.order_id || github.event.inputs.order_id || 'TEST-MANUAL' }}
+          ORDER_ID: ${{ github.event.client_payload.order_id || github.event.inputs.order_id }}
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: node scripts/improve-code.js
@@ -57,7 +57,7 @@ jobs:
           git config --global user.name "AI Code Improver"
           git config --global user.email "ai-improver@the-perfect-snake.app"
           git add .
-          git commit -m "AI improvement from payment ${{ github.event.client_payload.order_id || github.event.inputs.order_id || 'TEST-MANUAL' }}
+          git commit -m "AI improvement from payment ${{ github.event.client_payload.order_id || github.event.inputs.order_id }}
 
 Co-Authored-By: Claude Haiku <ai@anthropic.com>"
           git push origin main
