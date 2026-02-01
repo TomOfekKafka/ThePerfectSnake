@@ -28,3 +28,4 @@ dist-ssr
 # Vercel
 .vercel
 .env*.local
+claude-output.json
