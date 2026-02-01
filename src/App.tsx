@@ -1,6 +1,5 @@
 import { useSnakeGame } from './hooks/useSnakeGame';
 import { GameBoard } from './components/GameBoard';
-import { ParticleBackground } from './components/ParticleBackground';
 import './App.css';
 import { useEffect, useRef } from 'react';
 
@@ -9,7 +8,7 @@ function App() {
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
 
-  // Touch/swipe handling
+  // Touch/swipe handling for mobile
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
       touchStartX.current = e.touches[0].clientX;
@@ -27,14 +26,12 @@ function App() {
 
       // Determine if swipe is more horizontal or vertical
       if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        // Horizontal swipe
         if (deltaX > 30) {
           changeDirection('RIGHT');
         } else if (deltaX < -30) {
           changeDirection('LEFT');
         }
       } else {
-        // Vertical swipe
         if (deltaY > 30) {
           changeDirection('DOWN');
         } else if (deltaY < -30) {
@@ -53,77 +50,72 @@ function App() {
   }, [gameState.gameStarted, gameState.gameOver, changeDirection]);
 
   return (
-    <>
-      <ParticleBackground />
-      <div className="app">
-        <div className="game-container">
-          <h1 className="game-title pulse glow">The Perfect Snake 🐍</h1>
+    <div className="app">
+      <div className="game-container">
+        <h1>Snake Game</h1>
 
-          <div className="game-info">
-            <div className="score bounce glow">Score: {gameState.score}</div>
-            {!gameState.gameStarted && (
-              <div className="message glow">
-                <button className="start-button glow" onClick={resetGame}>
-                  Start Game
-                </button>
-              </div>
-            )}
-            {gameState.gameOver && (
-              <div className="message game-over glow">
-                <div>Game Over!</div>
-                <button className="start-button glow" onClick={resetGame}>
-                  Play Again
-                </button>
-              </div>
-            )}
+        <div className="score">Score: {gameState.score}</div>
+
+        {!gameState.gameStarted && (
+          <div className="message">
+            <button className="start-button" onClick={resetGame}>
+              Start Game
+            </button>
           </div>
+        )}
 
-          <GameBoard gameState={gameState} gridSize={gridSize} />
-
-          {/* Mobile controls */}
-          <div className="mobile-controls">
-            <div className="control-row">
-              <button
-                className="control-btn glow pulse"
-                onClick={() => changeDirection('UP')}
-                disabled={!gameState.gameStarted || gameState.gameOver}
-              >
-                ▲
-              </button>
-            </div>
-            <div className="control-row">
-              <button
-                className="control-btn glow pulse"
-                onClick={() => changeDirection('LEFT')}
-                disabled={!gameState.gameStarted || gameState.gameOver}
-              >
-                ◀
-              </button>
-              <button
-                className="control-btn glow pulse"
-                onClick={() => changeDirection('DOWN')}
-                disabled={!gameState.gameStarted || gameState.gameOver}
-              >
-                ▼
-              </button>
-              <button
-                className="control-btn glow pulse"
-                onClick={() => changeDirection('RIGHT')}
-                disabled={!gameState.gameStarted || gameState.gameOver}
-              >
-                ▶
-              </button>
-            </div>
+        {gameState.gameOver && (
+          <div className="message game-over">
+            <div>Game Over!</div>
+            <button className="start-button" onClick={resetGame}>
+              Play Again
+            </button>
           </div>
+        )}
 
-          <div className="instructions">
-            <p className="desktop-only">Use arrow keys or on-screen buttons to move</p>
-            <p className="mobile-only">Swipe or use buttons to move</p>
-            <p className="desktop-only">Press SPACE or click Start button</p>
+        <GameBoard gameState={gameState} gridSize={gridSize} />
+
+        {/* Mobile controls */}
+        <div className="mobile-controls">
+          <div className="control-row">
+            <button
+              className="control-btn"
+              onClick={() => changeDirection('UP')}
+              disabled={!gameState.gameStarted || gameState.gameOver}
+            >
+              ▲
+            </button>
+          </div>
+          <div className="control-row">
+            <button
+              className="control-btn"
+              onClick={() => changeDirection('LEFT')}
+              disabled={!gameState.gameStarted || gameState.gameOver}
+            >
+              ◀
+            </button>
+            <button
+              className="control-btn"
+              onClick={() => changeDirection('DOWN')}
+              disabled={!gameState.gameStarted || gameState.gameOver}
+            >
+              ▼
+            </button>
+            <button
+              className="control-btn"
+              onClick={() => changeDirection('RIGHT')}
+              disabled={!gameState.gameStarted || gameState.gameOver}
+            >
+              ▶
+            </button>
           </div>
         </div>
+
+        <div className="instructions">
+          <p>Desktop: Use arrow keys • Mobile: Swipe or use buttons</p>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 

@@ -1,51 +1,64 @@
-import { GameState } from '../types/types';
+import { useEffect, useRef } from 'react';
 import './GameBoard.css';
+
+interface Position {
+  x: number;
+  y: number;
+}
+
+interface GameState {
+  snake: Position[];
+  food: Position;
+  gameOver: boolean;
+}
 
 interface GameBoardProps {
   gameState: GameState;
   gridSize: number;
 }
 
-export const GameBoard = ({ gameState, gridSize }: GameBoardProps) => {
-  const getCellType = (x: number, y: number): string => {
-    // Check if it's the snake head
-    if (gameState.snake[0].x === x && gameState.snake[0].y === y) {
-      return 'snake-head';
-    }
+const CELL_SIZE = 20;
 
-    // Check if it's the snake body
-    if (gameState.snake.slice(1).some(segment => segment.x === x && segment.y === y)) {
-      return 'snake-body';
-    }
+export function GameBoard({ gameState, gridSize }: GameBoardProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    // Check if it's food
-    if (gameState.food.x === x && gameState.food.y === y) {
-      return 'food';
-    }
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-    return 'empty';
-  };
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas with white background
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw snake (green)
+    ctx.fillStyle = 'green';
+    gameState.snake.forEach(segment => {
+      ctx.fillRect(
+        segment.x * CELL_SIZE,
+        segment.y * CELL_SIZE,
+        CELL_SIZE - 1,
+        CELL_SIZE - 1
+      );
+    });
+
+    // Draw food (red)
+    ctx.fillStyle = 'red';
+    ctx.fillRect(
+      gameState.food.x * CELL_SIZE,
+      gameState.food.y * CELL_SIZE,
+      CELL_SIZE - 1,
+      CELL_SIZE - 1
+    );
+  }, [gameState, gridSize]);
 
   return (
-    <div
-      className="game-board"
-      style={{
-        gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-        gridTemplateRows: `repeat(${gridSize}, 1fr)`,
-      }}
-    >
-      {Array.from({ length: gridSize * gridSize }).map((_, index) => {
-        const x = index % gridSize;
-        const y = Math.floor(index / gridSize);
-        const cellType = getCellType(x, y);
-
-        return (
-          <div
-            key={`${x}-${y}`}
-            className={`cell ${cellType}`}
-          />
-        );
-      })}
-    </div>
+    <canvas
+      ref={canvasRef}
+      width={gridSize * CELL_SIZE}
+      height={gridSize * CELL_SIZE}
+    />
   );
-};
+}
