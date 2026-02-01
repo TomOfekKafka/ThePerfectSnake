@@ -56,9 +56,9 @@ jobs:
           claude -p "Make a dramatic visual improvement to The Perfect Snake game. Follow the instructions in .claude/CLAUDE.md carefully. After completing successfully, write deployment metadata to public/deployment-metadata.json" \
             --allowedTools "Read,Write,Edit,Bash(npm run build),Bash(npm test -- --passWithNoTests)" \
             --max-turns 25 \
-            --max-budget-usd 10.00 \
+            --max-budget-usd 15.00 \
             --output-format json \
-            --model claude-sonnet-4-5-20250929 \
+            --model claude-opus-4-5-20251101 \
             --no-session-persistence \
             > claude-output.json
 
@@ -67,10 +67,10 @@ jobs:
           cat claude-output.json | jq -r '.result'
 
           # Calculate cost as if using API directly (input + output tokens only, no caching overhead)
-          # Using model pricing: Sonnet 4.5 = $3.00/MTok input, $15.00/MTok output
+          # Using model pricing: Opus 4.5 = $5.00/MTok input, $25.00/MTok output
           input_tokens=$(cat claude-output.json | jq -r '.modelUsage | .[].inputTokens // 0')
           output_tokens=$(cat claude-output.json | jq -r '.modelUsage | .[].outputTokens // 0')
-          cost=$(echo "scale=6; ($input_tokens * 0.000003) + ($output_tokens * 0.000015)" | bc)
+          cost=$(echo "scale=6; ($input_tokens * 0.000005) + ($output_tokens * 0.000025)" | bc)
 
           # Show comparison
           claude_total=$(cat claude-output.json | jq -r '.total_cost_usd // 0')
