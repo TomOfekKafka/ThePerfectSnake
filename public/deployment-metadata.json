@@ -1,8 +1,8 @@
 {
   "lastDeployment": {
-    "timestamp": "2026-02-01T10:42:14.271Z",
-    "contributor": "Anonymous",
-    "cost": "0.15",
-    "orderId": "test-opus-cost-fix"
+    "timestamp": "2026-02-01T12:00:00Z",
+    "contributor": "Test User",
+    "cost": "2.50",
+    "orderId": "test-order-123"
   }
 }
