@@ -1,8 +1,5 @@
-import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { useSnakeGame } from './hooks/useSnakeGame';
 import { GameBoard } from './components/GameBoard';
-import PayPalButton from './components/PayPalButton';
-import { DeploymentInfo } from './components/DeploymentInfo';
 import { ParticleBackground } from './components/ParticleBackground';
 import './App.css';
 import { useEffect, useRef } from 'react';
@@ -56,13 +53,7 @@ function App() {
   }, [gameState.gameStarted, gameState.gameOver, changeDirection]);
 
   return (
-    <PayPalScriptProvider
-      options={{
-        clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || '',
-        currency: 'USD',
-        intent: 'capture'
-      }}
-    >
+    <>
       <ParticleBackground />
       <div className="app">
         <div className="game-container">
@@ -130,15 +121,9 @@ function App() {
             <p className="mobile-only">Swipe or use buttons to move</p>
             <p className="desktop-only">Press SPACE or click Start button</p>
           </div>
-
-          <DeploymentInfo />
         </div>
-
-        <aside className="payment-sidebar">
-          <PayPalButton />
-        </aside>
       </div>
-    </PayPalScriptProvider>
+    </>
   );
 }
 

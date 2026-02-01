@@ -29,11 +29,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run database migration
-        env:
-          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
-        run: node scripts/run-migration.js || echo "Migration may have already run"
-
       - name: Install Claude Code CLI
         run: |
           curl -fsSL https://claude.ai/install.sh | bash
@@ -53,7 +48,7 @@ jobs:
           export PATH="$HOME/.claude/bin:$PATH"
 
           # Run Claude Code with our instructions
-          claude -p "Make a dramatic visual improvement to The Perfect Snake game. Follow the instructions in .claude/CLAUDE.md carefully. After completing successfully, write deployment metadata to public/deployment-metadata.json" \
+          claude -p "Make a dramatic visual improvement to The Perfect Snake game. Follow the instructions in .claude/CLAUDE.md carefully." \
             --allowedTools "Read,Write,Edit,Bash(npm run build),Bash(npm test -- --passWithNoTests)" \
             --max-turns 25 \
             --max-budget-usd 15.00 \
@@ -79,12 +74,25 @@ jobs:
           echo "Direct API cost (displayed): \$$cost (input + output only)"
           echo "cost=$cost" >> $GITHUB_OUTPUT
 
-      - name: Update job status in database
+      - name: Write deployment metadata
         env:
-          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
           ORDER_ID: ${{ github.event.client_payload.order_id }}
+          CONTRIBUTOR: ${{ github.event.client_payload.contributor_name }}
           TOTAL_COST: ${{ steps.claude.outputs.cost }}
-        run: node scripts/update-job-status.js
+        run: |
+          # Write deployment metadata to public directory
+          cat > public/deployment-metadata.json << EOF
+          {
+            "lastDeployment": {
+              "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+              "contributor": "$CONTRIBUTOR",
+              "cost": "$TOTAL_COST",
+              "orderId": "$ORDER_ID"
+            }
+          }
+          EOF
+          echo "Deployment metadata written:"
+          cat public/deployment-metadata.json
 
       - name: Check for changes
         id: check_changes
