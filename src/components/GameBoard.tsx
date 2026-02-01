@@ -55,10 +55,12 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   }, [gameState, gridSize]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={gridSize * CELL_SIZE}
-      height={gridSize * CELL_SIZE}
-    />
+    <div className="canvas-wrapper">
+      <canvas
+        ref={canvasRef}
+        width={gridSize * CELL_SIZE}
+        height={gridSize * CELL_SIZE}
+      />
+    </div>
   );
 }
