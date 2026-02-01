@@ -66,10 +66,8 @@ jobs:
           echo "Claude Code result:"
           cat claude-output.json | jq -r '.result'
 
-          # Extract cost for database
-          input_tokens=$(cat claude-output.json | jq -r '.usage.input_tokens // 0')
-          output_tokens=$(cat claude-output.json | jq -r '.usage.output_tokens // 0')
-          cost=$(echo "scale=4; ($input_tokens * 0.000001) + ($output_tokens * 0.000005)" | bc)
+          # Extract cost from Claude Code's calculation (includes all token types)
+          cost=$(cat claude-output.json | jq -r '.total_cost_usd // 0')
           echo "Total cost: \$$cost"
           echo "cost=$cost" >> $GITHUB_OUTPUT
 
