@@ -5,8 +5,8 @@
 }
 
 body {
-  font-family: Arial, sans-serif;
-  background: white;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(135deg, #0d0d2b 0%, #1a1a4e 50%, #0d0d2b 100%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -28,39 +28,92 @@ body {
 }
 
 h1 {
-  font-size: 2rem;
-  color: #333;
+  font-size: 2.5rem;
+  color: #00ff88;
   margin-bottom: 10px;
+  text-shadow:
+    0 0 10px #00ff88,
+    0 0 20px #00ff88,
+    0 0 40px #00ff88,
+    0 0 80px #00ff88;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  animation: titlePulse 2s ease-in-out infinite;
+}
+
+@keyframes titlePulse {
+  0%, 100% {
+    text-shadow:
+      0 0 10px #00ff88,
+      0 0 20px #00ff88,
+      0 0 40px #00ff88,
+      0 0 80px #00ff88;
+  }
+  50% {
+    text-shadow:
+      0 0 5px #00ff88,
+      0 0 10px #00ff88,
+      0 0 20px #00ff88,
+      0 0 40px #00ff88;
+  }
 }
 
 .score {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #333;
+  color: #ff00ff;
+  text-shadow:
+    0 0 10px #ff00ff,
+    0 0 20px #ff00ff;
 }
 
 .message {
   margin: 10px 0;
+  color: #fff;
 }
 
 .game-over {
-  color: #d32f2f;
+  color: #ff3366;
   font-weight: bold;
+  font-size: 1.3rem;
+  text-shadow:
+    0 0 10px #ff3366,
+    0 0 20px #ff3366,
+    0 0 40px #ff3366;
+  animation: gameOverFlash 0.5s ease-in-out infinite;
+}
+
+@keyframes gameOverFlash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 .start-button {
-  padding: 12px 24px;
-  font-size: 16px;
-  background: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
+  padding: 15px 30px;
+  font-size: 18px;
+  font-weight: bold;
+  background: transparent;
+  color: #00ff88;
+  border: 3px solid #00ff88;
+  border-radius: 8px;
   cursor: pointer;
   margin-top: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  box-shadow:
+    0 0 10px #00ff88,
+    0 0 20px #00ff88,
+    inset 0 0 10px rgba(0, 255, 136, 0.1);
+  transition: all 0.3s ease;
 }
 
 .start-button:hover {
-  background: #45a049;
+  background: #00ff88;
+  color: #0d0d2b;
+  box-shadow:
+    0 0 20px #00ff88,
+    0 0 40px #00ff88,
+    0 0 60px #00ff88;
 }
 
 /* Mobile controls */
@@ -78,29 +131,40 @@ h1 {
 }
 
 .control-btn {
-  width: 50px;
-  height: 50px;
-  font-size: 20px;
-  background: #2196F3;
-  color: white;
-  border: none;
-  border-radius: 4px;
+  width: 55px;
+  height: 55px;
+  font-size: 22px;
+  background: transparent;
+  color: #00ccff;
+  border: 2px solid #00ccff;
+  border-radius: 8px;
   cursor: pointer;
   user-select: none;
+  box-shadow:
+    0 0 10px rgba(0, 204, 255, 0.5),
+    inset 0 0 10px rgba(0, 204, 255, 0.1);
+  transition: all 0.15s ease;
 }
 
 .control-btn:active {
-  background: #1976D2;
+  background: #00ccff;
+  color: #0d0d2b;
+  box-shadow:
+    0 0 20px #00ccff,
+    0 0 40px #00ccff;
 }
 
 .control-btn:disabled {
-  background: #ccc;
+  background: transparent;
+  border-color: #444;
+  color: #444;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
 .instructions {
   text-align: center;
-  color: #666;
+  color: #888;
   font-size: 0.9rem;
   margin-top: 10px;
 }
@@ -112,7 +176,7 @@ h1 {
   }
 
   h1 {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
   }
 
   .score {
