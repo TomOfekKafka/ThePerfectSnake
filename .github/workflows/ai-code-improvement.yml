@@ -68,9 +68,10 @@ jobs:
 
           # Calculate cost as if using API directly (input + output tokens only, no caching overhead)
           # Using model pricing: Opus 4.5 = $5.00/MTok input, $25.00/MTok output
-          input_tokens=$(cat claude-output.json | jq -r '.modelUsage | .[].inputTokens // 0')
-          output_tokens=$(cat claude-output.json | jq -r '.modelUsage | .[].outputTokens // 0')
-          cost=$(echo "scale=6; ($input_tokens * 0.000005) + ($output_tokens * 0.000025)" | bc)
+          # Sum all tokens across all model usages
+          input_tokens=$(cat claude-output.json | jq '[.modelUsage | to_entries[] | .value.inputTokens // 0] | add')
+          output_tokens=$(cat claude-output.json | jq '[.modelUsage | to_entries[] | .value.outputTokens // 0] | add')
+          cost=$(echo "scale=2; ($input_tokens * 0.000005) + ($output_tokens * 0.000025)" | bc)
 
           # Show comparison
           claude_total=$(cat claude-output.json | jq -r '.total_cost_usd // 0')
