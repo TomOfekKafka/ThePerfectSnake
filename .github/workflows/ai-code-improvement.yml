@@ -66,9 +66,16 @@ jobs:
           echo "Claude Code result:"
           cat claude-output.json | jq -r '.result'
 
-          # Extract cost from Claude Code's calculation (includes all token types)
-          cost=$(cat claude-output.json | jq -r '.total_cost_usd // 0')
-          echo "Total cost: \$$cost"
+          # Calculate cost as if using API directly (input + output tokens only, no caching overhead)
+          # Using model pricing: Haiku 4.5 = $1.00/MTok input, $5.00/MTok output
+          input_tokens=$(cat claude-output.json | jq -r '.modelUsage | .[].inputTokens // 0')
+          output_tokens=$(cat claude-output.json | jq -r '.modelUsage | .[].outputTokens // 0')
+          cost=$(echo "scale=6; ($input_tokens * 0.000001) + ($output_tokens * 0.000005)" | bc)
+
+          # Show comparison
+          claude_total=$(cat claude-output.json | jq -r '.total_cost_usd // 0')
+          echo "Claude Code total cost: \$$claude_total (includes caching)"
+          echo "Direct API cost (displayed): \$$cost (input + output only)"
           echo "cost=$cost" >> $GITHUB_OUTPUT
 
       - name: Update job status in database
