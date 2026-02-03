@@ -67,7 +67,8 @@ describe('postMessage API - Platform to Game Communication', () => {
       });
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('unauthorized origin')
+        expect.stringContaining('Ignored message from unauthorized origin'),
+        'https://evil-site.com'
       );
 
       consoleWarnSpy.mockRestore();
@@ -92,7 +93,8 @@ describe('postMessage API - Platform to Game Communication', () => {
       });
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid message structure')
+        expect.stringContaining('Invalid message structure'),
+        expect.any(Object)
       );
 
       consoleWarnSpy.mockRestore();

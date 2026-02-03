@@ -142,6 +142,8 @@ The tests verify:
 - ✅ Game state broadcasts to platform
 - ✅ 180-degree turn prevention works
 - ✅ Message format is correct
+- ✅ Visual safety (canvas visible, not spinning, reasonable size)
+- ✅ No UI regressions that make game unplayable
 
 ### 6. Verify Build
 
@@ -167,7 +169,38 @@ When tests pass AND build succeeds, say "DONE".
 ### Test Files
 
 - `src/__tests__/postMessage.test.ts` - postMessage API tests (CRITICAL)
+- `src/__tests__/visual-safety.test.ts` - Visual safety smoke tests (CRITICAL)
 - `src/components/GameBoard.test.tsx` - Rendering tests (if you modify GameBoard)
+
+### Visual Safety Tests
+
+The visual safety tests are CRITICAL smoke tests that catch UI regressions making the game unplayable:
+
+**What they check:**
+- Canvas exists, is visible (not display:none or hidden)
+- Canvas has reasonable dimensions (200-2000px)
+- Canvas is positioned on screen (not way off-viewport)
+- No extreme CSS rotations (e.g., 180deg spin)
+- No extreme scaling (scale < 0.3 or > 3.0)
+- No flipping (scaleX/Y = -1)
+- No infinite spinning animations
+- Canvas opacity is sufficient (>= 0.7)
+- Canvas isn't behind other elements (z-index >= 0)
+
+**Examples of what they catch:**
+```css
+/* ❌ BAD - Would fail tests */
+canvas {
+  transform: rotate(180deg);  /* Fails rotation test */
+  animation: spin 1s infinite; /* Fails animation test */
+  opacity: 0.1;               /* Fails opacity test */
+  display: none;              /* Fails visibility test */
+}
+```
+
+**These tests are FAST (~100ms) and prevent game-breaking visual bugs.**
+
+**If visual safety tests fail, you broke something critical - fix it!**
 
 ### Writing New Tests
 
@@ -269,6 +302,7 @@ Before you finish, verify:
 - [ ] Tests pass: `npm test`
 - [ ] Build succeeds: `npm run build`
 - [ ] postMessage API still works (tests verify this)
+- [ ] Visual safety tests pass (canvas visible, not spinning, playable)
 - [ ] Game works when embedded (postMessage tests)
 - [ ] Game works standalone (embedded mode detection intact)
 - [ ] Mobile compatibility maintained

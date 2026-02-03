@@ -69,15 +69,21 @@ Make ONE dramatic, bold, IMMEDIATELY OBVIOUS visual improvement to the game.
 2. **Explore** - Read key CSS files to understand current styling
 3. **Plan** - Decide on a dramatic visual change that won't break API
 4. **Implement** - Make bold CSS/visual changes
-5. **Test API** - Verify postMessage integration still works
-6. **Verify Build** - Run `npm run build` to check compilation
-7. **Test Logic** - Run `npm test` if you modified any logic
-8. **Finish** - Say "DONE" when build and tests pass
+5. **Test** - Run `npm test` to verify visual safety and API (REQUIRED)
+6. **Verify Build** - Run `npm run build` to check compilation (REQUIRED)
+7. **Finish** - Say "DONE" when build and tests pass
 
 ## Testing Requirements
 
-### If You Modified Visual Only (CSS):
+### Always Required (Even CSS-Only Changes):
+- Run `npm test` - MUST pass (includes visual safety smoke tests)
 - Run `npm run build` - MUST pass
+
+**Visual safety tests catch game-breaking UI changes:**
+- Canvas spinning/rotating
+- Canvas invisible or wrong size
+- Extreme transforms or animations
+- Game unplayable due to visual bugs
 
 ### If You Modified Game Logic:
 - Run `npm run build` - MUST pass
@@ -103,7 +109,9 @@ Make ONE dramatic, bold, IMMEDIATELY OBVIOUS visual improvement to the game.
 ## Quick Safety Check
 
 Before committing, verify:
-- [ ] Game renders in canvas
+- [ ] `npm test` passes (including visual safety tests)
+- [ ] Game renders in canvas and is visible
+- [ ] Canvas not spinning or severely transformed
 - [ ] Platform can send START_GAME command
 - [ ] Platform can send DIRECTION_CHANGE commands
 - [ ] Game sends GAME_STATE updates
