@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "reset-to-baseline": "cp .baseline/App.css src/App.css && cp .baseline/GameBoard.css src/components/GameBoard.css && cp .baseline/GameBoard.tsx src/components/GameBoard.tsx && echo '✅ Reset to boring baseline (v0)'"
   },
   "dependencies": {
     "react": "^18.2.0",

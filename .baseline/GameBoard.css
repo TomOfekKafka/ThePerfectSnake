@@ -1,0 +1,11 @@
+.canvas-wrapper {
+  padding: 2px;
+  border: 2px solid #999;
+  border-radius: 4px;
+  background: #fff;
+}
+
+canvas {
+  display: block;
+  background: #fff;
+}
