@@ -146,6 +146,8 @@ export function useSnakeGame() {
 
     // Embedded mode: listen for postMessage from platform
     const handleMessage = (event: MessageEvent) => {
+      console.log('🎮 Game received message:', { origin: event.origin, data: event.data });
+
       // Validate origin for security
       const allowedOrigins = [
         'https://perfect-snake-platform.vercel.app',
@@ -154,7 +156,7 @@ export function useSnakeGame() {
       ];
 
       if (!allowedOrigins.includes(event.origin)) {
-        console.warn('Ignored message from unauthorized origin:', event.origin);
+        console.warn('❌ Ignored message from unauthorized origin:', event.origin);
         return;
       }
 
@@ -162,17 +164,23 @@ export function useSnakeGame() {
 
       // Validate message structure
       if (!message || typeof message !== 'object' || !message.type) {
+        console.warn('❌ Invalid message structure:', message);
         return;
       }
 
+      console.log('✅ Processing message:', message.type);
+
       switch (message.type) {
         case 'DIRECTION_CHANGE':
+          console.log('🎮 Changing direction to:', message.direction);
           changeDirection(message.direction);
           break;
         case 'START_GAME':
+          console.log('🎮 Starting game');
           if (!gameState.gameStarted) resetGame();
           break;
         case 'RESET_GAME':
+          console.log('🎮 Resetting game');
           resetGame();
           break;
       }
