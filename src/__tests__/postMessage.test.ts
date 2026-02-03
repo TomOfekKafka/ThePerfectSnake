@@ -27,7 +27,7 @@ describe('postMessage API - Platform to Game Communication', () => {
         result.current.resetGame();
       });
 
-      const initialDirection = 'RIGHT';
+      // Initial direction is RIGHT (default)
 
       // Simulate platform sending UP command
       act(() => {

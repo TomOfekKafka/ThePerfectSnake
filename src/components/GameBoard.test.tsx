@@ -3,7 +3,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-import React from 'react';
 import { GameBoard } from './GameBoard';
 
 describe('GameBoard', () => {
@@ -17,7 +16,7 @@ describe('GameBoard', () => {
       score: 0
     };
 
-    const { container } = render(<GameBoard gameState={mockGameState} />);
+    const { container } = render(<GameBoard gameState={mockGameState} gridSize={20} />);
     const canvas = container.querySelector('canvas');
     expect(canvas).toBeTruthy();
   });
