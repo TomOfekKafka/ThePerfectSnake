@@ -8,8 +8,12 @@ function App() {
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
 
-  // Touch/swipe handling for mobile
+  // Detect if game is embedded in platform iframe
+  const isEmbedded = window.parent !== window;
+
+  // Touch/swipe handling for mobile (only in standalone mode)
   useEffect(() => {
+    if (isEmbedded) return; // Platform handles input when embedded
     const handleTouchStart = (e: TouchEvent) => {
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
@@ -47,7 +51,7 @@ function App() {
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [gameState.gameStarted, gameState.gameOver, changeDirection]);
+  }, [isEmbedded, gameState.gameStarted, gameState.gameOver, changeDirection]);
 
   return (
     <div className="app">
@@ -75,44 +79,50 @@ function App() {
 
         <GameBoard gameState={gameState} gridSize={gridSize} />
 
-        {/* Mobile controls */}
-        <div className="mobile-controls">
-          <div className="control-row">
-            <button
-              className="control-btn"
-              onClick={() => changeDirection('UP')}
-              disabled={!gameState.gameStarted || gameState.gameOver}
-            >
-              ▲
-            </button>
+        {/* Mobile controls - only show in standalone mode */}
+        {!isEmbedded && (
+          <div className="mobile-controls">
+            <div className="control-row">
+              <button
+                className="control-btn"
+                onClick={() => changeDirection('UP')}
+                disabled={!gameState.gameStarted || gameState.gameOver}
+              >
+                ▲
+              </button>
+            </div>
+            <div className="control-row">
+              <button
+                className="control-btn"
+                onClick={() => changeDirection('LEFT')}
+                disabled={!gameState.gameStarted || gameState.gameOver}
+              >
+                ◀
+              </button>
+              <button
+                className="control-btn"
+                onClick={() => changeDirection('DOWN')}
+                disabled={!gameState.gameStarted || gameState.gameOver}
+              >
+                ▼
+              </button>
+              <button
+                className="control-btn"
+                onClick={() => changeDirection('RIGHT')}
+                disabled={!gameState.gameStarted || gameState.gameOver}
+              >
+                ▶
+              </button>
+            </div>
           </div>
-          <div className="control-row">
-            <button
-              className="control-btn"
-              onClick={() => changeDirection('LEFT')}
-              disabled={!gameState.gameStarted || gameState.gameOver}
-            >
-              ◀
-            </button>
-            <button
-              className="control-btn"
-              onClick={() => changeDirection('DOWN')}
-              disabled={!gameState.gameStarted || gameState.gameOver}
-            >
-              ▼
-            </button>
-            <button
-              className="control-btn"
-              onClick={() => changeDirection('RIGHT')}
-              disabled={!gameState.gameStarted || gameState.gameOver}
-            >
-              ▶
-            </button>
-          </div>
-        </div>
+        )}
 
         <div className="instructions">
-          <p>Desktop: Use arrow keys • Mobile: Swipe or use buttons</p>
+          <p>
+            {isEmbedded
+              ? 'Use the platform controls to play'
+              : 'Desktop: Use arrow keys • Mobile: Swipe or use buttons'}
+          </p>
         </div>
       </div>
     </div>
