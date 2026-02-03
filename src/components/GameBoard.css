@@ -7,6 +7,9 @@
   max-width: 100%;
   max-height: 100%;
   box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 canvas {
@@ -17,4 +20,25 @@ canvas {
   width: auto;
   height: auto;
   object-fit: contain;
+}
+
+/* Landscape mode - constrain by height */
+@media (orientation: landscape) and (max-height: 600px) {
+  .canvas-wrapper {
+    max-height: calc(100vh - 150px); /* Leave space for UI elements */
+    max-width: calc(100vh - 150px); /* Keep it square */
+  }
+
+  canvas {
+    max-height: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Very short landscape screens */
+@media (orientation: landscape) and (max-height: 450px) {
+  .canvas-wrapper {
+    max-height: calc(100vh - 100px);
+    max-width: calc(100vh - 100px);
+  }
 }

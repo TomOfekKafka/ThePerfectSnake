@@ -151,3 +151,78 @@ h1 {
     max-width: 100%;
   }
 }
+
+/* Landscape mode - height is the limiting factor */
+@media (orientation: landscape) and (max-height: 600px) {
+  body {
+    align-items: flex-start;
+    padding-top: 5px;
+  }
+
+  .app {
+    padding: 5px;
+    max-height: 100vh;
+  }
+
+  .game-container {
+    gap: 5px;
+    max-height: 100vh;
+  }
+
+  h1 {
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+  }
+
+  .score {
+    font-size: 0.9rem;
+  }
+
+  .message {
+    margin: 5px 0;
+    font-size: 0.9rem;
+  }
+
+  .start-button {
+    padding: 8px 16px;
+    font-size: 14px;
+    margin-top: 5px;
+  }
+
+  .instructions {
+    font-size: 0.8rem;
+    margin-top: 5px;
+  }
+
+  .mobile-controls {
+    margin-top: 5px;
+    gap: 5px;
+  }
+
+  .control-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+}
+
+/* Very short landscape screens */
+@media (orientation: landscape) and (max-height: 450px) {
+  h1 {
+    font-size: 1rem;
+    margin-bottom: 3px;
+  }
+
+  .score {
+    font-size: 0.85rem;
+  }
+
+  .start-button {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .instructions {
+    font-size: 0.75rem;
+  }
+}
