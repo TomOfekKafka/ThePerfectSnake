@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PlatformMessage, GameMessage, Direction } from '../types/messages';
+import { GAME_VERSION } from '../version';
 
 export type { Direction };
 
@@ -206,6 +207,7 @@ export function useSnakeGame() {
         gameStarted: gameState.gameStarted,
         gameOver: gameState.gameOver,
         score: gameState.score,
+        version: GAME_VERSION,
         timestamp: Date.now()
       };
 
@@ -218,6 +220,7 @@ export function useSnakeGame() {
     if (isEmbedded && window.parent) {
       const readyMessage: GameMessage = {
         type: 'GAME_READY',
+        version: GAME_VERSION,
         timestamp: Date.now()
       };
 

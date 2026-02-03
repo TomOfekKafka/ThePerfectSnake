@@ -22,11 +22,13 @@ export interface GameStateUpdate {
   gameStarted: boolean;
   gameOver: boolean;
   score: number;
+  version: number;
   timestamp: number;
 }
 
 export interface GameReadyMessage {
   type: 'GAME_READY';
+  version: number;
   timestamp: number;
 }
 

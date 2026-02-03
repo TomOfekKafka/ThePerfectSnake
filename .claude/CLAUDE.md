@@ -65,13 +65,14 @@ Make ONE dramatic, bold, IMMEDIATELY OBVIOUS visual improvement to the game.
 
 ## Workflow
 
-1. **Read Architecture** - Read `.claude/ARCHITECTURE.md` to understand constraints
-2. **Explore** - Read key CSS files to understand current styling
-3. **Plan** - Decide on a dramatic visual change that won't break API
-4. **Implement** - Make bold CSS/visual changes
-5. **Test** - Run `npm test` to verify visual safety and API (REQUIRED)
-6. **Verify Build** - Run `npm run build` to check compilation (REQUIRED)
-7. **Finish** - Say "DONE" when build and tests pass
+1. **Increment Version** - Open `src/version.ts` and increment `GAME_VERSION` by 1 (REQUIRED FIRST STEP)
+2. **Read Architecture** - Read `.claude/ARCHITECTURE.md` to understand constraints
+3. **Explore** - Read key CSS files to understand current styling
+4. **Plan** - Decide on a dramatic visual change that won't break API
+5. **Implement** - Make bold CSS/visual changes
+6. **Test** - Run `npm test` to verify visual safety and API (REQUIRED)
+7. **Verify Build** - Run `npm run build` to check compilation (REQUIRED)
+8. **Finish** - Say "DONE" when build and tests pass
 
 ## Testing Requirements
 
@@ -109,12 +110,13 @@ Make ONE dramatic, bold, IMMEDIATELY OBVIOUS visual improvement to the game.
 ## Quick Safety Check
 
 Before committing, verify:
+- [ ] **Version number incremented** in `src/version.ts`
 - [ ] `npm test` passes (including visual safety tests)
 - [ ] Game renders in canvas and is visible
 - [ ] Canvas not spinning or severely transformed
 - [ ] Platform can send START_GAME command
 - [ ] Platform can send DIRECTION_CHANGE commands
-- [ ] Game sends GAME_STATE updates
+- [ ] Game sends GAME_STATE updates (including version)
 - [ ] `npm run build` succeeds
 - [ ] No TypeScript errors
 - [ ] No console errors when embedded

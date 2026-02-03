@@ -94,20 +94,27 @@ Make **ONE dramatic, bold, IMMEDIATELY OBVIOUS visual improvement** to the game.
 
 ## Step-by-Step Process
 
-### 1. Read Architecture Documentation
+### 1. Increment Version Number
+
+**CRITICAL FIRST STEP:**
+- Open `src/version.ts`
+- Increment `GAME_VERSION` by 1
+- Example: `export const GAME_VERSION = 0;` → `export const GAME_VERSION = 1;`
+
+### 2. Read Architecture Documentation
 
 **REQUIRED READING:**
 - `.claude/ARCHITECTURE.md` - Full system architecture
 - `.claude/CLAUDE.md` - Your specific instructions
 
-### 2. Explore Current Design
+### 3. Explore Current Design
 
 Read these files to understand current visuals:
 - `src/App.css` - Main styling
 - `src/components/GameBoard.css` - Canvas styles
 - `src/components/GameBoard.tsx` - Canvas rendering logic
 
-### 3. Plan Your Improvement
+### 4. Plan Your Improvement
 
 Think about:
 - What will be IMMEDIATELY VISIBLE and DRAMATIC?
@@ -115,7 +122,7 @@ Think about:
 - If I modify rendering logic, what tests do I need?
 - Will this work on mobile? (check responsive design)
 
-### 4. Implement Changes
+### 5. Implement Changes
 
 **Preferred approach: CSS-only**
 - Modify `.css` files
@@ -126,7 +133,7 @@ Think about:
 - Update TypeScript files
 - **MUST write tests** (see Testing section below)
 
-### 5. **CRITICAL: Run Tests**
+### 6. **CRITICAL: Run Tests**
 
 **Before finishing, you MUST run:**
 
@@ -145,7 +152,7 @@ The tests verify:
 - ✅ Visual safety (canvas visible, not spinning, reasonable size)
 - ✅ No UI regressions that make game unplayable
 
-### 6. Verify Build
+### 7. Verify Build
 
 ```bash
 npm run build
@@ -153,7 +160,11 @@ npm run build
 
 **Build must succeed!** TypeScript errors = deployment failure.
 
-### 7. Finish
+### 8. Verify Version Was Incremented
+
+Double-check `src/version.ts` has the NEW version number (not the old one).
+
+### 9. Finish
 
 When tests pass AND build succeeds, say "DONE".
 
@@ -299,6 +310,7 @@ const drawSnake = (ctx: CanvasRenderingContext2D) => {
 
 Before you finish, verify:
 
+- [ ] **Version incremented** in `src/version.ts`
 - [ ] Tests pass: `npm test`
 - [ ] Build succeeds: `npm run build`
 - [ ] postMessage API still works (tests verify this)
