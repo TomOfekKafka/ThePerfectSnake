@@ -6,7 +6,7 @@
 
 body {
   font-family: Arial, sans-serif;
-  background: #f0f0f0;
+  background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0a0a0f 100%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -29,39 +29,46 @@ body {
 
 h1 {
   font-size: 2rem;
-  color: #333;
+  color: #00ff88;
   margin-bottom: 10px;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
 }
 
 .score {
   font-size: 1.2rem;
-  color: #666;
+  color: #00cc6a;
+  text-shadow: 0 0 5px rgba(0, 204, 106, 0.3);
 }
 
 .message {
   margin: 10px 0;
-  color: #333;
+  color: #8888aa;
 }
 
 .game-over {
-  color: #d00;
+  color: #ff0066;
   font-weight: bold;
   font-size: 1.2rem;
+  text-shadow: 0 0 10px rgba(255, 0, 102, 0.5);
 }
 
 .start-button {
   padding: 12px 24px;
   font-size: 16px;
-  background: #fff;
-  color: #333;
-  border: 1px solid #ccc;
+  background: transparent;
+  color: #00ff88;
+  border: 2px solid #00ff88;
   border-radius: 4px;
   cursor: pointer;
   margin-top: 10px;
+  text-shadow: 0 0 5px rgba(0, 255, 136, 0.3);
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+  transition: all 0.3s ease;
 }
 
 .start-button:hover {
-  background: #e0e0e0;
+  background: rgba(0, 255, 136, 0.1);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
 }
 
 /* Mobile controls */
@@ -82,27 +89,30 @@ h1 {
   width: 50px;
   height: 50px;
   font-size: 20px;
-  background: #fff;
-  color: #333;
-  border: 1px solid #ccc;
+  background: transparent;
+  color: #00ff88;
+  border: 2px solid #00ff88;
   border-radius: 4px;
   cursor: pointer;
   user-select: none;
+  transition: all 0.2s ease;
 }
 
 .control-btn:active {
-  background: #e0e0e0;
+  background: rgba(0, 255, 136, 0.2);
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
 }
 
 .control-btn:disabled {
-  background: #f5f5f5;
-  color: #aaa;
+  background: transparent;
+  color: #444;
+  border-color: #444;
   cursor: not-allowed;
 }
 
 .instructions {
   text-align: center;
-  color: #888;
+  color: #666688;
   font-size: 0.9rem;
   margin-top: 10px;
 }
