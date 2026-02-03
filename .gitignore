@@ -32,3 +32,5 @@ claude-output.json
 
 # Platform repo (separate repository)
 perfect-snake-platform/
+.env.check
+.env.prod-check

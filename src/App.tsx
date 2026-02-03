@@ -56,25 +56,29 @@ function App() {
   return (
     <div className="app">
       <div className="game-container">
-        <h1>Snake Game</h1>
+        {/* When embedded, platform handles UI. When standalone, show basic UI */}
+        {!isEmbedded && (
+          <>
+            <h1>Snake Game</h1>
+            <div className="score">Score: {gameState.score}</div>
 
-        <div className="score">Score: {gameState.score}</div>
+            {!gameState.gameStarted && (
+              <div className="message">
+                <button className="start-button" onClick={resetGame}>
+                  Start Game
+                </button>
+              </div>
+            )}
 
-        {!gameState.gameStarted && (
-          <div className="message">
-            <button className="start-button" onClick={resetGame}>
-              Start Game
-            </button>
-          </div>
-        )}
-
-        {gameState.gameOver && (
-          <div className="message game-over">
-            <div>Game Over!</div>
-            <button className="start-button" onClick={resetGame}>
-              Play Again
-            </button>
-          </div>
+            {gameState.gameOver && (
+              <div className="message game-over">
+                <div>Game Over!</div>
+                <button className="start-button" onClick={resetGame}>
+                  Play Again
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         <GameBoard gameState={gameState} gridSize={gridSize} />
