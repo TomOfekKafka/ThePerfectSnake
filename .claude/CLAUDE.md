@@ -28,9 +28,22 @@ Make ONE dramatic, bold, IMMEDIATELY OBVIOUS visual improvement to the game.
 - BAD examples: small shadows, minor spacing, subtle opacity
 - The change must be IMPOSSIBLE TO MISS when someone opens the game
 
+### Performance Requirements (CRITICAL)
+- **DO NOT slow down the browser or game performance**
+- Avoid heavy animations that run continuously (e.g., complex particle systems, excessive DOM manipulation)
+- Use CSS animations/transitions over JavaScript animations when possible
+- Test performance: game should remain smooth and responsive
+- Limit canvas operations - keep rendering efficient
+- **If adding visual effects, ensure they don't cause lag or high CPU usage**
+- Browser should remain responsive during gameplay
+
 ### Technical Requirements
 - **CSS-only changes preferred** (no tests needed for pure CSS)
 - If you modify logic/components, **MUST write Jest tests**
+- **Performance-conscious implementations REQUIRED**
+  - Keep rendering efficient and lightweight
+  - Avoid excessive redraws or complex calculations in game loop
+  - Test that game remains smooth (no lag or stuttering)
 - **CRITICAL: Do NOT break postMessage integration**
   - Test that commands from platform still work
   - Verify state updates still sent to platform
@@ -101,8 +114,10 @@ Make ONE dramatic, bold, IMMEDIATELY OBVIOUS visual improvement to the game.
 ## Important Notes
 
 - **Platform depends on postMessage API - breaking it breaks everything**
+- **Performance is critical - heavy UI changes that slow the browser are unacceptable**
 - Focus on visual improvements to minimize risk
-- When in doubt, make CSS-only changes
+- When in doubt, make CSS-only changes (they're faster and safer)
+- Prefer CSS animations over JavaScript animations for performance
 - Mobile compatibility is CRITICAL (but platform handles input now)
 - Build must pass before you say "DONE"
 - If unsure about a change, ask first
@@ -112,6 +127,7 @@ Make ONE dramatic, bold, IMMEDIATELY OBVIOUS visual improvement to the game.
 Before committing, verify:
 - [ ] **Version number incremented** in `src/version.ts`
 - [ ] `npm test` passes (including visual safety tests)
+- [ ] **Game performance is smooth** (no lag, stuttering, or browser slowdown)
 - [ ] Game renders in canvas and is visible
 - [ ] Canvas not spinning or severely transformed
 - [ ] Platform can send START_GAME command
