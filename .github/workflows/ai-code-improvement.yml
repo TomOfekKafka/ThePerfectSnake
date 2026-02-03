@@ -48,8 +48,8 @@ jobs:
           export PATH="$HOME/.claude/bin:$PATH"
 
           # Run Claude Code with our instructions
-          claude -p "Make a dramatic visual improvement to The Perfect Snake game. Follow the instructions in .claude/CLAUDE.md carefully." \
-            --allowedTools "Read,Write,Edit,Bash(npm run build),Bash(npm test -- --passWithNoTests)" \
+          claude -p "Make a dramatic visual improvement to The Perfect Snake game. Follow the instructions in .claude/CLAUDE.md carefully. IMPORTANT: Run 'npm test' before finishing to verify you haven't broken the postMessage API!" \
+            --allowedTools "Read,Write,Edit,Bash(npm run build),Bash(npm test)" \
             --max-turns 25 \
             --max-budget-usd 15.00 \
             --output-format json \
@@ -73,6 +73,13 @@ jobs:
           echo "Claude Code total cost: \$$claude_total (includes caching)"
           echo "Direct API cost (displayed): \$$cost (input + output only)"
           echo "cost=$cost" >> $GITHUB_OUTPUT
+
+      - name: Run tests to verify changes
+        run: npm test
+        continue-on-error: false
+
+      - name: Verify build after changes
+        run: npm run build
 
       - name: Write deployment metadata
         env:
