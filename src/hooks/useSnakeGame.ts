@@ -32,8 +32,7 @@ export function useSnakeGame() {
   });
 
   const directionRef = useRef<Direction>('RIGHT');
-  const nextDirectionRef = useRef<Direction>('RIGHT'); // Next direction to apply
-  const directionChangedRef = useRef<boolean>(false); // Track if direction already changed this tick
+  const directionQueueRef = useRef<Direction[]>([]); // Queue of pending direction changes
   const gameLoopRef = useRef<number>();
 
   // Detect if game is embedded in platform iframe
@@ -63,9 +62,12 @@ export function useSnakeGame() {
     setGameState(prev => {
       if (prev.gameOver || !prev.gameStarted) return prev;
 
-      // Apply next direction change (only one per tick)
-      directionRef.current = nextDirectionRef.current;
-      directionChangedRef.current = false; // Allow new direction changes after this tick
+      // Process next queued direction if available
+      if (directionQueueRef.current.length > 0) {
+        const nextDirection = directionQueueRef.current.shift()!;
+        directionRef.current = nextDirection;
+        console.log('🎮 Applied queued direction:', nextDirection, 'Queue length:', directionQueueRef.current.length);
+      }
 
       const head = prev.snake[0];
       const direction = directionRef.current;
@@ -225,8 +227,7 @@ export function useSnakeGame() {
 
   const resetGame = () => {
     directionRef.current = 'RIGHT';
-    nextDirectionRef.current = 'RIGHT'; // Reset next direction too
-    directionChangedRef.current = false; // Reset direction change flag
+    directionQueueRef.current = []; // Clear the queue
     const newSnake = INITIAL_SNAKE;
     setGameState({
       snake: newSnake,
@@ -241,27 +242,38 @@ export function useSnakeGame() {
   const changeDirection = useCallback((newDirection: Direction) => {
     if (!gameState.gameStarted || gameState.gameOver) return;
 
-    // Only allow ONE direction change per game tick
-    // This prevents rapid keypresses from queueing multiple changes
-    if (directionChangedRef.current) {
-      console.log('⚠️ Direction change ignored - already changed this tick');
+    // Get the last direction in the queue, or current direction if queue is empty
+    const lastQueuedDirection = directionQueueRef.current.length > 0
+      ? directionQueueRef.current[directionQueueRef.current.length - 1]
+      : directionRef.current;
+
+    // Validate against the last queued direction to prevent 180-degree turns
+    const isValidMove =
+      (newDirection === 'UP' && lastQueuedDirection !== 'DOWN') ||
+      (newDirection === 'DOWN' && lastQueuedDirection !== 'UP') ||
+      (newDirection === 'LEFT' && lastQueuedDirection !== 'RIGHT') ||
+      (newDirection === 'RIGHT' && lastQueuedDirection !== 'LEFT');
+
+    if (!isValidMove) {
+      console.log('❌ Invalid move - would reverse direction');
       return;
     }
 
-    // Check against the NEXT direction (what will be applied), not current
-    // This prevents 180-degree turns
-    const directionToCheck = nextDirectionRef.current;
-
-    if (
-      (newDirection === 'UP' && directionToCheck !== 'DOWN') ||
-      (newDirection === 'DOWN' && directionToCheck !== 'UP') ||
-      (newDirection === 'LEFT' && directionToCheck !== 'RIGHT') ||
-      (newDirection === 'RIGHT' && directionToCheck !== 'LEFT')
-    ) {
-      nextDirectionRef.current = newDirection;
-      directionChangedRef.current = true; // Block further changes until next tick
-      console.log('✅ Direction queued:', newDirection);
+    // Don't queue duplicate directions
+    if (newDirection === lastQueuedDirection) {
+      console.log('⚠️ Duplicate direction ignored');
+      return;
     }
+
+    // Limit queue size to 3 to prevent building up too many moves
+    if (directionQueueRef.current.length >= 3) {
+      console.log('⚠️ Queue full - ignoring input');
+      return;
+    }
+
+    // Add to queue
+    directionQueueRef.current.push(newDirection);
+    console.log('✅ Direction queued:', newDirection, 'Queue:', directionQueueRef.current);
   }, [gameState.gameStarted, gameState.gameOver]);
 
   return {
