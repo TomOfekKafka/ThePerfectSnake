@@ -32,6 +32,7 @@ export function useSnakeGame() {
   });
 
   const directionRef = useRef<Direction>('RIGHT');
+  const nextDirectionRef = useRef<Direction>('RIGHT'); // Next direction to apply
   const gameLoopRef = useRef<number>();
 
   // Detect if game is embedded in platform iframe
@@ -60,6 +61,9 @@ export function useSnakeGame() {
   const moveSnake = useCallback(() => {
     setGameState(prev => {
       if (prev.gameOver || !prev.gameStarted) return prev;
+
+      // Apply next direction change (only one per tick)
+      directionRef.current = nextDirectionRef.current;
 
       const head = prev.snake[0];
       const direction = directionRef.current;
@@ -219,6 +223,7 @@ export function useSnakeGame() {
 
   const resetGame = () => {
     directionRef.current = 'RIGHT';
+    nextDirectionRef.current = 'RIGHT'; // Reset next direction too
     const newSnake = INITIAL_SNAKE;
     setGameState({
       snake: newSnake,
@@ -232,15 +237,18 @@ export function useSnakeGame() {
 
   const changeDirection = useCallback((newDirection: Direction) => {
     if (!gameState.gameStarted || gameState.gameOver) return;
-    const currentDirection = directionRef.current;
+
+    // Check against the NEXT direction (what will be applied), not current
+    // This prevents rapid keypresses from causing 180-degree turns
+    const directionToCheck = nextDirectionRef.current;
 
     if (
-      (newDirection === 'UP' && currentDirection !== 'DOWN') ||
-      (newDirection === 'DOWN' && currentDirection !== 'UP') ||
-      (newDirection === 'LEFT' && currentDirection !== 'RIGHT') ||
-      (newDirection === 'RIGHT' && currentDirection !== 'LEFT')
+      (newDirection === 'UP' && directionToCheck !== 'DOWN') ||
+      (newDirection === 'DOWN' && directionToCheck !== 'UP') ||
+      (newDirection === 'LEFT' && directionToCheck !== 'RIGHT') ||
+      (newDirection === 'RIGHT' && directionToCheck !== 'LEFT')
     ) {
-      directionRef.current = newDirection;
+      nextDirectionRef.current = newDirection;
     }
   }, [gameState.gameStarted, gameState.gameOver]);
 
