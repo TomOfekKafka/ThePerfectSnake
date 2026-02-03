@@ -33,6 +33,7 @@ export function useSnakeGame() {
 
   const directionRef = useRef<Direction>('RIGHT');
   const nextDirectionRef = useRef<Direction>('RIGHT'); // Next direction to apply
+  const directionChangedRef = useRef<boolean>(false); // Track if direction already changed this tick
   const gameLoopRef = useRef<number>();
 
   // Detect if game is embedded in platform iframe
@@ -64,6 +65,7 @@ export function useSnakeGame() {
 
       // Apply next direction change (only one per tick)
       directionRef.current = nextDirectionRef.current;
+      directionChangedRef.current = false; // Allow new direction changes after this tick
 
       const head = prev.snake[0];
       const direction = directionRef.current;
@@ -224,6 +226,7 @@ export function useSnakeGame() {
   const resetGame = () => {
     directionRef.current = 'RIGHT';
     nextDirectionRef.current = 'RIGHT'; // Reset next direction too
+    directionChangedRef.current = false; // Reset direction change flag
     const newSnake = INITIAL_SNAKE;
     setGameState({
       snake: newSnake,
@@ -238,8 +241,15 @@ export function useSnakeGame() {
   const changeDirection = useCallback((newDirection: Direction) => {
     if (!gameState.gameStarted || gameState.gameOver) return;
 
+    // Only allow ONE direction change per game tick
+    // This prevents rapid keypresses from queueing multiple changes
+    if (directionChangedRef.current) {
+      console.log('⚠️ Direction change ignored - already changed this tick');
+      return;
+    }
+
     // Check against the NEXT direction (what will be applied), not current
-    // This prevents rapid keypresses from causing 180-degree turns
+    // This prevents 180-degree turns
     const directionToCheck = nextDirectionRef.current;
 
     if (
@@ -249,6 +259,8 @@ export function useSnakeGame() {
       (newDirection === 'RIGHT' && directionToCheck !== 'LEFT')
     ) {
       nextDirectionRef.current = newDirection;
+      directionChangedRef.current = true; // Block further changes until next tick
+      console.log('✅ Direction queued:', newDirection);
     }
   }, [gameState.gameStarted, gameState.gameOver]);
 
