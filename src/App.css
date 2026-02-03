@@ -4,6 +4,10 @@
   box-sizing: border-box;
 }
 
+html, body {
+  overflow: hidden; /* Prevent scrollbars */
+}
+
 body {
   font-family: Arial, sans-serif;
   background: #f0f0f0;
