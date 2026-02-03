@@ -386,6 +386,7 @@ Your improvement is successful when:
 - `src/types/messages.ts` (breaks platform)
 - postMessage listeners/senders
 - Embedded mode detection
+- `.baseline/` directory (frozen v0 reference - NEVER TOUCH)
 
 ---
 
