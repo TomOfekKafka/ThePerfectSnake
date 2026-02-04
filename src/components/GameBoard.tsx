@@ -26,10 +26,15 @@ interface Particle {
   maxLife: number;
   size: number;
   color: string;
-  type: 'ambient' | 'explosion' | 'trail' | 'matrix' | 'lightning' | 'streak' | 'warp';
+  type: 'ambient' | 'explosion' | 'trail' | 'matrix' | 'lightning' | 'streak' | 'warp' | 'star' | 'shootingStar' | 'fire' | 'vortex' | 'prism';
   char?: string;
   angle?: number;
   length?: number;
+  twinklePhase?: number;
+  brightness?: number;
+  hue?: number;
+  orbitRadius?: number;
+  orbitSpeed?: number;
 }
 
 interface ScorePopup {
@@ -93,6 +98,9 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   const warpIntensityRef = useRef(0);
   const plasmaWavesRef = useRef<PlasmaWave[]>([]);
   const plasmaTimeRef = useRef(0);
+  const starsRef = useRef<Particle[]>([]);
+  const deathVortexRef = useRef<{ active: boolean; x: number; y: number; rotation: number; scale: number }>({ active: false, x: 0, y: 0, rotation: 0, scale: 0 });
+  const energyCorePhaseRef = useRef(0);
 
   // Create explosion particles at a position
   const createExplosion = useCallback((x: number, y: number, count: number, colors: string[]) => {
@@ -199,6 +207,81 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     particlesRef.current = [...particlesRef.current, ...electricParticles];
   }, []);
 
+  // Create fire trail particles behind snake
+  const createFireTrail = useCallback((x: number, y: number, intensity: number) => {
+    const fireParticles: Particle[] = [];
+    const count = Math.floor(2 + intensity * 3);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.5 + Math.random() * 1.5;
+      const hue = 20 + Math.random() * 40; // Orange to yellow range
+      fireParticles.push({
+        x: x + (Math.random() - 0.5) * 10,
+        y: y + (Math.random() - 0.5) * 10,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.5, // Fire rises
+        life: 1,
+        maxLife: 1,
+        size: 4 + Math.random() * 6,
+        color: `hsl(${hue}, 100%, 50%)`,
+        type: 'fire',
+        hue,
+      });
+    }
+    particlesRef.current = [...particlesRef.current, ...fireParticles];
+  }, []);
+
+  // Create prism/holographic particles around food
+  const createPrismParticles = useCallback((x: number, y: number) => {
+    const prismParticles: Particle[] = [];
+    for (let i = 0; i < 3; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 15 + Math.random() * 10;
+      prismParticles.push({
+        x: x + Math.cos(angle) * radius,
+        y: y + Math.sin(angle) * radius,
+        vx: 0,
+        vy: 0,
+        life: 1,
+        maxLife: 1,
+        size: 2 + Math.random() * 3,
+        color: '#ffffff',
+        type: 'prism',
+        hue: Math.random() * 360,
+        orbitRadius: radius,
+        orbitSpeed: 0.02 + Math.random() * 0.03,
+        angle,
+      });
+    }
+    particlesRef.current = [...particlesRef.current, ...prismParticles];
+  }, []);
+
+  // Create death vortex effect
+  const createDeathVortex = useCallback((x: number, y: number) => {
+    deathVortexRef.current = { active: true, x, y, rotation: 0, scale: 0 };
+    // Create vortex particles
+    const vortexParticles: Particle[] = [];
+    for (let i = 0; i < 24; i++) {
+      const angle = (Math.PI * 2 * i) / 24;
+      const radius = 30 + Math.random() * 50;
+      vortexParticles.push({
+        x: x + Math.cos(angle) * radius,
+        y: y + Math.sin(angle) * radius,
+        vx: 0,
+        vy: 0,
+        life: 1,
+        maxLife: 1,
+        size: 3 + Math.random() * 4,
+        color: COLORS.neonPink,
+        type: 'vortex',
+        angle,
+        orbitRadius: radius,
+        orbitSpeed: 0.15 + Math.random() * 0.1,
+      });
+    }
+    particlesRef.current = [...particlesRef.current, ...vortexParticles];
+  }, []);
+
   // Initialize plasma waves
   useEffect(() => {
     const waves: PlasmaWave[] = [];
@@ -221,6 +304,34 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
       });
     }
     plasmaWavesRef.current = waves;
+  }, [gridSize]);
+
+  // Initialize cosmic star field
+  useEffect(() => {
+    const width = gridSize * CELL_SIZE;
+    const height = gridSize * CELL_SIZE;
+    const stars: Particle[] = [];
+
+    // Create layered star field with different depths
+    for (let i = 0; i < 60; i++) {
+      const depth = Math.random();
+      const brightness = 0.3 + depth * 0.7;
+      stars.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: 0,
+        vy: 0,
+        life: 1,
+        maxLife: 1,
+        size: 0.5 + depth * 2,
+        color: '#ffffff',
+        type: 'star',
+        twinklePhase: Math.random() * Math.PI * 2,
+        brightness,
+      });
+    }
+
+    starsRef.current = stars;
   }, [gridSize]);
 
   // Initialize ambient and matrix particles
@@ -279,7 +390,7 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     prevFoodRef.current = { ...gameState.food };
   }, [gameState.food, createExplosion, createLightning, createScorePopup]);
 
-  // Track snake movement for streak effects
+  // Track snake movement for streak effects and fire trails
   useEffect(() => {
     const head = gameState.snake[0];
     if (!head) return;
@@ -297,13 +408,25 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
         const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
         createStreaks(headX, headY, normalizedDx, normalizedDy);
+
+        // Create fire trail based on snake length (longer snake = more intense fire)
+        const intensity = Math.min(gameState.snake.length / 10, 1);
+        if (intensity > 0.2) {
+          // Fire on tail segments
+          for (let i = Math.max(1, gameState.snake.length - 3); i < gameState.snake.length; i++) {
+            const seg = gameState.snake[i];
+            const segX = seg.x * CELL_SIZE + CELL_SIZE / 2;
+            const segY = seg.y * CELL_SIZE + CELL_SIZE / 2;
+            createFireTrail(segX, segY, intensity * 0.5);
+          }
+        }
       }
     }
 
     prevSnakeHeadRef.current = { ...head };
-  }, [gameState.snake, createStreaks]);
+  }, [gameState.snake, createStreaks, createFireTrail]);
 
-  // Detect game over and create death explosion with screen shake
+  // Detect game over and create death explosion with screen shake and vortex
   useEffect(() => {
     if (gameState.gameOver && !prevGameOverRef.current) {
       gameOverFrameRef.current = 0;
@@ -313,10 +436,15 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
         const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
         createExplosion(headX, headY, 32, [COLORS.particleMagenta, '#ff0000', '#ff6600', COLORS.neonPink]);
+        createDeathVortex(headX, headY);
       }
     }
+    if (!gameState.gameOver && prevGameOverRef.current) {
+      // Reset vortex on game restart
+      deathVortexRef.current = { active: false, x: 0, y: 0, rotation: 0, scale: 0 };
+    }
     prevGameOverRef.current = gameState.gameOver;
-  }, [gameState.gameOver, gameState.snake, createExplosion]);
+  }, [gameState.gameOver, gameState.snake, createExplosion, createDeathVortex]);
 
   // Animation loop for pulsing effects
   useEffect(() => {
@@ -354,6 +482,41 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
       warpIntensityRef.current *= 0.97;
       // Update plasma time
       plasmaTimeRef.current += 1;
+      // Update energy core phase
+      energyCorePhaseRef.current += 0.15;
+      // Update star twinkle
+      starsRef.current = starsRef.current.map(star => ({
+        ...star,
+        twinklePhase: (star.twinklePhase || 0) + 0.08,
+      }));
+      // Update death vortex
+      if (deathVortexRef.current.active) {
+        deathVortexRef.current.rotation += 0.15;
+        deathVortexRef.current.scale = Math.min(deathVortexRef.current.scale + 0.05, 1);
+      }
+      // Occasionally spawn shooting star
+      if (Math.random() > 0.98 && !gameState.gameOver) {
+        const width = gridSize * CELL_SIZE;
+        particlesRef.current.push({
+          x: Math.random() * width,
+          y: -10,
+          vx: (Math.random() - 0.5) * 2,
+          vy: 4 + Math.random() * 3,
+          life: 1,
+          maxLife: 1,
+          size: 2,
+          color: '#ffffff',
+          type: 'shootingStar',
+          length: 20 + Math.random() * 30,
+          angle: Math.PI / 2 + (Math.random() - 0.5) * 0.5,
+        });
+      }
+      // Create prism particles around food periodically
+      if (animationFrame % 10 === 0) {
+        const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
+        const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
+        createPrismParticles(foodX, foodY);
+      }
     }, 33); // ~30fps for smoother animations
     return () => clearInterval(interval);
   }, [gameState.gameOver]);
@@ -430,6 +593,56 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
             life: p.life - 0.06,
             length: (p.length || 30) * 0.98,
           };
+        } else if (p.type === 'fire') {
+          // Fire particles rise and fade
+          return {
+            ...p,
+            x: p.x + p.vx + (Math.random() - 0.5) * 0.5,
+            y: p.y + p.vy,
+            vy: p.vy - 0.05, // Accelerate upward
+            life: p.life - 0.04,
+            size: p.size * 0.96,
+            hue: (p.hue || 30) + 2, // Shift from orange to yellow as it fades
+          };
+        } else if (p.type === 'shootingStar') {
+          // Shooting stars fall diagonally
+          return {
+            ...p,
+            x: p.x + p.vx,
+            y: p.y + p.vy,
+            life: p.life - 0.02,
+            length: (p.length || 20) * 0.98,
+          };
+        } else if (p.type === 'vortex') {
+          // Vortex particles spiral inward
+          const vortex = deathVortexRef.current;
+          if (vortex.active) {
+            const newRadius = (p.orbitRadius || 50) * 0.97;
+            const newAngle = (p.angle || 0) + (p.orbitSpeed || 0.1);
+            return {
+              ...p,
+              x: vortex.x + Math.cos(newAngle) * newRadius,
+              y: vortex.y + Math.sin(newAngle) * newRadius,
+              angle: newAngle,
+              orbitRadius: newRadius,
+              life: p.life - 0.015,
+            };
+          }
+          return { ...p, life: 0 };
+        } else if (p.type === 'prism') {
+          // Prism particles orbit around food
+          const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
+          const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
+          const newAngle = (p.angle || 0) + (p.orbitSpeed || 0.02);
+          const radius = p.orbitRadius || 15;
+          return {
+            ...p,
+            x: foodX + Math.cos(newAngle) * radius,
+            y: foodY + Math.sin(newAngle) * radius,
+            angle: newAngle,
+            hue: ((p.hue || 0) + 3) % 360,
+            life: p.life - 0.02,
+          };
         } else {
           // Explosion particles decay
           return {
@@ -474,6 +687,69 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     bgGradient.addColorStop(1, COLORS.bgDark);
     ctx.fillStyle = bgGradient;
     ctx.fillRect(-10, -10, width + 20, height + 20);
+
+    // Draw cosmic star field (behind everything)
+    starsRef.current.forEach((star) => {
+      const twinkle = Math.sin(star.twinklePhase || 0) * 0.5 + 0.5;
+      const alpha = (star.brightness || 0.5) * (0.5 + twinkle * 0.5);
+      const size = star.size * (0.8 + twinkle * 0.4);
+
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, size, 0, Math.PI * 2);
+
+      // Star gradient for depth
+      const starGradient = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, size * 2);
+      starGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+      starGradient.addColorStop(0.5, `rgba(200, 220, 255, ${alpha * 0.5})`);
+      starGradient.addColorStop(1, 'transparent');
+      ctx.fillStyle = starGradient;
+      ctx.fill();
+
+      // Add subtle cross flare on brighter stars
+      if ((star.brightness || 0) > 0.7) {
+        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.3})`;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(star.x - size * 3, star.y);
+        ctx.lineTo(star.x + size * 3, star.y);
+        ctx.moveTo(star.x, star.y - size * 3);
+        ctx.lineTo(star.x, star.y + size * 3);
+        ctx.stroke();
+      }
+    });
+
+    // Draw shooting stars
+    particlesRef.current.forEach((p) => {
+      if (p.type === 'shootingStar') {
+        const angle = p.angle || Math.PI / 2;
+        const length = (p.length || 20) * p.life;
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(angle);
+
+        const gradient = ctx.createLinearGradient(0, 0, -length, 0);
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${p.life})`);
+        gradient.addColorStop(0.2, `rgba(200, 230, 255, ${p.life * 0.7})`);
+        gradient.addColorStop(1, 'transparent');
+
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = p.size;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-length, 0);
+        ctx.stroke();
+
+        // Bright head
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size * 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${p.life})`;
+        ctx.fill();
+
+        ctx.restore();
+      }
+    });
 
     // Draw plasma/aurora wave effect
     const plasmaTime = plasmaTimeRef.current;
@@ -663,6 +939,54 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
       }
     });
 
+    // Draw fire trail particles
+    particlesRef.current.forEach((p) => {
+      if (p.type === 'fire') {
+        const hue = p.hue || 30;
+        const alpha = p.life * 0.8;
+
+        // Fire glow
+        const fireGlow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
+        fireGlow.addColorStop(0, `hsla(${hue}, 100%, 70%, ${alpha})`);
+        fireGlow.addColorStop(0.4, `hsla(${hue}, 100%, 50%, ${alpha * 0.6})`);
+        fireGlow.addColorStop(1, 'transparent');
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+        ctx.fillStyle = fireGlow;
+        ctx.fill();
+
+        // Inner bright core
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${hue + 20}, 100%, 90%, ${alpha})`;
+        ctx.fill();
+      }
+    });
+
+    // Draw prism/holographic particles around food
+    particlesRef.current.forEach((p) => {
+      if (p.type === 'prism') {
+        const hue = p.hue || 0;
+        const alpha = p.life * 0.9;
+
+        // Rainbow glow
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+
+        const prismGradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
+        prismGradient.addColorStop(0, `hsla(${hue}, 100%, 80%, ${alpha})`);
+        prismGradient.addColorStop(0.5, `hsla(${(hue + 60) % 360}, 100%, 60%, ${alpha * 0.5})`);
+        prismGradient.addColorStop(1, 'transparent');
+
+        ctx.fillStyle = prismGradient;
+        ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    });
+
     // Draw hyperdrive warp effect overlay when intensity is high
     if (warpIntensityRef.current > 0.1) {
       const warpAlpha = warpIntensityRef.current * 0.15;
@@ -779,6 +1103,53 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     ctx.fillStyle = `rgba(255, 255, 255, ${0.5 + fastPulse * 0.3})`;
     ctx.fill();
 
+    // HOLOGRAPHIC SHIMMER EFFECT - Rainbow prism overlay on food
+    const shimmerPhase = animationFrame * 0.08;
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+
+    // Multiple rotating shimmer bands
+    for (let band = 0; band < 5; band++) {
+      const bandAngle = shimmerPhase + (band / 5) * Math.PI * 2;
+      const bandHue = (animationFrame * 3 + band * 72) % 360;
+      const bandWidth = foodRadius * 0.4;
+
+      ctx.save();
+      ctx.translate(foodX, foodY);
+      ctx.rotate(bandAngle);
+
+      // Create shimmer gradient
+      const shimmerGradient = ctx.createLinearGradient(-foodRadius, 0, foodRadius, 0);
+      shimmerGradient.addColorStop(0, 'transparent');
+      shimmerGradient.addColorStop(0.3, `hsla(${bandHue}, 100%, 70%, 0.15)`);
+      shimmerGradient.addColorStop(0.5, `hsla(${bandHue}, 100%, 80%, 0.25)`);
+      shimmerGradient.addColorStop(0.7, `hsla(${(bandHue + 30) % 360}, 100%, 70%, 0.15)`);
+      shimmerGradient.addColorStop(1, 'transparent');
+
+      ctx.fillStyle = shimmerGradient;
+      ctx.fillRect(-foodRadius, -bandWidth / 2, foodRadius * 2, bandWidth);
+
+      ctx.restore();
+    }
+
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+
+    // Outer holographic ring
+    ctx.beginPath();
+    ctx.arc(foodX, foodY, foodRadius + 4 + pulse * 2, 0, Math.PI * 2);
+    const holoRingGradient = ctx.createLinearGradient(
+      foodX - foodRadius - 5, foodY,
+      foodX + foodRadius + 5, foodY
+    );
+    const ringHue = (animationFrame * 5) % 360;
+    holoRingGradient.addColorStop(0, `hsla(${ringHue}, 100%, 60%, 0.3)`);
+    holoRingGradient.addColorStop(0.5, `hsla(${(ringHue + 180) % 360}, 100%, 70%, 0.4)`);
+    holoRingGradient.addColorStop(1, `hsla(${(ringHue + 90) % 360}, 100%, 60%, 0.3)`);
+    ctx.strokeStyle = holoRingGradient;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
     // Draw snake trail effect (glowing path behind snake)
     const snakeLength = gameState.snake.length;
     if (snakeLength > 1) {
@@ -844,6 +1215,56 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         ctx.beginPath();
         ctx.arc(x, y, radius + 4, 0, Math.PI * 2);
         ctx.fill();
+
+        // ENERGY CORE - Pulsing plasma core effect inside the head
+        const corePhase = energyCorePhaseRef.current;
+        const coreSize = radius * 0.4;
+        const corePulse = Math.sin(corePhase) * 0.3 + 0.7;
+
+        // Core outer energy ring
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(corePhase * 0.5);
+
+        // Rotating energy arcs
+        for (let arc = 0; arc < 3; arc++) {
+          const arcAngle = (arc / 3) * Math.PI * 2 + corePhase;
+          const arcAlpha = 0.4 + Math.sin(corePhase + arc) * 0.2;
+
+          ctx.beginPath();
+          ctx.arc(0, 0, coreSize * (1.2 + arc * 0.15), arcAngle, arcAngle + Math.PI * 0.8);
+          ctx.strokeStyle = `rgba(0, 255, 200, ${arcAlpha})`;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        ctx.restore();
+
+        // Core center - bright plasma ball
+        const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, coreSize * corePulse);
+        coreGradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+        coreGradient.addColorStop(0.3, 'rgba(0, 255, 200, 0.7)');
+        coreGradient.addColorStop(0.6, 'rgba(0, 200, 255, 0.4)');
+        coreGradient.addColorStop(1, 'transparent');
+
+        ctx.beginPath();
+        ctx.arc(x, y, coreSize * corePulse, 0, Math.PI * 2);
+        ctx.fillStyle = coreGradient;
+        ctx.fill();
+
+        // Core sparkle highlights
+        const sparkleCount = 4;
+        for (let s = 0; s < sparkleCount; s++) {
+          const sparkleAngle = (s / sparkleCount) * Math.PI * 2 + corePhase * 2;
+          const sparkleR = coreSize * 0.5 * corePulse;
+          const sx = x + Math.cos(sparkleAngle) * sparkleR;
+          const sy = y + Math.sin(sparkleAngle) * sparkleR;
+
+          ctx.beginPath();
+          ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+          ctx.fill();
+        }
       }
 
       // Body segment glow with rainbow wave
@@ -1060,6 +1481,78 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     if (gameState.gameOver) {
       const deathProgress = Math.min(gameOverFrameRef.current / 30, 1);
       const easeOut = 1 - Math.pow(1 - deathProgress, 3);
+
+      // DEATH VORTEX EFFECT - Swirling spiral of doom
+      const vortex = deathVortexRef.current;
+      if (vortex.active) {
+        ctx.save();
+        ctx.translate(vortex.x, vortex.y);
+
+        // Outer vortex spiral arms
+        const armCount = 6;
+        for (let arm = 0; arm < armCount; arm++) {
+          const armAngle = (arm / armCount) * Math.PI * 2 + vortex.rotation;
+
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+
+          // Draw spiral arm
+          for (let t = 0; t <= 1; t += 0.02) {
+            const spiralAngle = armAngle + t * Math.PI * 3;
+            const spiralRadius = t * 100 * vortex.scale;
+            const sx = Math.cos(spiralAngle) * spiralRadius;
+            const sy = Math.sin(spiralAngle) * spiralRadius;
+            ctx.lineTo(sx, sy);
+          }
+
+          const armHue = (arm / armCount) * 60 + 330; // Red to magenta range
+          ctx.strokeStyle = `hsla(${armHue % 360}, 100%, 50%, ${0.5 * vortex.scale})`;
+          ctx.lineWidth = 3 * vortex.scale;
+          ctx.stroke();
+        }
+
+        // Inner vortex glow
+        const vortexGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 50 * vortex.scale);
+        vortexGlow.addColorStop(0, `rgba(255, 0, 100, ${0.8 * vortex.scale})`);
+        vortexGlow.addColorStop(0.3, `rgba(150, 0, 200, ${0.5 * vortex.scale})`);
+        vortexGlow.addColorStop(0.6, `rgba(50, 0, 100, ${0.3 * vortex.scale})`);
+        vortexGlow.addColorStop(1, 'transparent');
+
+        ctx.beginPath();
+        ctx.arc(0, 0, 50 * vortex.scale, 0, Math.PI * 2);
+        ctx.fillStyle = vortexGlow;
+        ctx.fill();
+
+        // Center singularity
+        ctx.beginPath();
+        ctx.arc(0, 0, 8 * vortex.scale, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(0, 0, 0, ${0.9 * vortex.scale})`;
+        ctx.fill();
+
+        // White event horizon ring
+        ctx.beginPath();
+        ctx.arc(0, 0, 10 * vortex.scale, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.7 * vortex.scale})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      // Draw vortex particles spiraling inward
+      particlesRef.current.forEach((p) => {
+        if (p.type === 'vortex') {
+          const hue = (p.angle || 0) * 30 + 330;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+
+          const pGradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * p.life);
+          pGradient.addColorStop(0, `hsla(${hue % 360}, 100%, 70%, ${p.life})`);
+          pGradient.addColorStop(1, 'transparent');
+          ctx.fillStyle = pGradient;
+          ctx.fill();
+        }
+      });
 
       // Expanding shockwave from death point
       const deathHead = gameState.snake[0];
