@@ -26,8 +26,18 @@ interface Particle {
   maxLife: number;
   size: number;
   color: string;
-  type: 'ambient' | 'explosion' | 'trail' | 'matrix' | 'lightning';
+  type: 'ambient' | 'explosion' | 'trail' | 'matrix' | 'lightning' | 'streak' | 'warp';
   char?: string;
+  angle?: number;
+  length?: number;
+}
+
+interface ScorePopup {
+  x: number;
+  y: number;
+  value: number;
+  life: number;
+  scale: number;
 }
 
 const CELL_SIZE = 20;
@@ -69,6 +79,9 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   const prevGameOverRef = useRef(false);
   const screenShakeRef = useRef({ x: 0, y: 0, intensity: 0 });
   const lightningRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const scorePopupsRef = useRef<ScorePopup[]>([]);
+  const prevSnakeHeadRef = useRef<Position | null>(null);
+  const warpIntensityRef = useRef(0);
 
   // Create explosion particles at a position
   const createExplosion = useCallback((x: number, y: number, count: number, colors: string[]) => {
@@ -89,6 +102,67 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
       });
     }
     particlesRef.current = [...particlesRef.current, ...newParticles];
+  }, []);
+
+  // Create energy streak particles behind snake
+  const createStreaks = useCallback((x: number, y: number, dx: number, dy: number) => {
+    const streakParticles: Particle[] = [];
+    const colors = [COLORS.neonBlue, COLORS.neonPurple, COLORS.electricBlue, COLORS.particleCyan];
+
+    // Create multiple streaks at different offsets
+    for (let i = 0; i < 4; i++) {
+      const offsetX = (Math.random() - 0.5) * 8;
+      const offsetY = (Math.random() - 0.5) * 8;
+      const angle = Math.atan2(-dy, -dx) + (Math.random() - 0.5) * 0.4;
+      const speed = 1.5 + Math.random() * 2;
+
+      streakParticles.push({
+        x: x + offsetX,
+        y: y + offsetY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        maxLife: 1,
+        size: 2 + Math.random() * 3,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        type: 'streak',
+        angle: angle,
+        length: 15 + Math.random() * 20,
+      });
+    }
+
+    // Occasional warp burst particles
+    if (Math.random() > 0.7) {
+      for (let i = 0; i < 3; i++) {
+        const warpAngle = Math.atan2(-dy, -dx) + (Math.random() - 0.5) * 0.8;
+        streakParticles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(warpAngle) * 4,
+          vy: Math.sin(warpAngle) * 4,
+          life: 1,
+          maxLife: 1,
+          size: 1 + Math.random() * 2,
+          color: '#ffffff',
+          type: 'warp',
+          length: 30 + Math.random() * 20,
+          angle: warpAngle,
+        });
+      }
+    }
+
+    particlesRef.current = [...particlesRef.current, ...streakParticles];
+  }, []);
+
+  // Create score popup animation
+  const createScorePopup = useCallback((x: number, y: number, value: number) => {
+    scorePopupsRef.current.push({
+      x,
+      y,
+      value,
+      life: 1,
+      scale: 0,
+    });
   }, []);
 
   // Create lightning effect at position
@@ -154,7 +228,7 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     particlesRef.current = particles;
   }, [gridSize]);
 
-  // Detect food eaten and create explosion with lightning
+  // Detect food eaten and create explosion with lightning and score popup
   useEffect(() => {
     if (prevFoodRef.current &&
         (prevFoodRef.current.x !== gameState.food.x || prevFoodRef.current.y !== gameState.food.y)) {
@@ -163,9 +237,36 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
       const foodY = prevFoodRef.current.y * CELL_SIZE + CELL_SIZE / 2;
       createExplosion(foodX, foodY, 20, [COLORS.particleMagenta, COLORS.particleGold, COLORS.foodOuter, COLORS.neonPink]);
       createLightning(foodX, foodY);
+      createScorePopup(foodX, foodY, 10);
+      // Boost warp intensity when eating food
+      warpIntensityRef.current = Math.min(warpIntensityRef.current + 0.5, 1);
     }
     prevFoodRef.current = { ...gameState.food };
-  }, [gameState.food, createExplosion, createLightning]);
+  }, [gameState.food, createExplosion, createLightning, createScorePopup]);
+
+  // Track snake movement for streak effects
+  useEffect(() => {
+    const head = gameState.snake[0];
+    if (!head) return;
+
+    if (prevSnakeHeadRef.current) {
+      const dx = head.x - prevSnakeHeadRef.current.x;
+      const dy = head.y - prevSnakeHeadRef.current.y;
+
+      // Handle wrapping
+      const normalizedDx = dx > 1 ? -1 : dx < -1 ? 1 : dx;
+      const normalizedDy = dy > 1 ? -1 : dy < -1 ? 1 : dy;
+
+      // Only create streaks if snake moved
+      if (normalizedDx !== 0 || normalizedDy !== 0) {
+        const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+        const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+        createStreaks(headX, headY, normalizedDx, normalizedDy);
+      }
+    }
+
+    prevSnakeHeadRef.current = { ...head };
+  }, [gameState.snake, createStreaks]);
 
   // Detect game over and create death explosion with screen shake
   useEffect(() => {
@@ -205,6 +306,17 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
           lightningRef.current = null;
         }
       }
+      // Update score popups
+      scorePopupsRef.current = scorePopupsRef.current
+        .map((popup) => ({
+          ...popup,
+          life: popup.life - 0.025,
+          y: popup.y - 1.5,
+          scale: Math.min(popup.scale + 0.15, 1),
+        }))
+        .filter((popup) => popup.life > 0);
+      // Decay warp intensity
+      warpIntensityRef.current *= 0.97;
     }, 33); // ~30fps for smoother animations
     return () => clearInterval(interval);
   }, [gameState.gameOver]);
@@ -258,6 +370,28 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
             vy: p.vy * 0.85,
             life: p.life - 0.08,
             size: p.size * 0.95,
+          };
+        } else if (p.type === 'streak') {
+          // Energy streak particles trail behind and fade
+          return {
+            ...p,
+            x: p.x + p.vx,
+            y: p.y + p.vy,
+            vx: p.vx * 0.92,
+            vy: p.vy * 0.92,
+            life: p.life - 0.04,
+            length: (p.length || 20) * 0.95,
+          };
+        } else if (p.type === 'warp') {
+          // Warp particles stretch and fade quickly
+          return {
+            ...p,
+            x: p.x + p.vx,
+            y: p.y + p.vy,
+            vx: p.vx * 0.88,
+            vy: p.vy * 0.88,
+            life: p.life - 0.06,
+            length: (p.length || 30) * 0.98,
           };
         } else {
           // Explosion particles decay
@@ -360,6 +494,94 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         ctx.fill();
       }
     });
+
+    // Draw energy streak and warp particles (behind snake)
+    particlesRef.current.forEach((p) => {
+      if (p.type === 'streak' || p.type === 'warp') {
+        const angle = p.angle || 0;
+        const length = (p.length || 20) * p.life;
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(angle);
+
+        // Create gradient for streak
+        const streakGradient = ctx.createLinearGradient(0, 0, -length, 0);
+
+        if (p.type === 'warp') {
+          // Warp particles are bright white/cyan
+          streakGradient.addColorStop(0, `rgba(255, 255, 255, ${p.life * 0.9})`);
+          streakGradient.addColorStop(0.3, `rgba(0, 240, 255, ${p.life * 0.6})`);
+          streakGradient.addColorStop(1, 'transparent');
+          ctx.lineWidth = p.size * 0.8;
+        } else {
+          // Energy streaks with color
+          streakGradient.addColorStop(0, p.color.replace(')', `, ${p.life * 0.8})`).replace('#', 'rgba(').replace(/([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i, (_m, r, g, b) =>
+            `${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)}`
+          ));
+          streakGradient.addColorStop(0.4, p.color.replace(')', `, ${p.life * 0.4})`).replace('#', 'rgba(').replace(/([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i, (_m, r, g, b) =>
+            `${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)}`
+          ));
+          streakGradient.addColorStop(1, 'transparent');
+          ctx.lineWidth = p.size;
+        }
+
+        ctx.strokeStyle = streakGradient;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-length, 0);
+        ctx.stroke();
+
+        // Add glow effect
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = p.type === 'warp' ? 15 : 8;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.restore();
+      }
+    });
+
+    // Draw hyperdrive warp effect overlay when intensity is high
+    if (warpIntensityRef.current > 0.1) {
+      const warpAlpha = warpIntensityRef.current * 0.15;
+      const head = gameState.snake[0];
+      if (head) {
+        const hx = head.x * CELL_SIZE + CELL_SIZE / 2;
+        const hy = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+        // Radial speed lines emanating from center
+        ctx.save();
+        ctx.translate(hx, hy);
+
+        for (let i = 0; i < 16; i++) {
+          const lineAngle = (i / 16) * Math.PI * 2 + animationFrame * 0.02;
+          const innerR = 30 + Math.sin(animationFrame * 0.1 + i) * 10;
+          const outerR = 80 + warpIntensityRef.current * 60;
+
+          const gradient = ctx.createLinearGradient(
+            Math.cos(lineAngle) * innerR,
+            Math.sin(lineAngle) * innerR,
+            Math.cos(lineAngle) * outerR,
+            Math.sin(lineAngle) * outerR
+          );
+          gradient.addColorStop(0, 'transparent');
+          gradient.addColorStop(0.3, `rgba(0, 200, 255, ${warpAlpha})`);
+          gradient.addColorStop(0.7, `rgba(100, 100, 255, ${warpAlpha * 0.5})`);
+          gradient.addColorStop(1, 'transparent');
+
+          ctx.strokeStyle = gradient;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(lineAngle) * innerR, Math.sin(lineAngle) * innerR);
+          ctx.lineTo(Math.cos(lineAngle) * outerR, Math.sin(lineAngle) * outerR);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+    }
 
     // Pulsing animation values
     const pulse = (Math.sin(animationFrame * 0.1) + 1) / 2;
@@ -683,6 +905,35 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
       }
+    });
+
+    // Draw score popups
+    scorePopupsRef.current.forEach((popup) => {
+      const easeOut = 1 - Math.pow(1 - popup.scale, 3);
+      const bounceScale = easeOut * (1 + Math.sin(popup.life * Math.PI * 3) * 0.1 * popup.life);
+
+      ctx.save();
+      ctx.translate(popup.x, popup.y);
+      ctx.scale(bounceScale, bounceScale);
+
+      // Text glow
+      ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Outer glow layers
+      ctx.shadowColor = COLORS.particleGold;
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = `rgba(255, 221, 0, ${popup.life})`;
+      ctx.fillText(`+${popup.value}`, 0, 0);
+
+      // Inner bright text
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = `rgba(255, 255, 255, ${popup.life})`;
+      ctx.fillText(`+${popup.value}`, 0, 0);
+
+      ctx.shadowBlur = 0;
+      ctx.restore();
     });
 
     // Game over overlay effect with dramatic animation
