@@ -47,6 +47,30 @@ interface TrailParticle {
   hue: number;
 }
 
+// Electric arc particle around snake head
+interface ArcParticle {
+  angle: number;
+  length: number;
+  width: number;
+  speed: number;
+  branches: number;
+}
+
+// Shockwave effect when eating food
+interface Shockwave {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  alpha: number;
+}
+
+// Lightning bolt point
+interface LightningPoint {
+  x: number;
+  y: number;
+}
+
 // Sparkle for food effect
 interface Sparkle {
   angle: number;
@@ -57,6 +81,7 @@ interface Sparkle {
 
 const NUM_BG_PARTICLES = 30;
 const NUM_SPARKLES = 6;
+const NUM_ARC_PARTICLES = 8;
 
 // Initialize background particles
 function createBackgroundParticles(width: number, height: number): Particle[] {
@@ -89,6 +114,59 @@ function createSparkles(): Sparkle[] {
   return sparkles;
 }
 
+// Initialize electric arc particles around snake head
+function createArcParticles(): ArcParticle[] {
+  const arcs: ArcParticle[] = [];
+  for (let i = 0; i < NUM_ARC_PARTICLES; i++) {
+    arcs.push({
+      angle: (i / NUM_ARC_PARTICLES) * Math.PI * 2,
+      length: 12 + Math.random() * 8,
+      width: 1 + Math.random() * 1.5,
+      speed: 2 + Math.random() * 3,
+      branches: Math.floor(Math.random() * 3) + 1,
+    });
+  }
+  return arcs;
+}
+
+// Generate lightning bolt path between two points
+function generateLightningPath(
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  segments: number,
+  displacement: number
+): LightningPoint[] {
+  const points: LightningPoint[] = [{ x: startX, y: startY }];
+
+  const dx = endX - startX;
+  const dy = endY - startY;
+
+  for (let i = 1; i < segments; i++) {
+    const t = i / segments;
+    const baseX = startX + dx * t;
+    const baseY = startY + dy * t;
+
+    // Add random perpendicular displacement
+    const perpX = -dy;
+    const perpY = dx;
+    const len = Math.sqrt(perpX * perpX + perpY * perpY);
+    const normalizedPerpX = len > 0 ? perpX / len : 0;
+    const normalizedPerpY = len > 0 ? perpY / len : 0;
+
+    const offset = (Math.random() - 0.5) * displacement * (1 - t * 0.5);
+
+    points.push({
+      x: baseX + normalizedPerpX * offset,
+      y: baseY + normalizedPerpY * offset,
+    });
+  }
+
+  points.push({ x: endX, y: endY });
+  return points;
+}
+
 export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
@@ -96,7 +174,10 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   const bgParticlesRef = useRef<Particle[]>([]);
   const trailParticlesRef = useRef<TrailParticle[]>([]);
   const sparklesRef = useRef<Sparkle[]>([]);
+  const arcParticlesRef = useRef<ArcParticle[]>([]);
+  const shockwavesRef = useRef<Shockwave[]>([]);
   const lastSnakeHeadRef = useRef<Position | null>(null);
+  const lastScoreRef = useRef<number>(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -112,6 +193,25 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     if (sparklesRef.current.length === 0) {
       sparklesRef.current = createSparkles();
     }
+    if (arcParticlesRef.current.length === 0) {
+      arcParticlesRef.current = createArcParticles();
+    }
+
+    // Detect food eaten (snake length increased = score increased)
+    const currentScore = gameState.snake.length;
+    if (currentScore > lastScoreRef.current && lastScoreRef.current > 0) {
+      // Food was eaten! Create shockwave at food position
+      const foodCenterX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
+      const foodCenterY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
+      shockwavesRef.current.push({
+        x: foodCenterX,
+        y: foodCenterY,
+        radius: 5,
+        maxRadius: 80,
+        alpha: 1,
+      });
+    }
+    lastScoreRef.current = currentScore;
 
     // Add trail particles when snake moves
     const currentHead = gameState.snake[0];
@@ -147,7 +247,9 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         timestamp,
         bgParticlesRef.current,
         trailParticlesRef.current,
-        sparklesRef.current
+        sparklesRef.current,
+        arcParticlesRef.current,
+        shockwavesRef.current
       );
       animationId = requestAnimationFrame(animate);
     };
@@ -248,6 +350,208 @@ function drawTrailParticles(
     ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
     ctx.fill();
   }
+  ctx.shadowBlur = 0;
+}
+
+// Draw shockwave effects
+function drawShockwaves(
+  ctx: CanvasRenderingContext2D,
+  shockwaves: Shockwave[]
+) {
+  for (let i = shockwaves.length - 1; i >= 0; i--) {
+    const sw = shockwaves[i];
+
+    // Expand and fade
+    sw.radius += 4;
+    sw.alpha = 1 - (sw.radius / sw.maxRadius);
+
+    if (sw.radius >= sw.maxRadius) {
+      shockwaves.splice(i, 1);
+      continue;
+    }
+
+    // Draw multiple rings for dramatic effect
+    for (let ring = 0; ring < 3; ring++) {
+      const ringRadius = sw.radius - ring * 8;
+      if (ringRadius <= 0) continue;
+
+      const ringAlpha = sw.alpha * (1 - ring * 0.3);
+      const hue = 340 + ring * 20; // Pink to magenta
+
+      ctx.strokeStyle = `hsla(${hue}, 100%, 70%, ${ringAlpha})`;
+      ctx.lineWidth = 3 - ring;
+      ctx.shadowColor = `hsla(${hue}, 100%, 50%, ${ringAlpha})`;
+      ctx.shadowBlur = 15;
+
+      ctx.beginPath();
+      ctx.arc(sw.x, sw.y, ringRadius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Inner flash
+    if (sw.alpha > 0.7) {
+      const flashGradient = ctx.createRadialGradient(
+        sw.x, sw.y, 0,
+        sw.x, sw.y, sw.radius * 0.5
+      );
+      flashGradient.addColorStop(0, `rgba(255, 255, 255, ${sw.alpha * 0.5})`);
+      flashGradient.addColorStop(1, 'rgba(255, 100, 200, 0)');
+      ctx.fillStyle = flashGradient;
+      ctx.beginPath();
+      ctx.arc(sw.x, sw.y, sw.radius * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.shadowBlur = 0;
+}
+
+// Draw lightning bolts between snake segments
+function drawLightning(
+  ctx: CanvasRenderingContext2D,
+  snake: Position[],
+  time: number
+) {
+  if (snake.length < 2) return;
+
+  // Only draw lightning occasionally for flickering effect
+  const flicker = Math.sin(time / 30) * Math.sin(time / 47) * Math.sin(time / 23);
+  if (flicker < 0.3) return;
+
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // Draw lightning between consecutive segments
+  for (let i = 0; i < Math.min(snake.length - 1, 6); i++) {
+    const current = snake[i];
+    const next = snake[i + 1];
+
+    const startX = current.x * CELL_SIZE + CELL_SIZE / 2;
+    const startY = current.y * CELL_SIZE + CELL_SIZE / 2;
+    const endX = next.x * CELL_SIZE + CELL_SIZE / 2;
+    const endY = next.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Generate jagged lightning path
+    const segments = 4 + Math.floor(Math.random() * 3);
+    const displacement = 6 + i * 2;
+    const points = generateLightningPath(startX, startY, endX, endY, segments, displacement);
+
+    // Intensity decreases along the snake
+    const intensity = 1 - (i / 8);
+    const alpha = 0.6 * intensity * (flicker * 0.5 + 0.5);
+
+    // Draw outer glow
+    ctx.strokeStyle = `rgba(0, 255, 200, ${alpha * 0.3})`;
+    ctx.lineWidth = 6;
+    ctx.shadowColor = 'rgba(0, 255, 200, 0.8)';
+    ctx.shadowBlur = 15;
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let j = 1; j < points.length; j++) {
+      ctx.lineTo(points[j].x, points[j].y);
+    }
+    ctx.stroke();
+
+    // Draw bright core
+    ctx.strokeStyle = `rgba(200, 255, 255, ${alpha})`;
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 10;
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let j = 1; j < points.length; j++) {
+      ctx.lineTo(points[j].x, points[j].y);
+    }
+    ctx.stroke();
+
+    // White hot center
+    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let j = 1; j < points.length; j++) {
+      ctx.lineTo(points[j].x, points[j].y);
+    }
+    ctx.stroke();
+  }
+
+  ctx.shadowBlur = 0;
+}
+
+// Draw electric arcs emanating from the snake head
+function drawElectricArcs(
+  ctx: CanvasRenderingContext2D,
+  head: Position,
+  arcs: ArcParticle[],
+  time: number
+) {
+  const centerX = head.x * CELL_SIZE + CELL_SIZE / 2;
+  const centerY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+  ctx.lineCap = 'round';
+
+  for (const arc of arcs) {
+    // Rotate and pulse the arc angle
+    const currentAngle = arc.angle + time / 500 * arc.speed;
+    const pulseLength = arc.length + Math.sin(time / 100 + arc.angle) * 4;
+
+    // Flicker effect
+    const flicker = Math.sin(time / 20 + arc.angle * 5) * 0.5 + 0.5;
+    if (flicker < 0.3) continue;
+
+    const alpha = flicker * 0.7;
+
+    // Generate branching lightning from head
+    const startX = centerX + Math.cos(currentAngle) * 8;
+    const startY = centerY + Math.sin(currentAngle) * 8;
+    const endX = centerX + Math.cos(currentAngle) * (8 + pulseLength);
+    const endY = centerY + Math.sin(currentAngle) * (8 + pulseLength);
+
+    const points = generateLightningPath(startX, startY, endX, endY, 3, 4);
+
+    // Outer glow
+    ctx.strokeStyle = `rgba(0, 255, 180, ${alpha * 0.4})`;
+    ctx.lineWidth = arc.width * 3;
+    ctx.shadowColor = 'rgba(0, 255, 200, 0.9)';
+    ctx.shadowBlur = 12;
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let j = 1; j < points.length; j++) {
+      ctx.lineTo(points[j].x, points[j].y);
+    }
+    ctx.stroke();
+
+    // Bright core
+    ctx.strokeStyle = `rgba(180, 255, 255, ${alpha})`;
+    ctx.lineWidth = arc.width;
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let j = 1; j < points.length; j++) {
+      ctx.lineTo(points[j].x, points[j].y);
+    }
+    ctx.stroke();
+
+    // Draw branches
+    for (let b = 0; b < arc.branches; b++) {
+      const branchStart = points[Math.floor(points.length / 2)];
+      const branchAngle = currentAngle + (Math.random() - 0.5) * 1.5;
+      const branchLength = pulseLength * 0.4;
+      const branchEndX = branchStart.x + Math.cos(branchAngle) * branchLength;
+      const branchEndY = branchStart.y + Math.sin(branchAngle) * branchLength;
+
+      ctx.strokeStyle = `rgba(0, 255, 200, ${alpha * 0.5})`;
+      ctx.lineWidth = 1;
+
+      ctx.beginPath();
+      ctx.moveTo(branchStart.x, branchStart.y);
+      ctx.lineTo(branchEndX, branchEndY);
+      ctx.stroke();
+    }
+  }
+
   ctx.shadowBlur = 0;
 }
 
@@ -526,7 +830,9 @@ function render(
   time: number,
   bgParticles: Particle[],
   trailParticles: TrailParticle[],
-  sparkles: Sparkle[]
+  sparkles: Sparkle[],
+  arcParticles: ArcParticle[],
+  shockwaves: Shockwave[]
 ) {
   // Clear canvas with dark background
   ctx.fillStyle = COLORS.background;
@@ -541,12 +847,21 @@ function render(
   // Draw trail particles (behind snake)
   drawTrailParticles(ctx, trailParticles);
 
+  // Draw shockwave effects (behind snake)
+  drawShockwaves(ctx, shockwaves);
+
   // Draw snake (back to front so head is on top)
   const snakeLength = state.snake.length;
   for (let i = snakeLength - 1; i >= 0; i--) {
     const segment = state.snake[i];
     drawSnakeSegment(ctx, segment.x, segment.y, i === 0, i, snakeLength, time);
   }
+
+  // Draw lightning effects between snake segments
+  drawLightning(ctx, state.snake, time);
+
+  // Draw electric arcs from snake head
+  drawElectricArcs(ctx, state.snake[0], arcParticles, time);
 
   // Draw food with animation and sparkles
   drawFood(ctx, state.food, time, sparkles);
