@@ -1,49 +1,11 @@
 .canvas-wrapper {
-  padding: 4px;
-  border: 2px solid #00ff88;
-  border-radius: 8px;
-  background: #0a0a0f;
-  overflow: hidden;
-  max-width: 100%;
-  max-height: 100%;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-shadow:
-    0 0 20px rgba(0, 255, 136, 0.3),
-    0 0 40px rgba(0, 255, 136, 0.1),
-    inset 0 0 30px rgba(0, 255, 136, 0.05);
+  padding: 2px;
+  border: 2px solid #999;
+  border-radius: 4px;
+  background: #fff;
 }
 
 canvas {
   display: block;
-  background: #0a0a0f;
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  border-radius: 4px;
-}
-
-/* Landscape mode - constrain by height */
-@media (orientation: landscape) and (max-height: 600px) {
-  .canvas-wrapper {
-    max-height: calc(100vh - 150px); /* Leave space for UI elements */
-    max-width: calc(100vh - 150px); /* Keep it square */
-  }
-
-  canvas {
-    max-height: 100%;
-    max-width: 100%;
-  }
-}
-
-/* Very short landscape screens */
-@media (orientation: landscape) and (max-height: 450px) {
-  .canvas-wrapper {
-    max-height: calc(100vh - 100px);
-    max-width: calc(100vh - 100px);
-  }
+  background: #fff;
 }

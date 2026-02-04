@@ -10,7 +10,7 @@ function App() {
     return (
       <div className="app">
         <div className="game-container">
-          <GameBoard gameState={gameState} gridSize={gridSize} gameOver={gameState.gameOver} />
+          <GameBoard gameState={gameState} gridSize={gridSize} />
         </div>
       </div>
     );
@@ -40,7 +40,7 @@ function App() {
           </div>
         )}
 
-        <GameBoard gameState={gameState} gridSize={gridSize} gameOver={gameState.gameOver} />
+        <GameBoard gameState={gameState} gridSize={gridSize} />
 
         <MobileControls
           onDirection={changeDirection}
