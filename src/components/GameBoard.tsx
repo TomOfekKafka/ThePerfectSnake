@@ -28,6 +28,65 @@ const COLORS = {
   foodCore: '#ff3388',
 };
 
+// Rainbow hue calculation for chromatic snake effect
+function getRainbowHue(index: number, totalLength: number, time: number): number {
+  const baseHue = (time / 20) % 360; // Slowly rotating base hue
+  const segmentHue = (index / Math.max(totalLength, 1)) * 120; // Spread across 120 degrees
+  const waveHue = Math.sin(time / 300 + index * 0.5) * 30; // Wave effect
+  return (baseHue + segmentHue + waveHue) % 360;
+}
+
+// Energy crown particle around snake head
+interface CrownParticle {
+  angle: number;
+  height: number;
+  speed: number;
+  phase: number;
+}
+
+// Plasma wave for background
+interface PlasmaWave {
+  x: number;
+  y: number;
+  radius: number;
+  hue: number;
+  speed: number;
+  phase: number;
+}
+
+const NUM_CROWN_PARTICLES = 12;
+const NUM_PLASMA_WAVES = 5;
+
+// Initialize crown particles
+function createCrownParticles(): CrownParticle[] {
+  const particles: CrownParticle[] = [];
+  for (let i = 0; i < NUM_CROWN_PARTICLES; i++) {
+    particles.push({
+      angle: (i / NUM_CROWN_PARTICLES) * Math.PI * 2,
+      height: 8 + Math.random() * 6,
+      speed: 1 + Math.random() * 2,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+  return particles;
+}
+
+// Initialize plasma waves for aurora background
+function createPlasmaWaves(width: number, height: number): PlasmaWave[] {
+  const waves: PlasmaWave[] = [];
+  for (let i = 0; i < NUM_PLASMA_WAVES; i++) {
+    waves.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      radius: 60 + Math.random() * 80,
+      hue: Math.random() * 360,
+      speed: 0.3 + Math.random() * 0.5,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+  return waves;
+}
+
 // Particle system for background ambiance
 interface Particle {
   x: number;
@@ -111,6 +170,119 @@ const NUM_BG_PARTICLES = 30;
 const NUM_SPARKLES = 6;
 const NUM_ARC_PARTICLES = 8;
 const NUM_DEATH_PARTICLES = 50;
+
+// Draw plasma aurora waves in background
+function drawPlasmaWaves(
+  ctx: CanvasRenderingContext2D,
+  waves: PlasmaWave[],
+  width: number,
+  height: number,
+  time: number
+) {
+  ctx.globalCompositeOperation = 'screen';
+
+  for (const wave of waves) {
+    // Slowly move waves
+    wave.x += Math.sin(time / 2000 + wave.phase) * wave.speed;
+    wave.y += Math.cos(time / 2500 + wave.phase) * wave.speed * 0.7;
+
+    // Wrap around edges
+    if (wave.x < -wave.radius) wave.x = width + wave.radius;
+    if (wave.x > width + wave.radius) wave.x = -wave.radius;
+    if (wave.y < -wave.radius) wave.y = height + wave.radius;
+    if (wave.y > height + wave.radius) wave.y = -wave.radius;
+
+    // Shift hue over time
+    const hue = (wave.hue + time / 50) % 360;
+    const pulseAlpha = Math.sin(time / 1000 + wave.phase) * 0.03 + 0.06;
+    const pulseRadius = wave.radius + Math.sin(time / 800 + wave.phase) * 20;
+
+    // Draw gradient blob
+    const gradient = ctx.createRadialGradient(
+      wave.x, wave.y, 0,
+      wave.x, wave.y, pulseRadius
+    );
+    gradient.addColorStop(0, `hsla(${hue}, 80%, 60%, ${pulseAlpha})`);
+    gradient.addColorStop(0.4, `hsla(${(hue + 30) % 360}, 70%, 50%, ${pulseAlpha * 0.6})`);
+    gradient.addColorStop(0.7, `hsla(${(hue + 60) % 360}, 60%, 40%, ${pulseAlpha * 0.3})`);
+    gradient.addColorStop(1, 'transparent');
+
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(wave.x, wave.y, pulseRadius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// Draw energy crown around snake head
+function drawEnergyCrown(
+  ctx: CanvasRenderingContext2D,
+  head: Position,
+  crownParticles: CrownParticle[],
+  time: number,
+  snakeLength: number
+) {
+  const centerX = head.x * CELL_SIZE + CELL_SIZE / 2;
+  const centerY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+  // Crown intensity increases with snake length
+  const intensityMultiplier = Math.min(1 + snakeLength * 0.1, 3);
+
+  ctx.lineCap = 'round';
+
+  for (const particle of crownParticles) {
+    const currentAngle = particle.angle + time / 800 * particle.speed;
+    const pulseHeight = particle.height * (1 + Math.sin(time / 200 + particle.phase) * 0.4);
+    const adjustedHeight = pulseHeight * intensityMultiplier;
+
+    // Flicker effect
+    const flicker = Math.sin(time / 30 + particle.angle * 3) * 0.5 + 0.5;
+    if (flicker < 0.2) continue;
+
+    // Rainbow hue based on angle and time
+    const hue = (time / 15 + (particle.angle * 180 / Math.PI)) % 360;
+    const alpha = flicker * 0.8;
+
+    // Calculate crown spike points
+    const innerRadius = 10;
+    const outerRadius = innerRadius + adjustedHeight;
+
+    const innerX = centerX + Math.cos(currentAngle) * innerRadius;
+    const innerY = centerY + Math.sin(currentAngle) * innerRadius;
+    const outerX = centerX + Math.cos(currentAngle) * outerRadius;
+    const outerY = centerY + Math.sin(currentAngle) * outerRadius;
+
+    // Outer glow
+    ctx.strokeStyle = `hsla(${hue}, 100%, 70%, ${alpha * 0.4})`;
+    ctx.lineWidth = 4;
+    ctx.shadowColor = `hsla(${hue}, 100%, 60%, 0.8)`;
+    ctx.shadowBlur = 12;
+
+    ctx.beginPath();
+    ctx.moveTo(innerX, innerY);
+    ctx.lineTo(outerX, outerY);
+    ctx.stroke();
+
+    // Bright core
+    ctx.strokeStyle = `hsla(${hue}, 100%, 85%, ${alpha})`;
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(innerX, innerY);
+    ctx.lineTo(outerX, outerY);
+    ctx.stroke();
+
+    // White hot tip
+    ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
+    ctx.beginPath();
+    ctx.arc(outerX, outerY, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.shadowBlur = 0;
+}
 
 // Initialize background particles
 function createBackgroundParticles(width: number, height: number): Particle[] {
@@ -246,6 +418,8 @@ export function GameBoard({ gameState, gridSize, gameOver = false }: GameBoardPr
   const shakeStateRef = useRef<ShakeState>({ active: false, intensity: 0, offsetX: 0, offsetY: 0 });
   const gameOverTimeRef = useRef<number>(0);
   const wasGameOverRef = useRef<boolean>(false);
+  const crownParticlesRef = useRef<CrownParticle[]>([]);
+  const plasmaWavesRef = useRef<PlasmaWave[]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -263,6 +437,12 @@ export function GameBoard({ gameState, gridSize, gameOver = false }: GameBoardPr
     }
     if (arcParticlesRef.current.length === 0) {
       arcParticlesRef.current = createArcParticles();
+    }
+    if (crownParticlesRef.current.length === 0) {
+      crownParticlesRef.current = createCrownParticles();
+    }
+    if (plasmaWavesRef.current.length === 0) {
+      plasmaWavesRef.current = createPlasmaWaves(canvas.width, canvas.height);
     }
 
     // Detect game over transition
@@ -320,18 +500,19 @@ export function GameBoard({ gameState, gridSize, gameOver = false }: GameBoardPr
     if (lastSnakeHeadRef.current &&
         (lastSnakeHeadRef.current.x !== currentHead.x ||
          lastSnakeHeadRef.current.y !== currentHead.y)) {
-      // Add trail particle at old head position
+      // Add trail particle at old head position with rainbow hue
       const centerX = lastSnakeHeadRef.current.x * CELL_SIZE + CELL_SIZE / 2;
       const centerY = lastSnakeHeadRef.current.y * CELL_SIZE + CELL_SIZE / 2;
+      const trailHue = (timeRef.current / 20) % 360; // Rainbow trail
       trailParticlesRef.current.push({
         x: centerX + (Math.random() - 0.5) * 6,
         y: centerY + (Math.random() - 0.5) * 6,
-        alpha: 0.8,
-        size: 4 + Math.random() * 2,
-        hue: 150,
+        alpha: 0.9,
+        size: 5 + Math.random() * 3,
+        hue: trailHue,
       });
       // Keep trail manageable
-      if (trailParticlesRef.current.length > 20) {
+      if (trailParticlesRef.current.length > 25) {
         trailParticlesRef.current.shift();
       }
     }
@@ -356,7 +537,9 @@ export function GameBoard({ gameState, gridSize, gameOver = false }: GameBoardPr
         glitchStateRef.current,
         shakeStateRef.current,
         gameOver,
-        gameOverTimeRef.current
+        gameOverTimeRef.current,
+        crownParticlesRef.current,
+        plasmaWavesRef.current
       );
       animationId = requestAnimationFrame(animate);
     };
@@ -546,10 +729,13 @@ function drawLightning(
     const intensity = 1 - (i / 8);
     const alpha = 0.6 * intensity * (flicker * 0.5 + 0.5);
 
-    // Draw outer glow
-    ctx.strokeStyle = `rgba(0, 255, 200, ${alpha * 0.3})`;
+    // Rainbow hue for this lightning segment
+    const lightningHue = getRainbowHue(i, snake.length, time);
+
+    // Draw outer glow with rainbow color
+    ctx.strokeStyle = `hsla(${lightningHue}, 100%, 70%, ${alpha * 0.4})`;
     ctx.lineWidth = 6;
-    ctx.shadowColor = 'rgba(0, 255, 200, 0.8)';
+    ctx.shadowColor = `hsla(${lightningHue}, 100%, 60%, 0.9)`;
     ctx.shadowBlur = 15;
 
     ctx.beginPath();
@@ -559,8 +745,8 @@ function drawLightning(
     }
     ctx.stroke();
 
-    // Draw bright core
-    ctx.strokeStyle = `rgba(200, 255, 255, ${alpha})`;
+    // Draw bright core with shifted hue
+    ctx.strokeStyle = `hsla(${(lightningHue + 30) % 360}, 100%, 85%, ${alpha})`;
     ctx.lineWidth = 2;
     ctx.shadowBlur = 10;
 
@@ -838,25 +1024,30 @@ function drawSnakeSegment(
   const waveOffset = Math.sin(time / 150 - index * 0.5) * 0.1 + 1;
   const breathe = Math.sin(time / 300) * 0.05 + 1;
 
+  // Rainbow chromatic hue for this segment
+  const rainbowHue = getRainbowHue(index, totalLength, time);
+
   if (isHead) {
-    // Draw outer glow ring
-    ctx.shadowColor = COLORS.snakeHeadGlow;
-    ctx.shadowBlur = 20 + Math.sin(time / 200) * 5;
+    // Rainbow glow for head
+    const headHue = getRainbowHue(0, totalLength, time);
+    ctx.shadowColor = `hsla(${headHue}, 100%, 60%, 0.7)`;
+    ctx.shadowBlur = 25 + Math.sin(time / 200) * 8;
 
     // Head breathes slightly
     const headScale = breathe;
     const headSize = (CELL_SIZE - 2) * headScale;
     const headOffset = (CELL_SIZE - headSize) / 2;
 
-    // Head is larger and brighter with enhanced gradient
+    // Head with rainbow gradient
     const gradient = ctx.createRadialGradient(
       centerX - 2, centerY - 2, 0,
       centerX, centerY, radius + 4
     );
     gradient.addColorStop(0, '#ffffff');
-    gradient.addColorStop(0.2, '#aaffcc');
-    gradient.addColorStop(0.4, COLORS.snakeHead);
-    gradient.addColorStop(1, COLORS.snakeBody);
+    gradient.addColorStop(0.15, `hsla(${headHue}, 100%, 85%, 1)`);
+    gradient.addColorStop(0.4, `hsla(${headHue}, 100%, 65%, 1)`);
+    gradient.addColorStop(0.7, `hsla(${(headHue + 30) % 360}, 100%, 55%, 1)`);
+    gradient.addColorStop(1, `hsla(${(headHue + 60) % 360}, 100%, 45%, 1)`);
 
     ctx.fillStyle = gradient;
     ctx.beginPath();
@@ -869,14 +1060,15 @@ function drawSnakeSegment(
     );
     ctx.fill();
 
-    // Add inner highlight
+    // Add inner highlight with prismatic effect
     ctx.shadowBlur = 0;
     const highlightGradient = ctx.createRadialGradient(
       centerX - 3, centerY - 3, 0,
       centerX, centerY, radius
     );
-    highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
-    highlightGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
+    highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+    highlightGradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.2)');
+    highlightGradient.addColorStop(0.6, 'rgba(255, 255, 255, 0)');
     highlightGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = highlightGradient;
     ctx.beginPath();
@@ -889,7 +1081,7 @@ function drawSnakeSegment(
     );
     ctx.fill();
 
-    // Draw eyes with glow
+    // Draw eyes with glow - now with color matching
     ctx.fillStyle = '#0a0a0f';
     const eyeSize = 3;
     const eyeOffset = 4;
@@ -898,22 +1090,23 @@ function drawSnakeSegment(
     ctx.arc(centerX + eyeOffset, centerY - 2, eyeSize, 0, Math.PI * 2);
     ctx.fill();
 
-    // Eye shine with twinkle
+    // Eye shine with rainbow twinkle
     const eyeTwinkle = Math.sin(time / 100) * 0.3 + 0.7;
-    ctx.fillStyle = `rgba(255, 255, 255, ${eyeTwinkle})`;
+    const eyeHue = (headHue + 180) % 360; // Complementary color
+    ctx.fillStyle = `hsla(${eyeHue}, 100%, 90%, ${eyeTwinkle})`;
     ctx.beginPath();
     ctx.arc(centerX - eyeOffset + 1, centerY - 3, 1.5, 0, Math.PI * 2);
     ctx.arc(centerX + eyeOffset + 1, centerY - 3, 1.5, 0, Math.PI * 2);
     ctx.fill();
   } else {
-    // Body segments with wave animation and gradient fade
-    const alpha = 1 - (progress * 0.4);
-    const hue = 150 - (progress * 30); // More dramatic color shift
-    const lightness = 55 - progress * 15;
+    // Body segments with rainbow chromatic effect
+    const alpha = 1 - (progress * 0.3);
+    const saturation = 100 - progress * 20;
+    const lightness = 60 - progress * 15;
 
-    // Pulsing glow intensity
-    const glowIntensity = (8 - progress * 5) * waveOffset;
-    ctx.shadowColor = `hsla(${hue}, 100%, ${lightness}%, 0.6)`;
+    // Pulsing glow intensity with rainbow color
+    const glowIntensity = (12 - progress * 6) * waveOffset;
+    ctx.shadowColor = `hsla(${rainbowHue}, ${saturation}%, ${lightness}%, 0.7)`;
     ctx.shadowBlur = glowIntensity;
 
     // Size varies with wave
@@ -921,10 +1114,16 @@ function drawSnakeSegment(
     const segmentSize = (CELL_SIZE - 4) * segmentScale;
     const segmentOffset = (CELL_SIZE - segmentSize) / 2;
 
-    // Main segment
-    const segmentColor = `hsla(${hue}, 100%, ${lightness}%, ${alpha})`;
-    ctx.fillStyle = segmentColor;
+    // Create gradient for segment with rainbow shift
+    const segmentGradient = ctx.createRadialGradient(
+      centerX - 2, centerY - 2, 0,
+      centerX, centerY, radius + 2
+    );
+    segmentGradient.addColorStop(0, `hsla(${rainbowHue}, ${saturation}%, ${lightness + 20}%, ${alpha})`);
+    segmentGradient.addColorStop(0.5, `hsla(${rainbowHue}, ${saturation}%, ${lightness}%, ${alpha})`);
+    segmentGradient.addColorStop(1, `hsla(${(rainbowHue + 20) % 360}, ${saturation - 10}%, ${lightness - 10}%, ${alpha * 0.8})`);
 
+    ctx.fillStyle = segmentGradient;
     ctx.beginPath();
     ctx.roundRect(
       x * CELL_SIZE + segmentOffset,
@@ -935,13 +1134,14 @@ function drawSnakeSegment(
     );
     ctx.fill();
 
-    // Inner highlight on body segments
+    // Inner highlight on body segments - prismatic
     ctx.shadowBlur = 0;
     const bodyHighlight = ctx.createRadialGradient(
       centerX - 2, centerY - 2, 0,
       centerX, centerY, radius
     );
-    bodyHighlight.addColorStop(0, `rgba(255, 255, 255, ${0.15 * (1 - progress)})`);
+    bodyHighlight.addColorStop(0, `rgba(255, 255, 255, ${0.25 * (1 - progress)})`);
+    bodyHighlight.addColorStop(0.5, `rgba(255, 255, 255, ${0.1 * (1 - progress)})`);
     bodyHighlight.addColorStop(1, 'rgba(255, 255, 255, 0)');
     ctx.fillStyle = bodyHighlight;
     ctx.beginPath();
@@ -1079,7 +1279,9 @@ function render(
   glitch: GlitchState,
   shake: ShakeState,
   gameOver: boolean,
-  gameOverStartTime: number
+  gameOverStartTime: number,
+  crownParticles: CrownParticle[],
+  plasmaWaves: PlasmaWave[]
 ) {
   // Calculate game over progress (0 to 1 over 3 seconds)
   const gameOverProgress = gameOver && gameOverStartTime > 0
@@ -1118,6 +1320,9 @@ function render(
   ctx.fillStyle = COLORS.background;
   ctx.fillRect(-shake.offsetX, -shake.offsetY, width + Math.abs(shake.offsetX) * 2, height + Math.abs(shake.offsetY) * 2);
 
+  // Draw plasma aurora waves (very back layer)
+  drawPlasmaWaves(ctx, plasmaWaves, width, height, time);
+
   // Draw floating background particles (behind everything)
   drawBackgroundParticles(ctx, bgParticles, width, height, time);
 
@@ -1143,6 +1348,8 @@ function render(
   // Draw electric arcs from snake head (only if game not over)
   if (!gameOver) {
     drawElectricArcs(ctx, state.snake[0], arcParticles, time);
+    // Draw energy crown around snake head
+    drawEnergyCrown(ctx, state.snake[0], crownParticles, time, state.snake.length);
   }
 
   // Draw food with animation and sparkles
