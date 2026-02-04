@@ -26,19 +26,20 @@ interface Particle {
   maxLife: number;
   size: number;
   color: string;
-  type: 'ambient' | 'explosion' | 'trail';
+  type: 'ambient' | 'explosion' | 'trail' | 'matrix' | 'lightning';
+  char?: string;
 }
 
 const CELL_SIZE = 20;
 
-// Color palette - enhanced with more vibrant colors
+// Color palette - enhanced with dramatic neon colors
 const COLORS = {
-  bgDark: '#050510',
-  bgLight: '#0f0f2a',
+  bgDark: '#020208',
+  bgLight: '#0a0a1a',
   gridLine: 'rgba(100, 200, 255, 0.04)',
   snakeHead: '#00ff88',
   snakeHeadGlow: 'rgba(0, 255, 136, 0.8)',
-  snakeTail: '#0066ff',
+  snakeTail: '#ff00ff',
   snakeBody: '#00ddff',
   foodCore: '#ff2255',
   foodGlow: 'rgba(255, 51, 102, 0.9)',
@@ -50,7 +51,14 @@ const COLORS = {
   particleCyan: '#00ddff',
   particleMagenta: '#ff3388',
   particleGold: '#ffdd00',
+  neonPink: '#ff0080',
+  neonBlue: '#00f0ff',
+  neonPurple: '#8000ff',
+  electricBlue: '#00ffff',
 };
+
+// Matrix-style characters
+const MATRIX_CHARS = '01アイウエオカキクケコサシスセソタチツテトナニヌネノ';
 
 export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -59,6 +67,8 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   const prevFoodRef = useRef<Position | null>(null);
   const gameOverFrameRef = useRef(0);
   const prevGameOverRef = useRef(false);
+  const screenShakeRef = useRef({ x: 0, y: 0, intensity: 0 });
+  const lightningRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   // Create explosion particles at a position
   const createExplosion = useCallback((x: number, y: number, count: number, colors: string[]) => {
@@ -81,13 +91,38 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     particlesRef.current = [...particlesRef.current, ...newParticles];
   }, []);
 
-  // Initialize ambient particles
+  // Create lightning effect at position
+  const createLightning = useCallback((x: number, y: number) => {
+    lightningRef.current = { x, y, time: 15 };
+    // Add electric particles
+    const electricParticles: Particle[] = [];
+    for (let i = 0; i < 12; i++) {
+      const angle = (Math.PI * 2 * i) / 12;
+      const speed = 4 + Math.random() * 4;
+      electricParticles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        maxLife: 1,
+        size: 2 + Math.random() * 2,
+        color: COLORS.electricBlue,
+        type: 'lightning',
+      });
+    }
+    particlesRef.current = [...particlesRef.current, ...electricParticles];
+  }, []);
+
+  // Initialize ambient and matrix particles
   useEffect(() => {
     const width = gridSize * CELL_SIZE;
     const height = gridSize * CELL_SIZE;
-    const ambientParticles: Particle[] = [];
-    for (let i = 0; i < 30; i++) {
-      ambientParticles.push({
+    const particles: Particle[] = [];
+
+    // Ambient floating particles
+    for (let i = 0; i < 20; i++) {
+      particles.push({
         x: Math.random() * width,
         y: Math.random() * height,
         vx: (Math.random() - 0.5) * 0.3,
@@ -99,30 +134,49 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         type: 'ambient',
       });
     }
-    particlesRef.current = ambientParticles;
+
+    // Matrix-style falling characters
+    for (let i = 0; i < 15; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: 0,
+        vy: 1 + Math.random() * 2,
+        life: Math.random(),
+        maxLife: 1,
+        size: 8 + Math.random() * 4,
+        color: COLORS.particleGreen,
+        type: 'matrix',
+        char: MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)],
+      });
+    }
+
+    particlesRef.current = particles;
   }, [gridSize]);
 
-  // Detect food eaten and create explosion
+  // Detect food eaten and create explosion with lightning
   useEffect(() => {
     if (prevFoodRef.current &&
         (prevFoodRef.current.x !== gameState.food.x || prevFoodRef.current.y !== gameState.food.y)) {
       // Food position changed = food was eaten at the old position
       const foodX = prevFoodRef.current.x * CELL_SIZE + CELL_SIZE / 2;
       const foodY = prevFoodRef.current.y * CELL_SIZE + CELL_SIZE / 2;
-      createExplosion(foodX, foodY, 16, [COLORS.particleMagenta, COLORS.particleGold, COLORS.foodOuter]);
+      createExplosion(foodX, foodY, 20, [COLORS.particleMagenta, COLORS.particleGold, COLORS.foodOuter, COLORS.neonPink]);
+      createLightning(foodX, foodY);
     }
     prevFoodRef.current = { ...gameState.food };
-  }, [gameState.food, createExplosion]);
+  }, [gameState.food, createExplosion, createLightning]);
 
-  // Detect game over and create death explosion
+  // Detect game over and create death explosion with screen shake
   useEffect(() => {
     if (gameState.gameOver && !prevGameOverRef.current) {
       gameOverFrameRef.current = 0;
+      screenShakeRef.current.intensity = 15;
       const head = gameState.snake[0];
       if (head) {
         const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
         const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
-        createExplosion(headX, headY, 24, [COLORS.particleMagenta, '#ff0000', '#ff6600']);
+        createExplosion(headX, headY, 32, [COLORS.particleMagenta, '#ff0000', '#ff6600', COLORS.neonPink]);
       }
     }
     prevGameOverRef.current = gameState.gameOver;
@@ -134,6 +188,22 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
       setAnimationFrame((f) => (f + 1) % 360);
       if (gameState.gameOver) {
         gameOverFrameRef.current = Math.min(gameOverFrameRef.current + 1, 60);
+      }
+      // Update screen shake
+      if (screenShakeRef.current.intensity > 0) {
+        screenShakeRef.current.x = (Math.random() - 0.5) * screenShakeRef.current.intensity;
+        screenShakeRef.current.y = (Math.random() - 0.5) * screenShakeRef.current.intensity;
+        screenShakeRef.current.intensity *= 0.9;
+        if (screenShakeRef.current.intensity < 0.5) {
+          screenShakeRef.current = { x: 0, y: 0, intensity: 0 };
+        }
+      }
+      // Update lightning timer
+      if (lightningRef.current) {
+        lightningRef.current.time--;
+        if (lightningRef.current.time <= 0) {
+          lightningRef.current = null;
+        }
       }
     }, 33); // ~30fps for smoother animations
     return () => clearInterval(interval);
@@ -160,6 +230,35 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
             y: newY,
             life: (Math.sin(animationFrame * 0.05 + p.x * 0.01) + 1) / 2,
           };
+        } else if (p.type === 'matrix') {
+          // Matrix characters fall down and wrap
+          let newY = p.y + p.vy;
+          if (newY > height) {
+            newY = -10;
+            return {
+              ...p,
+              x: Math.random() * width,
+              y: newY,
+              char: MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)],
+              life: Math.random() * 0.5 + 0.5,
+            };
+          }
+          return {
+            ...p,
+            y: newY,
+            life: (Math.sin(animationFrame * 0.03 + p.x * 0.02) + 1) / 2 * 0.6 + 0.2,
+          };
+        } else if (p.type === 'lightning') {
+          // Lightning particles move fast and fade quickly
+          return {
+            ...p,
+            x: p.x + p.vx,
+            y: p.y + p.vy,
+            vx: p.vx * 0.85,
+            vy: p.vy * 0.85,
+            life: p.life - 0.08,
+            size: p.size * 0.95,
+          };
         } else {
           // Explosion particles decay
           return {
@@ -173,7 +272,7 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
           };
         }
       })
-      .filter((p) => p.life > 0);
+      .filter((p) => p.life > 0 || p.type === 'matrix');
   }, [animationFrame, gridSize]);
 
   useEffect(() => {
@@ -186,6 +285,10 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     const width = canvas.width;
     const height = canvas.height;
 
+    // Apply screen shake
+    ctx.save();
+    ctx.translate(screenShakeRef.current.x, screenShakeRef.current.y);
+
     // Get snake head position for dynamic lighting
     const headX = gameState.snake[0]?.x * CELL_SIZE + CELL_SIZE / 2 || width / 2;
     const headY = gameState.snake[0]?.y * CELL_SIZE + CELL_SIZE / 2 || height / 2;
@@ -195,17 +298,33 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
       headX, headY, 0,
       headX, headY, width * 0.8
     );
-    bgGradient.addColorStop(0, '#101025');
+    bgGradient.addColorStop(0, '#0a0a20');
     bgGradient.addColorStop(0.3, COLORS.bgLight);
     bgGradient.addColorStop(1, COLORS.bgDark);
     ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(-10, -10, width + 20, height + 20);
 
     // Add subtle animated scanlines for retro effect
     ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
     for (let y = 0; y < height; y += 4) {
       ctx.fillRect(0, y, width, 2);
     }
+
+    // Draw matrix falling characters (behind grid)
+    ctx.font = 'bold 10px monospace';
+    particlesRef.current.forEach((p) => {
+      if (p.type === 'matrix' && p.char) {
+        ctx.globalAlpha = p.life * 0.15;
+        ctx.fillStyle = COLORS.particleGreen;
+        ctx.fillText(p.char, p.x, p.y);
+        // Glow effect
+        ctx.shadowColor = COLORS.particleGreen;
+        ctx.shadowBlur = 8;
+        ctx.fillText(p.char, p.x, p.y);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+    });
 
     // Draw animated grid with pulsing effect
     const gridPulse = (Math.sin(animationFrame * 0.02) + 1) / 2 * 0.03 + 0.02;
@@ -221,6 +340,16 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
       ctx.lineTo(width, i * CELL_SIZE);
       ctx.stroke();
     }
+
+    // Draw pulsing neon border
+    const borderPulse = (Math.sin(animationFrame * 0.08) + 1) / 2;
+    const borderColors = [COLORS.neonPink, COLORS.neonBlue, COLORS.neonPurple, COLORS.particleGreen];
+    const currentBorderColor = borderColors[Math.floor(animationFrame / 90) % borderColors.length];
+    ctx.strokeStyle = currentBorderColor;
+    ctx.lineWidth = 2 + borderPulse;
+    ctx.globalAlpha = 0.5 + borderPulse * 0.3;
+    ctx.strokeRect(1, 1, width - 2, height - 2);
+    ctx.globalAlpha = 1;
 
     // Draw ambient particles (behind everything)
     particlesRef.current.forEach((p) => {
@@ -375,19 +504,21 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         ctx.fill();
       }
 
-      // Body segment glow
+      // Body segment glow with rainbow wave
       if (!isHead && index < snakeLength - 1) {
-        const bodyGlowAlpha = 0.3 * (1 - progress);
-        const bodyGlow = ctx.createRadialGradient(x, y, 0, x, y, radius + 3);
-        bodyGlow.addColorStop(0, `rgba(0, 221, 255, ${bodyGlowAlpha})`);
+        // Rainbow wave effect - hue shifts based on position and time
+        const waveHue = (index * 30 + animationFrame * 2) % 360;
+        const bodyGlowAlpha = 0.4 * (1 - progress);
+        const bodyGlow = ctx.createRadialGradient(x, y, 0, x, y, radius + 4);
+        bodyGlow.addColorStop(0, `hsla(${waveHue}, 100%, 60%, ${bodyGlowAlpha})`);
         bodyGlow.addColorStop(1, 'transparent');
         ctx.fillStyle = bodyGlow;
         ctx.beginPath();
-        ctx.arc(x, y, radius + 3, 0, Math.PI * 2);
+        ctx.arc(x, y, radius + 4, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Segment gradient (green head to blue tail) with enhanced colors
+      // Segment gradient with rainbow wave effect
       const segmentGradient = ctx.createRadialGradient(
         x - radius * 0.3, y - radius * 0.3, 0,
         x, y, radius
@@ -399,14 +530,14 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         segmentGradient.addColorStop(0.7, COLORS.snakeHead);
         segmentGradient.addColorStop(1, '#00aa55');
       } else {
-        // Smooth gradient from cyan body to blue tail
-        const hue = 180 + progress * 40; // Cyan to blue
+        // Rainbow wave effect - each segment gets a different hue that shifts over time
+        const waveHue = (index * 25 + animationFrame * 2) % 360;
         const saturation = 100;
-        const lightness = 60 - progress * 15;
-        const highlightL = Math.min(lightness + 20, 80);
-        segmentGradient.addColorStop(0, `hsl(${hue}, ${saturation}%, ${highlightL}%)`);
-        segmentGradient.addColorStop(0.5, `hsl(${hue}, ${saturation}%, ${lightness}%)`);
-        segmentGradient.addColorStop(1, `hsl(${hue}, ${saturation}%, ${lightness - 10}%)`);
+        const lightness = 55 - progress * 10;
+        const highlightL = Math.min(lightness + 25, 85);
+        segmentGradient.addColorStop(0, `hsl(${waveHue}, ${saturation}%, ${highlightL}%)`);
+        segmentGradient.addColorStop(0.5, `hsl(${waveHue}, ${saturation}%, ${lightness}%)`);
+        segmentGradient.addColorStop(1, `hsl(${(waveHue + 20) % 360}, ${saturation}%, ${lightness - 15}%)`);
       }
 
       // Draw segment with slight border
@@ -490,17 +621,66 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
       }
     });
 
-    // Draw explosion particles (on top of snake)
+    // Draw lightning effect
+    if (lightningRef.current && lightningRef.current.time > 0) {
+      const lx = lightningRef.current.x;
+      const ly = lightningRef.current.y;
+      const intensity = lightningRef.current.time / 15;
+
+      // Screen flash
+      ctx.globalAlpha = intensity * 0.3;
+      ctx.fillStyle = COLORS.electricBlue;
+      ctx.fillRect(0, 0, width, height);
+      ctx.globalAlpha = 1;
+
+      // Draw lightning bolts
+      ctx.strokeStyle = COLORS.electricBlue;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = COLORS.electricBlue;
+      ctx.shadowBlur = 20;
+
+      for (let bolt = 0; bolt < 6; bolt++) {
+        const angle = (bolt / 6) * Math.PI * 2;
+        let bx = lx;
+        let by = ly;
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+
+        for (let seg = 0; seg < 5; seg++) {
+          const dist = 15 + Math.random() * 20;
+          bx += Math.cos(angle + (Math.random() - 0.5) * 0.8) * dist;
+          by += Math.sin(angle + (Math.random() - 0.5) * 0.8) * dist;
+          ctx.lineTo(bx, by);
+        }
+
+        ctx.globalAlpha = intensity;
+        ctx.stroke();
+      }
+
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
+
+    // Draw explosion and lightning particles (on top of snake)
     particlesRef.current.forEach((p) => {
-      if (p.type === 'explosion') {
+      if (p.type === 'explosion' || p.type === 'lightning') {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
         gradient.addColorStop(0, p.color);
+        gradient.addColorStop(0.5, p.color);
         gradient.addColorStop(1, 'transparent');
         ctx.fillStyle = gradient;
         ctx.globalAlpha = p.life;
+
+        // Add glow for lightning particles
+        if (p.type === 'lightning') {
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 10;
+        }
+
         ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
       }
     });
@@ -566,6 +746,9 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         }
       }
     }
+
+    // Restore from screen shake transform
+    ctx.restore();
   }, [gameState, gridSize, animationFrame]);
 
   return (
