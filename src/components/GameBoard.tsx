@@ -11,6 +11,7 @@ interface GameBoardState {
 interface GameBoardProps {
   gameState: GameBoardState;
   gridSize: number;
+  gameOver?: boolean;
 }
 
 // Color palette for neon snake game
@@ -79,9 +80,37 @@ interface Sparkle {
   speed: number;
 }
 
+// Death explosion particle
+interface DeathParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  alpha: number;
+  hue: number;
+  life: number;
+}
+
+// Glitch effect state
+interface GlitchState {
+  active: boolean;
+  intensity: number;
+  slices: { y: number; height: number; offset: number }[];
+}
+
+// Screen shake state
+interface ShakeState {
+  active: boolean;
+  intensity: number;
+  offsetX: number;
+  offsetY: number;
+}
+
 const NUM_BG_PARTICLES = 30;
 const NUM_SPARKLES = 6;
 const NUM_ARC_PARTICLES = 8;
+const NUM_DEATH_PARTICLES = 50;
 
 // Initialize background particles
 function createBackgroundParticles(width: number, height: number): Particle[] {
@@ -129,6 +158,40 @@ function createArcParticles(): ArcParticle[] {
   return arcs;
 }
 
+// Create death explosion particles from a position
+function createDeathParticles(x: number, y: number): DeathParticle[] {
+  const particles: DeathParticle[] = [];
+  for (let i = 0; i < NUM_DEATH_PARTICLES; i++) {
+    const angle = (i / NUM_DEATH_PARTICLES) * Math.PI * 2 + Math.random() * 0.5;
+    const speed = 3 + Math.random() * 8;
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: 3 + Math.random() * 6,
+      alpha: 1,
+      hue: Math.random() < 0.5 ? 0 + Math.random() * 30 : 150 + Math.random() * 30, // Red or green
+      life: 1,
+    });
+  }
+  return particles;
+}
+
+// Create random glitch slices
+function createGlitchSlices(height: number): { y: number; height: number; offset: number }[] {
+  const slices: { y: number; height: number; offset: number }[] = [];
+  const numSlices = 5 + Math.floor(Math.random() * 5);
+  for (let i = 0; i < numSlices; i++) {
+    slices.push({
+      y: Math.random() * height,
+      height: 2 + Math.random() * 20,
+      offset: (Math.random() - 0.5) * 30,
+    });
+  }
+  return slices;
+}
+
 // Generate lightning bolt path between two points
 function generateLightningPath(
   startX: number,
@@ -167,7 +230,7 @@ function generateLightningPath(
   return points;
 }
 
-export function GameBoard({ gameState, gridSize }: GameBoardProps) {
+export function GameBoard({ gameState, gridSize, gameOver = false }: GameBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
   const timeRef = useRef<number>(0);
@@ -178,6 +241,11 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   const shockwavesRef = useRef<Shockwave[]>([]);
   const lastSnakeHeadRef = useRef<Position | null>(null);
   const lastScoreRef = useRef<number>(0);
+  const deathParticlesRef = useRef<DeathParticle[]>([]);
+  const glitchStateRef = useRef<GlitchState>({ active: false, intensity: 0, slices: [] });
+  const shakeStateRef = useRef<ShakeState>({ active: false, intensity: 0, offsetX: 0, offsetY: 0 });
+  const gameOverTimeRef = useRef<number>(0);
+  const wasGameOverRef = useRef<boolean>(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -196,6 +264,40 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     if (arcParticlesRef.current.length === 0) {
       arcParticlesRef.current = createArcParticles();
     }
+
+    // Detect game over transition
+    if (gameOver && !wasGameOverRef.current) {
+      // Game just ended - trigger death effects
+      const head = gameState.snake[0];
+      const centerX = head.x * CELL_SIZE + CELL_SIZE / 2;
+      const centerY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+      // Create death explosion at snake head
+      deathParticlesRef.current = createDeathParticles(centerX, centerY);
+
+      // Activate screen shake
+      shakeStateRef.current = { active: true, intensity: 15, offsetX: 0, offsetY: 0 };
+
+      // Activate glitch effect
+      glitchStateRef.current = {
+        active: true,
+        intensity: 1,
+        slices: createGlitchSlices(canvas.height),
+      };
+
+      // Record game over start time
+      gameOverTimeRef.current = timeRef.current;
+    }
+
+    // Reset death effects when game restarts
+    if (!gameOver && wasGameOverRef.current) {
+      deathParticlesRef.current = [];
+      glitchStateRef.current = { active: false, intensity: 0, slices: [] };
+      shakeStateRef.current = { active: false, intensity: 0, offsetX: 0, offsetY: 0 };
+      gameOverTimeRef.current = 0;
+    }
+
+    wasGameOverRef.current = gameOver;
 
     // Detect food eaten (snake length increased = score increased)
     const currentScore = gameState.snake.length;
@@ -249,7 +351,12 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         trailParticlesRef.current,
         sparklesRef.current,
         arcParticlesRef.current,
-        shockwavesRef.current
+        shockwavesRef.current,
+        deathParticlesRef.current,
+        glitchStateRef.current,
+        shakeStateRef.current,
+        gameOver,
+        gameOverTimeRef.current
       );
       animationId = requestAnimationFrame(animate);
     };
@@ -576,6 +683,141 @@ function drawScanlines(ctx: CanvasRenderingContext2D, width: number, height: num
   }
 }
 
+// Draw death explosion particles
+function drawDeathParticles(
+  ctx: CanvasRenderingContext2D,
+  particles: DeathParticle[]
+) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+
+    // Update physics
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.96; // Friction
+    p.vy *= 0.96;
+    p.vy += 0.1; // Gravity
+    p.life -= 0.015;
+    p.alpha = p.life;
+    p.size *= 0.98;
+
+    if (p.life <= 0) {
+      particles.splice(i, 1);
+      continue;
+    }
+
+    // Draw particle with glow
+    const lightness = 50 + (1 - p.life) * 30;
+    ctx.fillStyle = `hsla(${p.hue}, 100%, ${lightness}%, ${p.alpha})`;
+    ctx.shadowColor = `hsla(${p.hue}, 100%, 50%, ${p.alpha})`;
+    ctx.shadowBlur = 10;
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw trailing ember
+    if (p.life > 0.3) {
+      ctx.fillStyle = `hsla(${p.hue}, 100%, 80%, ${p.alpha * 0.5})`;
+      ctx.beginPath();
+      ctx.arc(p.x - p.vx * 2, p.y - p.vy * 2, p.size * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.shadowBlur = 0;
+}
+
+// Draw glitch/distortion effect
+function drawGlitch(
+  ctx: CanvasRenderingContext2D,
+  glitch: GlitchState,
+  width: number,
+  height: number,
+  time: number
+) {
+  if (!glitch.active || glitch.intensity <= 0) return;
+
+  // Flicker the glitch randomly
+  if (Math.random() > 0.7) {
+    // RGB split effect
+    const splitOffset = glitch.intensity * 5 * (Math.random() - 0.5);
+    ctx.globalCompositeOperation = 'screen';
+
+    // Red channel shift
+    ctx.fillStyle = `rgba(255, 0, 0, ${glitch.intensity * 0.15})`;
+    ctx.fillRect(splitOffset, 0, width, height);
+
+    // Cyan channel shift
+    ctx.fillStyle = `rgba(0, 255, 255, ${glitch.intensity * 0.15})`;
+    ctx.fillRect(-splitOffset, 0, width, height);
+
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // Draw horizontal glitch slices
+  if (Math.random() > 0.5) {
+    for (const slice of glitch.slices) {
+      const flicker = Math.sin(time / 20 + slice.y) * 0.5 + 0.5;
+      if (flicker > 0.6) {
+        const offset = slice.offset * glitch.intensity * (Math.random() - 0.5) * 2;
+        ctx.drawImage(
+          ctx.canvas,
+          0, slice.y, width, slice.height,
+          offset, slice.y, width, slice.height
+        );
+
+        // Add colored line artifacts
+        ctx.fillStyle = `rgba(0, 255, 136, ${glitch.intensity * 0.3})`;
+        ctx.fillRect(0, slice.y, width, 1);
+      }
+    }
+  }
+
+  // Random noise blocks
+  if (Math.random() > 0.8) {
+    const numBlocks = Math.floor(glitch.intensity * 10);
+    for (let i = 0; i < numBlocks; i++) {
+      const bx = Math.random() * width;
+      const by = Math.random() * height;
+      const bw = 5 + Math.random() * 30;
+      const bh = 2 + Math.random() * 10;
+      const hue = Math.random() < 0.5 ? 0 : 150;
+      ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${glitch.intensity * 0.5})`;
+      ctx.fillRect(bx, by, bw, bh);
+    }
+  }
+}
+
+// Draw death fade overlay
+function drawDeathOverlay(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  gameOverProgress: number
+) {
+  if (gameOverProgress <= 0) return;
+
+  // Pulsing red vignette
+  const pulseIntensity = Math.sin(gameOverProgress * Math.PI * 2) * 0.1 + 0.3;
+  const vignetteAlpha = Math.min(gameOverProgress * 0.5, 0.4) + pulseIntensity * gameOverProgress;
+
+  const gradient = ctx.createRadialGradient(
+    width / 2, height / 2, 0,
+    width / 2, height / 2, width * 0.8
+  );
+  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  gradient.addColorStop(0.5, `rgba(50, 0, 0, ${vignetteAlpha * 0.3})`);
+  gradient.addColorStop(1, `rgba(100, 0, 0, ${vignetteAlpha})`);
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  // Darkening overlay that increases over time
+  const darkAlpha = Math.min(gameOverProgress * 0.3, 0.25);
+  ctx.fillStyle = `rgba(0, 0, 0, ${darkAlpha})`;
+  ctx.fillRect(0, 0, width, height);
+}
+
 function drawSnakeSegment(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -832,11 +1074,49 @@ function render(
   trailParticles: TrailParticle[],
   sparkles: Sparkle[],
   arcParticles: ArcParticle[],
-  shockwaves: Shockwave[]
+  shockwaves: Shockwave[],
+  deathParticles: DeathParticle[],
+  glitch: GlitchState,
+  shake: ShakeState,
+  gameOver: boolean,
+  gameOverStartTime: number
 ) {
+  // Calculate game over progress (0 to 1 over 3 seconds)
+  const gameOverProgress = gameOver && gameOverStartTime > 0
+    ? Math.min((time - gameOverStartTime) / 3000, 1)
+    : 0;
+
+  // Update shake effect
+  if (shake.active) {
+    shake.intensity *= 0.92; // Decay
+    shake.offsetX = (Math.random() - 0.5) * shake.intensity * 2;
+    shake.offsetY = (Math.random() - 0.5) * shake.intensity * 2;
+    if (shake.intensity < 0.5) {
+      shake.active = false;
+      shake.offsetX = 0;
+      shake.offsetY = 0;
+    }
+  }
+
+  // Update glitch effect
+  if (glitch.active) {
+    glitch.intensity *= 0.97; // Slower decay for dramatic effect
+    if (glitch.intensity < 0.05) {
+      glitch.active = false;
+    }
+    // Randomly regenerate slices
+    if (Math.random() > 0.9) {
+      glitch.slices = createGlitchSlices(height);
+    }
+  }
+
+  // Apply screen shake offset
+  ctx.save();
+  ctx.translate(shake.offsetX, shake.offsetY);
+
   // Clear canvas with dark background
   ctx.fillStyle = COLORS.background;
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillRect(-shake.offsetX, -shake.offsetY, width + Math.abs(shake.offsetX) * 2, height + Math.abs(shake.offsetY) * 2);
 
   // Draw floating background particles (behind everything)
   drawBackgroundParticles(ctx, bgParticles, width, height, time);
@@ -860,13 +1140,28 @@ function render(
   // Draw lightning effects between snake segments
   drawLightning(ctx, state.snake, time);
 
-  // Draw electric arcs from snake head
-  drawElectricArcs(ctx, state.snake[0], arcParticles, time);
+  // Draw electric arcs from snake head (only if game not over)
+  if (!gameOver) {
+    drawElectricArcs(ctx, state.snake[0], arcParticles, time);
+  }
 
   // Draw food with animation and sparkles
   drawFood(ctx, state.food, time, sparkles);
 
+  // Draw death explosion particles
+  if (deathParticles.length > 0) {
+    drawDeathParticles(ctx, deathParticles);
+  }
+
   // Draw post-processing effects
   drawScanlines(ctx, width, height, time);
   drawVignette(ctx, width, height);
+
+  // Draw game over effects
+  if (gameOver) {
+    drawGlitch(ctx, glitch, width, height, time);
+    drawDeathOverlay(ctx, width, height, gameOverProgress);
+  }
+
+  ctx.restore();
 }
