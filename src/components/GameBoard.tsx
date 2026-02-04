@@ -45,6 +45,23 @@ interface ScorePopup {
   scale: number;
 }
 
+interface TrailSegment {
+  x: number;
+  y: number;
+  age: number;
+  hue: number;
+}
+
+interface ElectricArc {
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  points: { x: number; y: number }[];
+  life: number;
+  hue: number;
+}
+
 interface PlasmaWave {
   phase: number;
   amplitude: number;
@@ -101,6 +118,9 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   const starsRef = useRef<Particle[]>([]);
   const deathVortexRef = useRef<{ active: boolean; x: number; y: number; rotation: number; scale: number }>({ active: false, x: 0, y: 0, rotation: 0, scale: 0 });
   const energyCorePhaseRef = useRef(0);
+  const neonTrailRef = useRef<TrailSegment[]>([]);
+  const electricArcsRef = useRef<ElectricArc[]>([]);
+  const trailHueRef = useRef(0);
 
   // Create explosion particles at a position
   const createExplosion = useCallback((x: number, y: number, count: number, colors: string[]) => {
@@ -256,6 +276,46 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     particlesRef.current = [...particlesRef.current, ...prismParticles];
   }, []);
 
+  // Generate jagged electric arc points between two positions
+  const generateArcPoints = useCallback((fromX: number, fromY: number, toX: number, toY: number): { x: number; y: number }[] => {
+    const points: { x: number; y: number }[] = [];
+    const segments = 6;
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const perpX = -dy;
+    const perpY = dx;
+    const perpLen = Math.sqrt(perpX * perpX + perpY * perpY);
+    const normPerpX = perpLen > 0 ? perpX / perpLen : 0;
+    const normPerpY = perpLen > 0 ? perpY / perpLen : 0;
+
+    points.push({ x: fromX, y: fromY });
+    for (let i = 1; i < segments; i++) {
+      const t = i / segments;
+      const baseX = fromX + dx * t;
+      const baseY = fromY + dy * t;
+      const jitter = (Math.random() - 0.5) * 12;
+      points.push({
+        x: baseX + normPerpX * jitter,
+        y: baseY + normPerpY * jitter
+      });
+    }
+    points.push({ x: toX, y: toY });
+    return points;
+  }, []);
+
+  // Create electric arc between two points
+  const createElectricArc = useCallback((fromX: number, fromY: number, toX: number, toY: number, hue: number) => {
+    electricArcsRef.current.push({
+      fromX,
+      fromY,
+      toX,
+      toY,
+      points: generateArcPoints(fromX, fromY, toX, toY),
+      life: 1,
+      hue
+    });
+  }, [generateArcPoints]);
+
   // Create death vortex effect
   const createDeathVortex = useCallback((x: number, y: number) => {
     deathVortexRef.current = { active: true, x, y, rotation: 0, scale: 0 };
@@ -390,7 +450,7 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     prevFoodRef.current = { ...gameState.food };
   }, [gameState.food, createExplosion, createLightning, createScorePopup]);
 
-  // Track snake movement for streak effects and fire trails
+  // Track snake movement for streak effects, fire trails, neon trail, and electric arcs
   useEffect(() => {
     const head = gameState.snake[0];
     if (!head) return;
@@ -409,6 +469,38 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
         createStreaks(headX, headY, normalizedDx, normalizedDy);
 
+        // Add to neon pulse trail with current hue
+        trailHueRef.current = (trailHueRef.current + 3) % 360;
+        neonTrailRef.current.push({
+          x: headX,
+          y: headY,
+          age: 0,
+          hue: trailHueRef.current
+        });
+
+        // Keep trail at reasonable length
+        if (neonTrailRef.current.length > 80) {
+          neonTrailRef.current = neonTrailRef.current.slice(-80);
+        }
+
+        // Create electric arcs between adjacent snake segments
+        if (gameState.snake.length > 1) {
+          for (let i = 0; i < Math.min(gameState.snake.length - 1, 5); i++) {
+            const seg1 = gameState.snake[i];
+            const seg2 = gameState.snake[i + 1];
+            const dist = Math.abs(seg1.x - seg2.x) + Math.abs(seg1.y - seg2.y);
+            // Only create arcs between adjacent segments (not wrapped)
+            if (dist === 1 && Math.random() > 0.5) {
+              const x1 = seg1.x * CELL_SIZE + CELL_SIZE / 2;
+              const y1 = seg1.y * CELL_SIZE + CELL_SIZE / 2;
+              const x2 = seg2.x * CELL_SIZE + CELL_SIZE / 2;
+              const y2 = seg2.y * CELL_SIZE + CELL_SIZE / 2;
+              const arcHue = (180 + i * 30) % 360; // Cyan to purple range
+              createElectricArc(x1, y1, x2, y2, arcHue);
+            }
+          }
+        }
+
         // Create fire trail based on snake length (longer snake = more intense fire)
         const intensity = Math.min(gameState.snake.length / 10, 1);
         if (intensity > 0.2) {
@@ -424,7 +516,7 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     }
 
     prevSnakeHeadRef.current = { ...head };
-  }, [gameState.snake, createStreaks, createFireTrail]);
+  }, [gameState.snake, createStreaks, createFireTrail, createElectricArc]);
 
   // Detect game over and create death explosion with screen shake and vortex
   useEffect(() => {
@@ -517,9 +609,21 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
         createPrismParticles(foodX, foodY);
       }
+      // Age and remove old neon trail segments
+      neonTrailRef.current = neonTrailRef.current
+        .map(seg => ({ ...seg, age: seg.age + 1 }))
+        .filter(seg => seg.age < 60);
+      // Update and regenerate electric arcs
+      electricArcsRef.current = electricArcsRef.current
+        .map(arc => ({
+          ...arc,
+          life: arc.life - 0.08,
+          points: arc.life > 0.5 ? generateArcPoints(arc.fromX, arc.fromY, arc.toX, arc.toY) : arc.points
+        }))
+        .filter(arc => arc.life > 0);
     }, 33); // ~30fps for smoother animations
     return () => clearInterval(interval);
-  }, [gameState.gameOver]);
+  }, [gameState.gameOver, generateArcPoints]);
 
   // Update particles
   useEffect(() => {
@@ -962,6 +1066,141 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         ctx.fillStyle = `hsla(${hue + 20}, 100%, 90%, ${alpha})`;
         ctx.fill();
       }
+    });
+
+    // Draw NEON PULSE TRAIL - persistent glowing trail behind snake
+    if (neonTrailRef.current.length > 1) {
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Draw multiple layers for glow effect
+      for (let layer = 0; layer < 3; layer++) {
+        const layerWidth = (3 - layer) * 4;
+        const layerAlpha = layer === 0 ? 0.15 : layer === 1 ? 0.3 : 0.6;
+
+        ctx.beginPath();
+        let lastPos: TrailSegment | null = null;
+
+        neonTrailRef.current.forEach((seg) => {
+          const alpha = (1 - seg.age / 60) * layerAlpha;
+          if (alpha <= 0) return;
+
+          if (lastPos) {
+            // Check if this segment is close to the previous (not wrapped around)
+            const dist = Math.sqrt(
+              Math.pow(seg.x - lastPos.x, 2) + Math.pow(seg.y - lastPos.y, 2)
+            );
+            if (dist < CELL_SIZE * 2) {
+              // Draw gradient line between segments
+              const gradient = ctx.createLinearGradient(lastPos.x, lastPos.y, seg.x, seg.y);
+              gradient.addColorStop(0, `hsla(${lastPos.hue}, 100%, 60%, ${alpha})`);
+              gradient.addColorStop(1, `hsla(${seg.hue}, 100%, 60%, ${alpha})`);
+
+              ctx.beginPath();
+              ctx.moveTo(lastPos.x, lastPos.y);
+              ctx.lineTo(seg.x, seg.y);
+              ctx.strokeStyle = gradient;
+              ctx.lineWidth = layerWidth * (1 - seg.age / 60);
+              ctx.stroke();
+            }
+          }
+          lastPos = seg;
+        });
+
+        // Add glow on outermost layer
+        if (layer === 0) {
+          ctx.shadowColor = `hsl(${trailHueRef.current}, 100%, 50%)`;
+          ctx.shadowBlur = 15;
+        }
+      }
+
+      // Draw pulsing nodes at trail points
+      neonTrailRef.current.forEach((seg, i) => {
+        if (i % 4 !== 0) return; // Only draw every 4th node
+        const alpha = (1 - seg.age / 60);
+        if (alpha <= 0) return;
+
+        const pulsePhase = animationFrame * 0.15 + i * 0.3;
+        const pulseSize = 2 + Math.sin(pulsePhase) * 1;
+
+        // Outer glow
+        const nodeGlow = ctx.createRadialGradient(seg.x, seg.y, 0, seg.x, seg.y, pulseSize * 3);
+        nodeGlow.addColorStop(0, `hsla(${seg.hue}, 100%, 70%, ${alpha * 0.8})`);
+        nodeGlow.addColorStop(0.5, `hsla(${seg.hue}, 100%, 50%, ${alpha * 0.3})`);
+        nodeGlow.addColorStop(1, 'transparent');
+
+        ctx.beginPath();
+        ctx.arc(seg.x, seg.y, pulseSize * 3, 0, Math.PI * 2);
+        ctx.fillStyle = nodeGlow;
+        ctx.shadowBlur = 0;
+        ctx.fill();
+
+        // Bright core
+        ctx.beginPath();
+        ctx.arc(seg.x, seg.y, pulseSize, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${seg.hue}, 100%, 85%, ${alpha})`;
+        ctx.fill();
+      });
+
+      ctx.restore();
+    }
+
+    // Draw ELECTRIC ARCS between snake segments
+    electricArcsRef.current.forEach((arc) => {
+      if (arc.points.length < 2) return;
+
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Draw multiple layers for electric glow effect
+      for (let layer = 0; layer < 3; layer++) {
+        const layerWidth = (3 - layer) * 2 + 1;
+        const layerAlpha = arc.life * (layer === 0 ? 0.3 : layer === 1 ? 0.6 : 1);
+
+        ctx.beginPath();
+        ctx.moveTo(arc.points[0].x, arc.points[0].y);
+
+        for (let i = 1; i < arc.points.length; i++) {
+          ctx.lineTo(arc.points[i].x, arc.points[i].y);
+        }
+
+        const arcGradient = ctx.createLinearGradient(
+          arc.fromX, arc.fromY, arc.toX, arc.toY
+        );
+        arcGradient.addColorStop(0, `hsla(${arc.hue}, 100%, 70%, ${layerAlpha})`);
+        arcGradient.addColorStop(0.5, `hsla(${(arc.hue + 30) % 360}, 100%, 80%, ${layerAlpha})`);
+        arcGradient.addColorStop(1, `hsla(${arc.hue}, 100%, 70%, ${layerAlpha})`);
+
+        ctx.strokeStyle = arcGradient;
+        ctx.lineWidth = layerWidth;
+
+        if (layer === 0) {
+          ctx.shadowColor = `hsl(${arc.hue}, 100%, 60%)`;
+          ctx.shadowBlur = 12;
+        } else {
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.stroke();
+      }
+
+      // Draw bright nodes at arc endpoints
+      [arc.points[0], arc.points[arc.points.length - 1]].forEach((point) => {
+        const nodeGlow = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, 6);
+        nodeGlow.addColorStop(0, `hsla(${arc.hue}, 100%, 90%, ${arc.life})`);
+        nodeGlow.addColorStop(0.5, `hsla(${arc.hue}, 100%, 60%, ${arc.life * 0.5})`);
+        nodeGlow.addColorStop(1, 'transparent');
+
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = nodeGlow;
+        ctx.shadowBlur = 0;
+        ctx.fill();
+      });
+
+      ctx.restore();
     });
 
     // Draw prism/holographic particles around food
