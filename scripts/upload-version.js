@@ -10,7 +10,7 @@ const path = require('path');
 
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 const VERSION_FILE = path.join(__dirname, '..', 'src', 'version.ts');
-const PLATFORM_VERSIONS_FILE = path.join(__dirname, '..', 'perfect-snake-platform', 'public', 'versions.json');
+const VERSIONS_FILE = path.join(__dirname, '..', 'public', 'versions.json');
 
 // Get version number from version.ts
 function getVersion() {
@@ -91,12 +91,12 @@ async function uploadVersion() {
 
   // Update versions.json in platform repo
   let versions = [];
-  if (fs.existsSync(PLATFORM_VERSIONS_FILE)) {
-    const content = fs.readFileSync(PLATFORM_VERSIONS_FILE, 'utf-8');
+  if (fs.existsSync(VERSIONS_FILE)) {
+    const content = fs.readFileSync(VERSIONS_FILE, 'utf-8');
     versions = JSON.parse(content).versions || [];
   } else {
     // Create public directory if it doesn't exist
-    const publicDir = path.dirname(PLATFORM_VERSIONS_FILE);
+    const publicDir = path.dirname(VERSIONS_FILE);
     if (!fs.existsSync(publicDir)) {
       fs.mkdirSync(publicDir, { recursive: true });
     }
@@ -126,12 +126,12 @@ async function uploadVersion() {
 
   // Write updated versions.json
   fs.writeFileSync(
-    PLATFORM_VERSIONS_FILE,
+    VERSIONS_FILE,
     JSON.stringify({ versions }, null, 2),
     'utf-8'
   );
 
-  console.log(`✅ versions.json updated at ${PLATFORM_VERSIONS_FILE}`);
+  console.log(`✅ versions.json updated at ${VERSIONS_FILE}`);
   console.log(`\n🎉 Version ${version} is now available at: ${indexUrl}`);
 }
 
