@@ -40,6 +40,15 @@ interface ScorePopup {
   scale: number;
 }
 
+interface PlasmaWave {
+  phase: number;
+  amplitude: number;
+  frequency: number;
+  speed: number;
+  color: string;
+  yOffset: number;
+}
+
 const CELL_SIZE = 20;
 
 // Color palette - enhanced with dramatic neon colors
@@ -82,6 +91,8 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   const scorePopupsRef = useRef<ScorePopup[]>([]);
   const prevSnakeHeadRef = useRef<Position | null>(null);
   const warpIntensityRef = useRef(0);
+  const plasmaWavesRef = useRef<PlasmaWave[]>([]);
+  const plasmaTimeRef = useRef(0);
 
   // Create explosion particles at a position
   const createExplosion = useCallback((x: number, y: number, count: number, colors: string[]) => {
@@ -187,6 +198,30 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     }
     particlesRef.current = [...particlesRef.current, ...electricParticles];
   }, []);
+
+  // Initialize plasma waves
+  useEffect(() => {
+    const waves: PlasmaWave[] = [];
+    const waveColors = [
+      'rgba(0, 255, 200, 0.15)',    // Cyan-green aurora
+      'rgba(128, 0, 255, 0.12)',    // Purple aurora
+      'rgba(255, 0, 128, 0.10)',    // Magenta aurora
+      'rgba(0, 200, 255, 0.13)',    // Electric blue
+      'rgba(0, 255, 100, 0.11)',    // Neon green
+    ];
+
+    for (let i = 0; i < 5; i++) {
+      waves.push({
+        phase: (i / 5) * Math.PI * 2,
+        amplitude: 30 + i * 15,
+        frequency: 0.008 + i * 0.003,
+        speed: 0.02 + (i % 2) * 0.015,
+        color: waveColors[i],
+        yOffset: (i / 5) * (gridSize * CELL_SIZE),
+      });
+    }
+    plasmaWavesRef.current = waves;
+  }, [gridSize]);
 
   // Initialize ambient and matrix particles
   useEffect(() => {
@@ -317,6 +352,8 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         .filter((popup) => popup.life > 0);
       // Decay warp intensity
       warpIntensityRef.current *= 0.97;
+      // Update plasma time
+      plasmaTimeRef.current += 1;
     }, 33); // ~30fps for smoother animations
     return () => clearInterval(interval);
   }, [gameState.gameOver]);
@@ -437,6 +474,89 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     bgGradient.addColorStop(1, COLORS.bgDark);
     ctx.fillStyle = bgGradient;
     ctx.fillRect(-10, -10, width + 20, height + 20);
+
+    // Draw plasma/aurora wave effect
+    const plasmaTime = plasmaTimeRef.current;
+    const snakeHeadForPlasma = gameState.snake[0];
+    const snakeInfluenceX = snakeHeadForPlasma ? snakeHeadForPlasma.x * CELL_SIZE : width / 2;
+    const snakeInfluenceY = snakeHeadForPlasma ? snakeHeadForPlasma.y * CELL_SIZE : height / 2;
+
+    plasmaWavesRef.current.forEach((wave, waveIndex) => {
+      ctx.beginPath();
+
+      const baseY = wave.yOffset + Math.sin(plasmaTime * wave.speed * 0.5) * 20;
+
+      // Start from off-screen left
+      ctx.moveTo(-10, baseY);
+
+      // Draw flowing wave with multiple sine components
+      for (let x = 0; x <= width + 10; x += 4) {
+        // Distance from snake head influences wave distortion
+        const distFromSnake = Math.sqrt(
+          Math.pow(x - snakeInfluenceX, 2) + Math.pow(baseY - snakeInfluenceY, 2)
+        );
+        const snakeDistortion = Math.max(0, 1 - distFromSnake / 200) * 25;
+
+        // Combine multiple wave functions for organic movement
+        const y1 = Math.sin(x * wave.frequency + plasmaTime * wave.speed + wave.phase) * wave.amplitude;
+        const y2 = Math.sin(x * wave.frequency * 0.5 + plasmaTime * wave.speed * 1.3) * (wave.amplitude * 0.5);
+        const y3 = Math.sin(x * wave.frequency * 2 + plasmaTime * wave.speed * 0.7 + waveIndex) * (wave.amplitude * 0.3);
+
+        // Add snake influence ripple
+        const snakeRipple = snakeDistortion * Math.sin(distFromSnake * 0.05 - plasmaTime * 0.1);
+
+        const y = baseY + y1 + y2 + y3 + snakeRipple;
+        ctx.lineTo(x, y);
+      }
+
+      // Complete the shape to fill below the wave
+      ctx.lineTo(width + 10, height + 10);
+      ctx.lineTo(-10, height + 10);
+      ctx.closePath();
+
+      // Create vertical gradient for aurora effect
+      const waveGradient = ctx.createLinearGradient(0, baseY - wave.amplitude * 2, 0, baseY + wave.amplitude * 3);
+      const baseColor = wave.color;
+
+      // Intensify color near snake
+      const snakeNearness = Math.max(0, 1 - Math.abs(snakeInfluenceY - baseY) / 150);
+      const intensityBoost = 1 + snakeNearness * 0.5 + warpIntensityRef.current * 0.3;
+
+      waveGradient.addColorStop(0, 'transparent');
+      waveGradient.addColorStop(0.3, baseColor.replace(/[\d.]+\)$/, `${parseFloat(baseColor.match(/[\d.]+\)$/)?.[0] || '0.1') * intensityBoost})`));
+      waveGradient.addColorStop(0.6, baseColor.replace(/[\d.]+\)$/, `${parseFloat(baseColor.match(/[\d.]+\)$/)?.[0] || '0.1') * intensityBoost * 0.6})`));
+      waveGradient.addColorStop(1, 'transparent');
+
+      ctx.fillStyle = waveGradient;
+      ctx.fill();
+
+      // Add glow line at the wave crest
+      ctx.beginPath();
+      ctx.moveTo(-10, baseY);
+      for (let x = 0; x <= width + 10; x += 4) {
+        const distFromSnake = Math.sqrt(
+          Math.pow(x - snakeInfluenceX, 2) + Math.pow(baseY - snakeInfluenceY, 2)
+        );
+        const snakeDistortion = Math.max(0, 1 - distFromSnake / 200) * 25;
+
+        const y1 = Math.sin(x * wave.frequency + plasmaTime * wave.speed + wave.phase) * wave.amplitude;
+        const y2 = Math.sin(x * wave.frequency * 0.5 + plasmaTime * wave.speed * 1.3) * (wave.amplitude * 0.5);
+        const y3 = Math.sin(x * wave.frequency * 2 + plasmaTime * wave.speed * 0.7 + waveIndex) * (wave.amplitude * 0.3);
+        const snakeRipple = snakeDistortion * Math.sin(distFromSnake * 0.05 - plasmaTime * 0.1);
+
+        const y = baseY + y1 + y2 + y3 + snakeRipple;
+        ctx.lineTo(x, y);
+      }
+
+      // Brighter line color
+      const lineAlpha = 0.3 * intensityBoost;
+      ctx.strokeStyle = baseColor.replace(/[\d.]+\)$/, `${lineAlpha})`);
+      ctx.lineWidth = 2;
+      ctx.shadowColor = baseColor.replace(/[\d.]+\)$/, '0.8)');
+      ctx.shadowBlur = 15;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    });
 
     // Add subtle animated scanlines for retro effect
     ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
