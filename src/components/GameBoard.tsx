@@ -1,23 +1,17 @@
 import { useEffect, useRef } from 'react';
+import type { Position } from '../game/types';
+import { CELL_SIZE } from '../game/constants';
 import './GameBoard.css';
 
-interface Position {
-  x: number;
-  y: number;
-}
-
-interface GameState {
+interface GameBoardState {
   snake: Position[];
   food: Position;
-  gameOver: boolean;
 }
 
 interface GameBoardProps {
-  gameState: GameState;
+  gameState: GameBoardState;
   gridSize: number;
 }
-
-const CELL_SIZE = 20;
 
 export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -29,30 +23,8 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear canvas with white background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw snake (black)
-    ctx.fillStyle = '#000000';
-    gameState.snake.forEach((segment) => {
-      ctx.fillRect(
-        segment.x * CELL_SIZE,
-        segment.y * CELL_SIZE,
-        CELL_SIZE - 1,
-        CELL_SIZE - 1
-      );
-    });
-
-    // Draw food (red)
-    ctx.fillStyle = '#ff0000';
-    ctx.fillRect(
-      gameState.food.x * CELL_SIZE,
-      gameState.food.y * CELL_SIZE,
-      CELL_SIZE - 1,
-      CELL_SIZE - 1
-    );
-  }, [gameState, gridSize]);
+    render(ctx, gameState, canvas.width, canvas.height);
+  }, [gameState]);
 
   return (
     <div className="canvas-wrapper">
@@ -62,5 +34,36 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         height={gridSize * CELL_SIZE}
       />
     </div>
+  );
+}
+
+function render(
+  ctx: CanvasRenderingContext2D,
+  state: GameBoardState,
+  width: number,
+  height: number
+) {
+  // Clear canvas
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+
+  // Draw snake
+  ctx.fillStyle = '#000000';
+  for (const segment of state.snake) {
+    ctx.fillRect(
+      segment.x * CELL_SIZE,
+      segment.y * CELL_SIZE,
+      CELL_SIZE - 1,
+      CELL_SIZE - 1
+    );
+  }
+
+  // Draw food
+  ctx.fillStyle = '#ff0000';
+  ctx.fillRect(
+    state.food.x * CELL_SIZE,
+    state.food.y * CELL_SIZE,
+    CELL_SIZE - 1,
+    CELL_SIZE - 1
   );
 }

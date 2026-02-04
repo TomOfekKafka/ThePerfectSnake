@@ -14,6 +14,7 @@
     "reset-to-baseline": "cp .baseline/App.css src/App.css && cp .baseline/GameBoard.css src/components/GameBoard.css && cp .baseline/GameBoard.tsx src/components/GameBoard.tsx && echo '✅ Reset to boring baseline (v0)'"
   },
   "dependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.57.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
