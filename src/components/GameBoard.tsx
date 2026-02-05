@@ -71,6 +71,15 @@ interface PlasmaWave {
   yOffset: number;
 }
 
+interface GravityWell {
+  x: number;
+  y: number;
+  strength: number;
+  radius: number;
+  age: number;
+  hue: number;
+}
+
 const CELL_SIZE = 20;
 
 // Color palette - enhanced with dramatic neon colors
@@ -121,6 +130,9 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   const neonTrailRef = useRef<TrailSegment[]>([]);
   const electricArcsRef = useRef<ElectricArc[]>([]);
   const trailHueRef = useRef(0);
+  const gravityWellsRef = useRef<GravityWell[]>([]);
+  const spacetimeDistortionRef = useRef(0);
+  const dimensionalRiftRef = useRef<{ active: boolean; x: number; y: number; phase: number; size: number }>({ active: false, x: 0, y: 0, phase: 0, size: 0 });
 
   // Create explosion particles at a position
   const createExplosion = useCallback((x: number, y: number, count: number, colors: string[]) => {
@@ -316,6 +328,27 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     });
   }, [generateArcPoints]);
 
+  // Create gravity well at position (when eating food or moving fast)
+  const createGravityWell = useCallback((x: number, y: number, strength: number) => {
+    gravityWellsRef.current.push({
+      x,
+      y,
+      strength,
+      radius: 60 + strength * 40,
+      age: 0,
+      hue: Math.random() * 360
+    });
+    // Limit gravity wells
+    if (gravityWellsRef.current.length > 8) {
+      gravityWellsRef.current = gravityWellsRef.current.slice(-8);
+    }
+  }, []);
+
+  // Create dimensional rift effect (major food collection event)
+  const createDimensionalRift = useCallback((x: number, y: number) => {
+    dimensionalRiftRef.current = { active: true, x, y, phase: 0, size: 0 };
+  }, []);
+
   // Create death vortex effect
   const createDeathVortex = useCallback((x: number, y: number) => {
     deathVortexRef.current = { active: true, x, y, rotation: 0, scale: 0 };
@@ -446,9 +479,17 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
       createScorePopup(foodX, foodY, 10);
       // Boost warp intensity when eating food
       warpIntensityRef.current = Math.min(warpIntensityRef.current + 0.5, 1);
+      // Create gravity well at food location
+      createGravityWell(foodX, foodY, 1);
+      // Boost spacetime distortion
+      spacetimeDistortionRef.current = Math.min(spacetimeDistortionRef.current + 0.3, 1);
+      // Create dimensional rift occasionally
+      if (Math.random() > 0.7) {
+        createDimensionalRift(foodX, foodY);
+      }
     }
     prevFoodRef.current = { ...gameState.food };
-  }, [gameState.food, createExplosion, createLightning, createScorePopup]);
+  }, [gameState.food, createExplosion, createLightning, createScorePopup, createGravityWell, createDimensionalRift]);
 
   // Track snake movement for streak effects, fire trails, neon trail, and electric arcs
   useEffect(() => {
@@ -468,6 +509,11 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
         const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
         createStreaks(headX, headY, normalizedDx, normalizedDy);
+
+        // Create small gravity wells along snake's path based on speed
+        if (Math.random() > 0.85) {
+          createGravityWell(headX, headY, 0.3);
+        }
 
         // Add to neon pulse trail with current hue
         trailHueRef.current = (trailHueRef.current + 3) % 360;
@@ -516,7 +562,7 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
     }
 
     prevSnakeHeadRef.current = { ...head };
-  }, [gameState.snake, createStreaks, createFireTrail, createElectricArc]);
+  }, [gameState.snake, createStreaks, createFireTrail, createElectricArc, createGravityWell]);
 
   // Detect game over and create death explosion with screen shake and vortex
   useEffect(() => {
@@ -621,6 +667,25 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
           points: arc.life > 0.5 ? generateArcPoints(arc.fromX, arc.fromY, arc.toX, arc.toY) : arc.points
         }))
         .filter(arc => arc.life > 0);
+      // Update gravity wells
+      gravityWellsRef.current = gravityWellsRef.current
+        .map(well => ({
+          ...well,
+          age: well.age + 1,
+          strength: well.strength * 0.98,
+          radius: well.radius * 1.01
+        }))
+        .filter(well => well.strength > 0.05);
+      // Decay spacetime distortion
+      spacetimeDistortionRef.current *= 0.98;
+      // Update dimensional rift
+      if (dimensionalRiftRef.current.active) {
+        dimensionalRiftRef.current.phase += 0.1;
+        dimensionalRiftRef.current.size = Math.min(dimensionalRiftRef.current.size + 3, 80);
+        if (dimensionalRiftRef.current.phase > Math.PI * 4) {
+          dimensionalRiftRef.current.active = false;
+        }
+      }
     }, 33); // ~30fps for smoother animations
     return () => clearInterval(interval);
   }, [gameState.gameOver, generateArcPoints]);
@@ -821,6 +886,193 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         ctx.stroke();
       }
     });
+
+    // Draw GRAVITATIONAL WAVE DISTORTION effect - spacetime ripples
+    gravityWellsRef.current.forEach((well) => {
+      const waveCount = 4;
+      const maxWaveRadius = well.radius;
+      const wellAlpha = well.strength * 0.6;
+
+      // Draw concentric distortion rings
+      for (let wave = 0; wave < waveCount; wave++) {
+        const wavePhase = (well.age * 0.15 + wave * 0.8) % (Math.PI * 2);
+        const waveRadius = (wave / waveCount) * maxWaveRadius * (1 + Math.sin(wavePhase) * 0.2);
+        const waveAlpha = wellAlpha * (1 - wave / waveCount) * (0.5 + Math.sin(wavePhase) * 0.5);
+
+        if (waveRadius > 5 && waveAlpha > 0.01) {
+          // Outer glow ring
+          ctx.beginPath();
+          ctx.arc(well.x, well.y, waveRadius, 0, Math.PI * 2);
+
+          const waveGradient = ctx.createRadialGradient(
+            well.x, well.y, waveRadius * 0.9,
+            well.x, well.y, waveRadius * 1.1
+          );
+          const waveHue = (well.hue + wave * 40 + well.age) % 360;
+          waveGradient.addColorStop(0, 'transparent');
+          waveGradient.addColorStop(0.3, `hsla(${waveHue}, 80%, 60%, ${waveAlpha * 0.3})`);
+          waveGradient.addColorStop(0.5, `hsla(${waveHue}, 100%, 70%, ${waveAlpha})`);
+          waveGradient.addColorStop(0.7, `hsla(${(waveHue + 30) % 360}, 80%, 60%, ${waveAlpha * 0.3})`);
+          waveGradient.addColorStop(1, 'transparent');
+
+          ctx.strokeStyle = waveGradient;
+          ctx.lineWidth = 3 + well.strength * 2;
+          ctx.stroke();
+
+          // Inner distortion line
+          ctx.beginPath();
+          ctx.arc(well.x, well.y, waveRadius, 0, Math.PI * 2);
+          ctx.strokeStyle = `hsla(${waveHue}, 100%, 80%, ${waveAlpha * 0.5})`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+
+      // Central gravity well glow
+      const coreGlow = ctx.createRadialGradient(well.x, well.y, 0, well.x, well.y, 25 * well.strength);
+      const coreHue = (well.hue + well.age * 2) % 360;
+      coreGlow.addColorStop(0, `hsla(${coreHue}, 100%, 90%, ${wellAlpha * 0.8})`);
+      coreGlow.addColorStop(0.3, `hsla(${coreHue}, 100%, 70%, ${wellAlpha * 0.5})`);
+      coreGlow.addColorStop(0.6, `hsla(${(coreHue + 60) % 360}, 80%, 50%, ${wellAlpha * 0.2})`);
+      coreGlow.addColorStop(1, 'transparent');
+
+      ctx.beginPath();
+      ctx.arc(well.x, well.y, 25 * well.strength, 0, Math.PI * 2);
+      ctx.fillStyle = coreGlow;
+      ctx.fill();
+
+      // Spinning distortion arms (like gravitational lensing)
+      ctx.save();
+      ctx.translate(well.x, well.y);
+      ctx.rotate(well.age * 0.05);
+
+      for (let arm = 0; arm < 4; arm++) {
+        const armAngle = (arm / 4) * Math.PI * 2;
+        const armLength = well.radius * 0.6 * well.strength;
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+
+        // Curved arm path
+        for (let t = 0; t <= 1; t += 0.05) {
+          const spiralAngle = armAngle + t * Math.PI * 0.5;
+          const spiralR = t * armLength;
+          ctx.lineTo(
+            Math.cos(spiralAngle) * spiralR,
+            Math.sin(spiralAngle) * spiralR
+          );
+        }
+
+        const armHue = (well.hue + arm * 90) % 360;
+        ctx.strokeStyle = `hsla(${armHue}, 100%, 70%, ${wellAlpha * 0.4})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    });
+
+    // Draw DIMENSIONAL RIFT effect - reality-tearing portal
+    if (dimensionalRiftRef.current.active) {
+      const rift = dimensionalRiftRef.current;
+      const riftAlpha = Math.sin(rift.phase * 0.5) * 0.5 + 0.5;
+
+      ctx.save();
+      ctx.translate(rift.x, rift.y);
+
+      // Outer reality tear effect
+      const tearCount = 8;
+      for (let tear = 0; tear < tearCount; tear++) {
+        const tearAngle = (tear / tearCount) * Math.PI * 2 + rift.phase * 0.3;
+        const tearLength = rift.size * (0.8 + Math.sin(rift.phase + tear) * 0.3);
+        const tearHue = (rift.phase * 50 + tear * 45) % 360;
+
+        // Jagged tear line
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+
+        for (let seg = 1; seg <= 5; seg++) {
+          const segDist = (seg / 5) * tearLength;
+          const jitter = (Math.sin(rift.phase * 3 + seg + tear) * 8);
+          const perpAngle = tearAngle + Math.PI / 2;
+          ctx.lineTo(
+            Math.cos(tearAngle) * segDist + Math.cos(perpAngle) * jitter,
+            Math.sin(tearAngle) * segDist + Math.sin(perpAngle) * jitter
+          );
+        }
+
+        ctx.strokeStyle = `hsla(${tearHue}, 100%, 70%, ${riftAlpha * 0.6})`;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = `hsl(${tearHue}, 100%, 60%)`;
+        ctx.shadowBlur = 15;
+        ctx.stroke();
+      }
+
+      // Central void
+      const voidGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, rift.size * 0.4);
+      voidGradient.addColorStop(0, `rgba(0, 0, 20, ${riftAlpha * 0.9})`);
+      voidGradient.addColorStop(0.5, `rgba(50, 0, 100, ${riftAlpha * 0.6})`);
+      voidGradient.addColorStop(1, 'transparent');
+
+      ctx.beginPath();
+      ctx.arc(0, 0, rift.size * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = voidGradient;
+      ctx.shadowBlur = 0;
+      ctx.fill();
+
+      // Rotating energy ring
+      ctx.beginPath();
+      ctx.arc(0, 0, rift.size * 0.3, 0, Math.PI * 2);
+      const ringHue = (rift.phase * 60) % 360;
+      ctx.strokeStyle = `hsla(${ringHue}, 100%, 80%, ${riftAlpha * 0.8})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Inner bright core
+      ctx.beginPath();
+      ctx.arc(0, 0, 5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${riftAlpha})`;
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // Global spacetime distortion overlay - subtle warping effect
+    if (spacetimeDistortionRef.current > 0.05) {
+      const distortion = spacetimeDistortionRef.current;
+
+      // Draw radiating distortion waves from snake head
+      const distortHead = gameState.snake[0];
+      if (distortHead) {
+        const dx = distortHead.x * CELL_SIZE + CELL_SIZE / 2;
+        const dy = distortHead.y * CELL_SIZE + CELL_SIZE / 2;
+
+        // Multiple expanding rings
+        for (let ring = 0; ring < 3; ring++) {
+          const ringPhase = (animationFrame * 0.1 + ring * 2) % 6;
+          const ringRadius = ringPhase * 40;
+          const ringAlpha = distortion * (1 - ringPhase / 6) * 0.3;
+
+          if (ringAlpha > 0.01) {
+            ctx.beginPath();
+            ctx.arc(dx, dy, ringRadius, 0, Math.PI * 2);
+
+            const ringGradient = ctx.createRadialGradient(
+              dx, dy, ringRadius * 0.9,
+              dx, dy, ringRadius * 1.1
+            );
+            const ringHue = (animationFrame * 3 + ring * 60) % 360;
+            ringGradient.addColorStop(0, 'transparent');
+            ringGradient.addColorStop(0.5, `hsla(${ringHue}, 80%, 60%, ${ringAlpha})`);
+            ringGradient.addColorStop(1, 'transparent');
+
+            ctx.strokeStyle = ringGradient;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        }
+      }
+    }
 
     // Draw shooting stars
     particlesRef.current.forEach((p) => {
