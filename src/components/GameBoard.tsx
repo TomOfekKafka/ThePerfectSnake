@@ -1800,6 +1800,125 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
       ctx.fillStyle = segmentGradient;
       ctx.fill();
 
+      // HOLOGRAPHIC DRAGON SCALE EFFECT - iridescent shimmering scales on body segments
+      if (!isHead && radius > 3) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.clip();
+
+        // Calculate scale properties based on segment position and animation
+        const scalePhase = animationFrame * 0.08 + index * 0.5;
+        const hexSides = 6;
+        const baseScaleSize = radius * 0.45;
+
+        // Draw overlapping hexagonal scales with chromatic shift
+        for (let row = -2; row <= 2; row++) {
+          for (let col = -2; col <= 2; col++) {
+            // Offset every other row for hexagonal pattern
+            const offsetX = row % 2 === 0 ? 0 : baseScaleSize * 0.5;
+            const scaleX = x + col * baseScaleSize * 0.9 + offsetX;
+            const scaleY = y + row * baseScaleSize * 0.75;
+
+            // Distance from center affects visibility
+            const distFromCenter = Math.sqrt(
+              Math.pow(scaleX - x, 2) + Math.pow(scaleY - y, 2)
+            );
+            if (distFromCenter > radius * 1.1) continue;
+
+            // Chromatic hue based on position and animation - creates prism rainbow effect
+            const chromaticHue = (
+              index * 40 +
+              row * 25 +
+              col * 35 +
+              animationFrame * 3 +
+              Math.sin(scalePhase + row + col) * 30
+            ) % 360;
+
+            // Shimmer intensity based on angle and time - simulates light refraction
+            const shimmerAngle = Math.atan2(scaleY - y, scaleX - x);
+            const lightWave = Math.sin(scalePhase * 2 + shimmerAngle * 3);
+            const shimmerIntensity = 0.3 + lightWave * 0.25;
+
+            // Scale alpha fades toward edges
+            const edgeFade = 1 - (distFromCenter / radius) * 0.6;
+            const scaleAlpha = shimmerIntensity * edgeFade * (1 - progress * 0.5);
+
+            // Draw hexagonal scale shape
+            ctx.beginPath();
+            const scaleRadius = baseScaleSize * 0.4;
+            for (let i = 0; i < hexSides; i++) {
+              const angle = (i / hexSides) * Math.PI * 2 - Math.PI / hexSides;
+              const px = scaleX + Math.cos(angle) * scaleRadius;
+              const py = scaleY + Math.sin(angle) * scaleRadius;
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+
+            // Fill with chromatic gradient
+            const scaleGradient = ctx.createRadialGradient(
+              scaleX - scaleRadius * 0.3,
+              scaleY - scaleRadius * 0.3,
+              0,
+              scaleX,
+              scaleY,
+              scaleRadius
+            );
+            const lightness = 60 + lightWave * 20;
+            scaleGradient.addColorStop(0, `hsla(${chromaticHue}, 100%, ${lightness + 20}%, ${scaleAlpha * 0.9})`);
+            scaleGradient.addColorStop(0.4, `hsla(${(chromaticHue + 30) % 360}, 90%, ${lightness}%, ${scaleAlpha * 0.7})`);
+            scaleGradient.addColorStop(1, `hsla(${(chromaticHue + 60) % 360}, 80%, ${lightness - 15}%, ${scaleAlpha * 0.4})`);
+
+            ctx.fillStyle = scaleGradient;
+            ctx.fill();
+
+            // Add iridescent highlight on each scale
+            if (lightWave > 0.3) {
+              ctx.beginPath();
+              ctx.arc(
+                scaleX - scaleRadius * 0.25,
+                scaleY - scaleRadius * 0.25,
+                scaleRadius * 0.25,
+                0,
+                Math.PI * 2
+              );
+              ctx.fillStyle = `rgba(255, 255, 255, ${scaleAlpha * lightWave * 0.6})`;
+              ctx.fill();
+            }
+
+            // Draw scale edge highlight for 3D effect
+            ctx.beginPath();
+            for (let i = 0; i < 3; i++) {
+              const angle = (i / 6) * Math.PI * 2 - Math.PI / 6;
+              const px = scaleX + Math.cos(angle) * scaleRadius;
+              const py = scaleY + Math.sin(angle) * scaleRadius;
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.strokeStyle = `rgba(255, 255, 255, ${scaleAlpha * 0.4})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+
+        // Add overall holographic sheen overlay
+        const sheenAngle = animationFrame * 0.05 + index * 0.3;
+        const sheenX = x + Math.cos(sheenAngle) * radius * 0.5;
+        const sheenY = y + Math.sin(sheenAngle) * radius * 0.5;
+        const sheenGradient = ctx.createRadialGradient(sheenX, sheenY, 0, x, y, radius);
+        sheenGradient.addColorStop(0, `rgba(255, 255, 255, ${0.25 * (1 - progress)})`);
+        sheenGradient.addColorStop(0.3, `hsla(${(animationFrame * 4 + index * 50) % 360}, 100%, 75%, ${0.15 * (1 - progress)})`);
+        sheenGradient.addColorStop(1, 'transparent');
+
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = sheenGradient;
+        ctx.fill();
+
+        ctx.restore();
+      }
+
       // Segment highlight
       ctx.beginPath();
       ctx.arc(x - radius * 0.3, y - radius * 0.3, radius * 0.3, 0, Math.PI * 2);
