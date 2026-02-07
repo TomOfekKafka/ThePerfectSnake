@@ -20,7 +20,7 @@ interface GameBoardProps {
 
 const CELL_SIZE = 20;
 
-// Enhanced color palette with more vibrant neon colors
+// Enhanced color palette with electric neon colors
 const COLORS = {
   bgDark: '#050510',
   bgMid: '#0a0a1a',
@@ -39,6 +39,11 @@ const COLORS = {
   gameOverText: '#ff2266',
   particle: '#00ffcc',
   star: 'rgba(100, 150, 255, 0.8)',
+  // Electric effect colors
+  electricCore: '#ffffff',
+  electricInner: '#88ffff',
+  electricOuter: '#00ccff',
+  electricGlow: 'rgba(0, 200, 255, 0.6)',
 };
 
 // Particle system for trail effects
@@ -61,6 +66,16 @@ let lastScore = 0;
 let gameOverTime = 0;
 let stars: { x: number; y: number; size: number; speed: number; brightness: number }[] = [];
 let starsInitialized = false;
+
+// Electric arc effect state
+interface ElectricArc {
+  points: { x: number; y: number }[];
+  life: number;
+  maxLife: number;
+  intensity: number;
+}
+const electricArcs: ElectricArc[] = [];
+let powerSurgeIntensity = 0;
 
 function initStars(width: number, height: number) {
   if (starsInitialized && stars.length > 0) return;
@@ -172,6 +187,206 @@ function updateAndDrawParticles(ctx: CanvasRenderingContext2D) {
   }
 }
 
+// Generate lightning bolt path between two points
+function generateLightningPath(
+  x1: number, y1: number,
+  x2: number, y2: number,
+  segments: number = 8,
+  displacement: number = 15
+): { x: number; y: number }[] {
+  const points: { x: number; y: number }[] = [{ x: x1, y: y1 }];
+
+  for (let i = 1; i < segments; i++) {
+    const t = i / segments;
+    const baseX = x1 + (x2 - x1) * t;
+    const baseY = y1 + (y2 - y1) * t;
+
+    // Add random displacement perpendicular to the line
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const perpX = -dy / len;
+    const perpY = dx / len;
+
+    const offset = (Math.random() - 0.5) * displacement * (1 - Math.abs(t - 0.5) * 2);
+    points.push({
+      x: baseX + perpX * offset,
+      y: baseY + perpY * offset
+    });
+  }
+
+  points.push({ x: x2, y: y2 });
+  return points;
+}
+
+// Spawn electric arcs between snake segments
+function spawnElectricArc(x1: number, y1: number, x2: number, y2: number, intensity: number = 1) {
+  const points = generateLightningPath(x1, y1, x2, y2, 6, 12 * intensity);
+  electricArcs.push({
+    points,
+    life: 1,
+    maxLife: 1,
+    intensity
+  });
+}
+
+// Draw electric arcs with glow effect
+function drawElectricArcs(ctx: CanvasRenderingContext2D) {
+  for (let i = electricArcs.length - 1; i >= 0; i--) {
+    const arc = electricArcs[i];
+    arc.life -= 0.08;
+
+    if (arc.life <= 0) {
+      electricArcs.splice(i, 1);
+      continue;
+    }
+
+    const alpha = arc.life * arc.intensity;
+    const { points } = arc;
+
+    if (points.length < 2) continue;
+
+    // Draw outer glow (thick, transparent)
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let j = 1; j < points.length; j++) {
+      ctx.lineTo(points[j].x, points[j].y);
+    }
+    ctx.strokeStyle = `rgba(0, 200, 255, ${alpha * 0.3})`;
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // Draw middle glow
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let j = 1; j < points.length; j++) {
+      ctx.lineTo(points[j].x, points[j].y);
+    }
+    ctx.strokeStyle = `rgba(100, 220, 255, ${alpha * 0.6})`;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // Draw core (bright white)
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let j = 1; j < points.length; j++) {
+      ctx.lineTo(points[j].x, points[j].y);
+    }
+    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+// Draw electric aura around a point
+function drawElectricAura(
+  ctx: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  radius: number,
+  time: number,
+  intensity: number = 1
+) {
+  const numBolts = 6;
+  const baseAngle = time * 0.005;
+
+  for (let i = 0; i < numBolts; i++) {
+    const angle = baseAngle + (i * Math.PI * 2) / numBolts;
+    const wobble = Math.sin(time * 0.02 + i * 1.5) * 0.3;
+    const boltLength = radius * (0.8 + Math.sin(time * 0.015 + i * 2) * 0.4) * intensity;
+
+    const startX = centerX + Math.cos(angle + wobble) * radius * 0.5;
+    const startY = centerY + Math.sin(angle + wobble) * radius * 0.5;
+    const endX = centerX + Math.cos(angle + wobble) * (radius * 0.5 + boltLength);
+    const endY = centerY + Math.sin(angle + wobble) * (radius * 0.5 + boltLength);
+
+    // Generate mini lightning path
+    const points = generateLightningPath(startX, startY, endX, endY, 4, 6);
+
+    // Draw the mini bolt
+    const alpha = 0.4 + Math.sin(time * 0.03 + i) * 0.3;
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let j = 1; j < points.length; j++) {
+      ctx.lineTo(points[j].x, points[j].y);
+    }
+    ctx.strokeStyle = `rgba(100, 220, 255, ${alpha * 0.5})`;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let j = 1; j < points.length; j++) {
+      ctx.lineTo(points[j].x, points[j].y);
+    }
+    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+}
+
+// Draw power surge effect (screen-wide electric pulse)
+function drawPowerSurge(ctx: CanvasRenderingContext2D, width: number, height: number, intensity: number, time: number) {
+  if (intensity <= 0) return;
+
+  // Electric pulse rings expanding from center
+  const numRings = 3;
+  for (let ring = 0; ring < numRings; ring++) {
+    const ringProgress = ((time * 0.003 + ring * 0.3) % 1);
+    const ringRadius = ringProgress * Math.max(width, height) * 0.8;
+    const ringAlpha = intensity * (1 - ringProgress) * 0.3;
+
+    ctx.beginPath();
+    ctx.arc(width / 2, height / 2, ringRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(100, 220, 255, ${ringAlpha})`;
+    ctx.lineWidth = 3 * (1 - ringProgress);
+    ctx.stroke();
+  }
+
+  // Random electric branches from edges
+  if (Math.random() < intensity * 0.3) {
+    const side = Math.floor(Math.random() * 4);
+    let startX: number, startY: number, endX: number, endY: number;
+
+    switch (side) {
+      case 0: // Top
+        startX = Math.random() * width;
+        startY = 0;
+        endX = startX + (Math.random() - 0.5) * 100;
+        endY = Math.random() * height * 0.4;
+        break;
+      case 1: // Bottom
+        startX = Math.random() * width;
+        startY = height;
+        endX = startX + (Math.random() - 0.5) * 100;
+        endY = height - Math.random() * height * 0.4;
+        break;
+      case 2: // Left
+        startX = 0;
+        startY = Math.random() * height;
+        endX = Math.random() * width * 0.4;
+        endY = startY + (Math.random() - 0.5) * 100;
+        break;
+      default: // Right
+        startX = width;
+        startY = Math.random() * height;
+        endX = width - Math.random() * width * 0.4;
+        endY = startY + (Math.random() - 0.5) * 100;
+    }
+
+    spawnElectricArc(startX, startY, endX, endY, intensity * 0.7);
+  }
+
+  // Screen flash
+  const flashAlpha = intensity * 0.1;
+  ctx.fillStyle = `rgba(150, 230, 255, ${flashAlpha})`;
+  ctx.fillRect(0, 0, width, height);
+}
+
 function getDirectionAngle(direction: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT'): number {
   switch (direction) {
     case 'UP': return -Math.PI / 2;
@@ -186,18 +401,23 @@ function drawSnakeHead(
   x: number,
   y: number,
   direction: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT',
-  time: number
+  time: number,
+  electricIntensity: number = 1
 ) {
   const centerX = x * CELL_SIZE + CELL_SIZE / 2;
   const centerY = y * CELL_SIZE + CELL_SIZE / 2;
   const radius = (CELL_SIZE - 2) / 2;
   const angle = getDirectionAngle(direction);
 
-  // Animated glow effect
+  // Draw electric aura around the head
+  drawElectricAura(ctx, centerX, centerY, radius + 15, time, electricIntensity);
+
+  // Animated glow effect (enhanced with electric blue tint)
   const glowPulse = 12 + Math.sin(time * 0.01) * 3;
   const glow = ctx.createRadialGradient(centerX, centerY, radius * 0.3, centerX, centerY, radius + glowPulse);
   glow.addColorStop(0, COLORS.snakeHeadGlow);
-  glow.addColorStop(0.5, 'rgba(0, 255, 170, 0.3)');
+  glow.addColorStop(0.3, 'rgba(0, 255, 200, 0.4)');
+  glow.addColorStop(0.6, 'rgba(0, 200, 255, 0.2)');
   glow.addColorStop(1, 'transparent');
   ctx.fillStyle = glow;
   ctx.fillRect(centerX - radius - glowPulse, centerY - radius - glowPulse,
@@ -278,7 +498,19 @@ function drawSnakeBody(
 ) {
   if (segments.length < 2) return;
 
-  // Draw connected body segments with rainbow effect
+  // Spawn electric arcs between segments periodically
+  if (Math.random() < 0.15 && segments.length > 2) {
+    const arcIndex = Math.floor(Math.random() * (segments.length - 1)) + 1;
+    const seg1 = segments[arcIndex - 1];
+    const seg2 = segments[arcIndex];
+    const x1 = seg1.x * CELL_SIZE + CELL_SIZE / 2;
+    const y1 = seg1.y * CELL_SIZE + CELL_SIZE / 2;
+    const x2 = seg2.x * CELL_SIZE + CELL_SIZE / 2;
+    const y2 = seg2.y * CELL_SIZE + CELL_SIZE / 2;
+    spawnElectricArc(x1, y1, x2, y2, 0.8);
+  }
+
+  // Draw connected body segments with electric gradient effect
   for (let i = 1; i < segments.length; i++) {
     const segment = segments[i];
     const prevSegment = segments[i - 1];
@@ -294,15 +526,18 @@ function drawSnakeBody(
     const taperFactor = 1 - progress * 0.4;
     const radius = baseRadius * taperFactor;
 
-    // Rainbow hue that shifts over time and position
-    const hue = (160 + progress * 60 + time * 0.02) % 360;
-    const saturation = 80 - progress * 20;
-    const lightness = 55 - progress * 15;
+    // Electric-enhanced hue (cyan to green gradient with electric blue pulses)
+    const electricPulse = Math.sin(time * 0.015 + i * 0.8) * 0.5 + 0.5;
+    const baseHue = 160 + progress * 40; // Green to cyan
+    const hue = baseHue + electricPulse * 20; // Add blue shift when pulsing
+    const saturation = 85 - progress * 15 + electricPulse * 15;
+    const lightness = 55 - progress * 10 + electricPulse * 10;
 
-    // Draw glow
-    const glowRadius = radius + 6 - progress * 4;
-    const glow = ctx.createRadialGradient(centerX, centerY, radius * 0.3, centerX, centerY, glowRadius);
-    glow.addColorStop(0, `hsla(${hue}, ${saturation}%, ${lightness}%, 0.6)`);
+    // Draw electric glow (enhanced)
+    const glowRadius = radius + 8 - progress * 4 + electricPulse * 4;
+    const glow = ctx.createRadialGradient(centerX, centerY, radius * 0.2, centerX, centerY, glowRadius);
+    glow.addColorStop(0, `hsla(${hue}, ${saturation}%, ${lightness}%, 0.7)`);
+    glow.addColorStop(0.5, `hsla(190, 100%, 60%, ${0.3 * electricPulse})`);
     glow.addColorStop(1, 'transparent');
     ctx.fillStyle = glow;
     ctx.fillRect(centerX - glowRadius, centerY - glowRadius, glowRadius * 2, glowRadius * 2);
@@ -314,10 +549,20 @@ function drawSnakeBody(
 
     if (dist < CELL_SIZE * 1.5) {
       const prevRadius = baseRadius * (1 - (i - 1) / segments.length * 0.4);
+
+      // Draw electric core connector
       ctx.beginPath();
       ctx.lineWidth = Math.min(radius, prevRadius) * 1.8;
       ctx.lineCap = 'round';
       ctx.strokeStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+      ctx.moveTo(prevCenterX, prevCenterY);
+      ctx.lineTo(centerX, centerY);
+      ctx.stroke();
+
+      // Draw thin electric line through center
+      ctx.beginPath();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = `rgba(200, 255, 255, ${0.3 + electricPulse * 0.4})`;
       ctx.moveTo(prevCenterX, prevCenterY);
       ctx.lineTo(centerX, centerY);
       ctx.stroke();
@@ -327,23 +572,32 @@ function drawSnakeBody(
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
 
-    // Gradient fill
+    // Electric gradient fill
     const segGradient = ctx.createRadialGradient(
       centerX - radius * 0.3, centerY - radius * 0.3, 0,
       centerX, centerY, radius
     );
-    segGradient.addColorStop(0, `hsl(${hue}, ${saturation}%, ${lightness + 30}%)`);
-    segGradient.addColorStop(0.4, `hsl(${hue}, ${saturation}%, ${lightness}%)`);
-    segGradient.addColorStop(1, `hsl(${hue}, ${saturation - 10}%, ${lightness - 20}%)`);
+    segGradient.addColorStop(0, `hsl(${hue}, ${saturation}%, ${lightness + 35}%)`);
+    segGradient.addColorStop(0.3, `hsl(${hue}, ${saturation}%, ${lightness + 10}%)`);
+    segGradient.addColorStop(0.7, `hsl(${hue}, ${saturation}%, ${lightness}%)`);
+    segGradient.addColorStop(1, `hsl(${hue}, ${saturation - 10}%, ${lightness - 15}%)`);
 
     ctx.fillStyle = segGradient;
     ctx.fill();
 
-    // Add shine
+    // Add electric shine
     ctx.beginPath();
-    ctx.arc(centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.2, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.arc(centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.25, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200, 255, 255, ${0.4 + electricPulse * 0.3})`;
     ctx.fill();
+
+    // Small electric dot on each segment
+    if (electricPulse > 0.7) {
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${(electricPulse - 0.7) * 3})`;
+      ctx.fill();
+    }
   }
 }
 
@@ -509,8 +763,24 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         const head = gameState.snake[0];
         if (head) {
           spawnParticles(head.x, head.y, 15, 340); // Pink particles
+          spawnParticles(head.x, head.y, 10, 190); // Electric cyan particles
+
+          // Spawn electric arcs radiating from head
+          const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+          const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+          for (let a = 0; a < 6; a++) {
+            const angle = (a / 6) * Math.PI * 2 + Math.random() * 0.5;
+            const dist = 40 + Math.random() * 30;
+            spawnElectricArc(
+              headX, headY,
+              headX + Math.cos(angle) * dist,
+              headY + Math.sin(angle) * dist,
+              1.2
+            );
+          }
         }
         foodEatFlash = 1;
+        powerSurgeIntensity = 1;
         lastScore = scoreRef.current;
       }
 
@@ -527,6 +797,11 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         foodEatFlash -= 0.05;
       }
 
+      // Update power surge intensity
+      if (powerSurgeIntensity > 0) {
+        powerSurgeIntensity -= 0.03;
+      }
+
       // Track game over timing
       if (gameState.gameOver && gameOverTime === 0) {
         gameOverTime = time;
@@ -537,11 +812,17 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
       // Draw background with grid and stars
       drawBackground(ctx, width, height, time);
 
+      // Draw power surge effect (behind everything)
+      drawPowerSurge(ctx, width, height, powerSurgeIntensity, time);
+
       // Draw food eat flash effect
       drawFoodEatFlash(ctx, width, height, foodEatFlash);
 
       // Draw and update particles
       updateAndDrawParticles(ctx);
+
+      // Draw electric arcs
+      drawElectricArcs(ctx);
 
       // Draw food with animation
       drawFood(ctx, gameState.food.x, gameState.food.y, time);
@@ -549,10 +830,11 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
       // Draw snake body (all segments except head)
       drawSnakeBody(ctx, gameState.snake, time);
 
-      // Draw snake head on top
+      // Draw snake head on top with electric intensity based on recent food eating
       if (gameState.snake.length > 0) {
         const head = gameState.snake[0];
-        drawSnakeHead(ctx, head.x, head.y, gameState.direction, time);
+        const electricBoost = 1 + powerSurgeIntensity * 0.5;
+        drawSnakeHead(ctx, head.x, head.y, gameState.direction, time, electricBoost);
       }
 
       // Draw game over overlay if needed
