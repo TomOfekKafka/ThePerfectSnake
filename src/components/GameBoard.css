@@ -1,9 +1,13 @@
 .canvas-wrapper {
-  padding: 2px;
-  border: 2px solid #999;
-  border-radius: 4px;
-  background: #fff;
-  overflow: hidden; /* Prevent scrollbars */
+  padding: 4px;
+  border: 2px solid #00ff88;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0a0a1a 0%, #12122a 100%);
+  box-shadow:
+    0 0 20px rgba(0, 255, 136, 0.3),
+    0 0 40px rgba(0, 255, 136, 0.1),
+    inset 0 0 20px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
   max-width: 100%;
   max-height: 100%;
   box-sizing: border-box;
@@ -14,12 +18,13 @@
 
 canvas {
   display: block;
-  background: #fff;
+  background: #0a0a1a;
   max-width: 100%;
   max-height: 100%;
   width: auto;
   height: auto;
   object-fit: contain;
+  border-radius: 4px;
 }
 
 /* Landscape mode - constrain by height */
