@@ -62,6 +62,18 @@ const SHOOTING_STARS: Array<{ x: number; y: number; angle: number; length: numbe
   { x: 320, y: 80, angle: Math.PI * 0.8, length: 20 },
 ];
 
+// Static warp lines (decorative speed lines)
+const WARP_LINES: Array<{ x: number; y: number; angle: number; length: number; color: string }> = [];
+for (let i = 0; i < 8; i++) {
+  WARP_LINES.push({
+    x: 50 + Math.random() * 300,
+    y: 50 + Math.random() * 300,
+    angle: Math.PI * (0.7 + Math.random() * 0.3),
+    length: 20 + Math.random() * 30,
+    color: COLORS.rainbow[i % COLORS.rainbow.length],
+  });
+}
+
 function lerpColor(color1: string, color2: string, t: number): string {
   const c1 = parseInt(color1.slice(1), 16);
   const c2 = parseInt(color2.slice(1), 16);
@@ -163,6 +175,33 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.globalAlpha = 1;
   }
 
+  // Draw warp lines (decorative speed effect)
+  for (const wl of WARP_LINES) {
+    const endX = wl.x + Math.cos(wl.angle) * wl.length;
+    const endY = wl.y + Math.sin(wl.angle) * wl.length;
+
+    // Gradient warp trail
+    const warpGrad = ctx.createLinearGradient(wl.x, wl.y, endX, endY);
+    warpGrad.addColorStop(0, wl.color);
+    warpGrad.addColorStop(1, 'rgba(0, 255, 204, 0)');
+
+    ctx.strokeStyle = warpGrad;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.4;
+    ctx.beginPath();
+    ctx.moveTo(wl.x, wl.y);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+
+    // Head glow
+    ctx.fillStyle = wl.color;
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(wl.x, wl.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
   // Subtle grid pattern
   ctx.strokeStyle = COLORS.bgGrid;
   ctx.globalAlpha = 0.25;
@@ -195,6 +234,18 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   const food = gameState.food;
   const foodCenterX = food.x * CELL_SIZE + CELL_SIZE / 2;
   const foodCenterY = food.y * CELL_SIZE + CELL_SIZE / 2;
+
+  // Energy rings around food (static)
+  for (let i = 0; i < 3; i++) {
+    const ringRadius = 20 + i * 12;
+    ctx.strokeStyle = COLORS.rainbow[i * 2];
+    ctx.lineWidth = 2 - i * 0.5;
+    ctx.globalAlpha = 0.15 - i * 0.04;
+    ctx.beginPath();
+    ctx.arc(foodCenterX, foodCenterY, ringRadius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 
   // Outer corona glow (larger, more dramatic)
   ctx.fillStyle = COLORS.food;

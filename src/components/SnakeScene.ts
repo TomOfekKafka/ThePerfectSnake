@@ -41,6 +41,27 @@ interface ShootingStar {
   life: number;
 }
 
+interface WarpLine {
+  x: number;
+  y: number;
+  angle: number;
+  speed: number;
+  length: number;
+  color: number;
+  alpha: number;
+  life: number;
+}
+
+interface EnergyRing {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  color: number;
+  life: number;
+  thickness: number;
+}
+
 interface Star {
   x: number;
   y: number;
@@ -110,14 +131,20 @@ export class SnakeScene extends Phaser.Scene {
   private plasmaWaves: PlasmaWave[] = [];
   private shockWaves: ShockWave[] = [];
   private shootingStars: ShootingStar[] = [];
+  private warpLines: WarpLine[] = [];
+  private energyRings: EnergyRing[] = [];
 
   // Previous state for detecting food eaten
   private prevFoodPos: Position | null = null;
   private prevSnakeLength = 0;
+  private prevHeadPos: Position | null = null;
 
   // Screen shake for game over
   private shakeIntensity = 0;
   private shakeDecay = 0.9;
+
+  // Direction tracking for warp effect
+  private moveDirection: { dx: number; dy: number } = { dx: 1, dy: 0 };
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -181,6 +208,7 @@ export class SnakeScene extends Phaser.Scene {
     // Detect if food was eaten (snake grew)
     if (this.currentState && state.snake.length > this.prevSnakeLength) {
       this.spawnFoodExplosion(this.prevFoodPos || state.food);
+      this.spawnEnergyRings(this.prevFoodPos || state.food);
     }
 
     // Trigger screen shake on game over
@@ -188,8 +216,23 @@ export class SnakeScene extends Phaser.Scene {
       this.shakeIntensity = 8;
     }
 
+    // Track movement direction for warp effect
+    if (state.snake.length > 0 && this.prevHeadPos) {
+      const head = state.snake[0];
+      const dx = head.x - this.prevHeadPos.x;
+      const dy = head.y - this.prevHeadPos.y;
+      if (dx !== 0 || dy !== 0) {
+        this.moveDirection = { dx, dy };
+        // Spawn warp lines when moving
+        if (!state.gameOver) {
+          this.spawnWarpLines(head);
+        }
+      }
+    }
+
     this.prevFoodPos = state.food;
     this.prevSnakeLength = state.snake.length;
+    this.prevHeadPos = state.snake.length > 0 ? { ...state.snake[0] } : null;
     this.currentState = state;
     this.needsRedraw = true;
   }
@@ -198,19 +241,19 @@ export class SnakeScene extends Phaser.Scene {
     const centerX = pos.x * CELL_SIZE + CELL_SIZE / 2;
     const centerY = pos.y * CELL_SIZE + CELL_SIZE / 2;
 
-    // Spawn burst of particles
-    for (let i = 0; i < 12; i++) {
-      const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.5;
-      const speed = 2 + Math.random() * 3;
+    // Spawn burst of particles - more particles for dramatic effect
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2 + Math.random() * 0.5;
+      const speed = 2.5 + Math.random() * 4;
       this.foodParticles.push({
         x: centerX,
         y: centerY,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: 30,
-        maxLife: 30,
+        life: 35,
+        maxLife: 35,
         color: COLORS.rainbow[i % COLORS.rainbow.length],
-        size: 3 + Math.random() * 2,
+        size: 3 + Math.random() * 3,
       });
     }
 
@@ -219,10 +262,56 @@ export class SnakeScene extends Phaser.Scene {
       x: centerX,
       y: centerY,
       radius: 5,
-      maxRadius: 60,
-      life: 20,
+      maxRadius: 70,
+      life: 25,
       color: COLORS.food,
     });
+  }
+
+  private spawnEnergyRings(pos: Position): void {
+    const centerX = pos.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = pos.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Spawn multiple expanding energy rings
+    for (let i = 0; i < 3; i++) {
+      this.energyRings.push({
+        x: centerX,
+        y: centerY,
+        radius: 5 + i * 8,
+        maxRadius: 80 + i * 20,
+        color: COLORS.rainbow[i * 2],
+        life: 30 - i * 5,
+        thickness: 3 - i * 0.5,
+      });
+    }
+  }
+
+  private spawnWarpLines(head: Position): void {
+    if (this.warpLines.length > 30) return; // Limit warp lines
+
+    const centerX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Calculate base angle from movement direction (opposite to movement = trailing behind)
+    const baseAngle = Math.atan2(-this.moveDirection.dy, -this.moveDirection.dx);
+
+    // Spawn warp lines behind the snake head
+    for (let i = 0; i < 3; i++) {
+      const spreadAngle = (Math.random() - 0.5) * 0.8; // Spread angle
+      const angle = baseAngle + spreadAngle;
+      const distance = 10 + Math.random() * 15;
+
+      this.warpLines.push({
+        x: centerX + Math.cos(angle) * distance,
+        y: centerY + Math.sin(angle) * distance,
+        angle: angle,
+        speed: 4 + Math.random() * 3,
+        length: 15 + Math.random() * 20,
+        color: COLORS.electric[Math.floor(Math.random() * COLORS.electric.length)],
+        alpha: 0.6 + Math.random() * 0.4,
+        life: 15 + Math.random() * 10,
+      });
+    }
   }
 
   private spawnShootingStar(): void {
@@ -339,6 +428,28 @@ export class SnakeScene extends Phaser.Scene {
     if (Math.random() < 0.02) {
       this.spawnShootingStar();
     }
+
+    // Update warp lines
+    for (let i = this.warpLines.length - 1; i >= 0; i--) {
+      const wl = this.warpLines[i];
+      wl.x += Math.cos(wl.angle) * wl.speed;
+      wl.y += Math.sin(wl.angle) * wl.speed;
+      wl.life--;
+      wl.alpha *= 0.92;
+      if (wl.life <= 0 || wl.alpha < 0.05) {
+        this.warpLines.splice(i, 1);
+      }
+    }
+
+    // Update energy rings
+    for (let i = this.energyRings.length - 1; i >= 0; i--) {
+      const er = this.energyRings[i];
+      er.radius += (er.maxRadius - er.radius) * 0.12;
+      er.life--;
+      if (er.life <= 0) {
+        this.energyRings.splice(i, 1);
+      }
+    }
   }
 
   update(): void {
@@ -379,14 +490,18 @@ export class SnakeScene extends Phaser.Scene {
     // Subtle grid pattern with glow
     this.drawGrid(g, width, height, shakeX, shakeY);
 
+    // Draw warp lines (behind everything else game-related)
+    this.drawWarpLines(g, shakeX, shakeY);
+
     // Draw trail particles (behind snake)
     this.drawTrailParticles(g, shakeX, shakeY);
 
     // Draw food with enhanced pulsing glow effect
     this.drawFood(g, shakeX, shakeY);
 
-    // Draw food explosion particles
+    // Draw food explosion particles and energy rings
     this.drawFoodParticles(g, shakeX, shakeY);
+    this.drawEnergyRings(g, shakeX, shakeY);
 
     // Draw snake with rainbow shimmer and electric effects
     this.drawSnake(g, shakeX, shakeY);
@@ -514,7 +629,7 @@ export class SnakeScene extends Phaser.Scene {
 
     // Draw shockwaves
     for (const sw of this.shockWaves) {
-      const alpha = (sw.life / 20) * 0.6;
+      const alpha = (sw.life / 25) * 0.6;
       const x = sw.x + shakeX;
       const y = sw.y + shakeY;
 
@@ -527,6 +642,52 @@ export class SnakeScene extends Phaser.Scene {
 
       g.lineStyle(1, sw.color, alpha * 0.8);
       g.strokeCircle(x, y, sw.radius * 0.4);
+    }
+  }
+
+  private drawWarpLines(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const wl of this.warpLines) {
+      const alpha = wl.alpha;
+      const startX = wl.x + shakeX;
+      const startY = wl.y + shakeY;
+      const endX = startX + Math.cos(wl.angle) * wl.length;
+      const endY = startY + Math.sin(wl.angle) * wl.length;
+
+      // Outer glow
+      g.lineStyle(4, wl.color, alpha * 0.2);
+      g.lineBetween(startX, startY, endX, endY);
+
+      // Core line
+      g.lineStyle(2, wl.color, alpha * 0.6);
+      g.lineBetween(startX, startY, endX, endY);
+
+      // Bright center
+      g.lineStyle(1, 0xffffff, alpha * 0.8);
+      g.lineBetween(startX, startY, endX, endY);
+
+      // Head glow
+      g.fillStyle(0xffffff, alpha * 0.9);
+      g.fillCircle(startX, startY, 2);
+    }
+  }
+
+  private drawEnergyRings(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const er of this.energyRings) {
+      const alpha = (er.life / 30) * 0.7;
+      const x = er.x + shakeX;
+      const y = er.y + shakeY;
+
+      // Outer glow
+      g.lineStyle(er.thickness + 2, er.color, alpha * 0.2);
+      g.strokeCircle(x, y, er.radius + 2);
+
+      // Main ring
+      g.lineStyle(er.thickness, er.color, alpha * 0.5);
+      g.strokeCircle(x, y, er.radius);
+
+      // Inner bright edge
+      g.lineStyle(1, 0xffffff, alpha * 0.7);
+      g.strokeCircle(x, y, er.radius - 1);
     }
   }
 
@@ -728,29 +889,91 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   private drawEyes(g: Phaser.GameObjects.Graphics, cx: number, cy: number): void {
-    const eyeOffset = 4;
     const eyeSize = 3.5;
+
+    // Position eyes based on movement direction
+    const dx = this.moveDirection.dx;
+    const dy = this.moveDirection.dy;
+
+    // Calculate eye positions based on direction
+    let eye1X: number, eye1Y: number, eye2X: number, eye2Y: number;
+    let pupilOffsetX: number, pupilOffsetY: number;
+
+    if (dx !== 0) {
+      // Moving horizontally
+      const forward = dx > 0 ? 3 : -3;
+      eye1X = cx + forward;
+      eye1Y = cy - 4;
+      eye2X = cx + forward;
+      eye2Y = cy + 4;
+      pupilOffsetX = dx * 1.2;
+      pupilOffsetY = 0;
+    } else {
+      // Moving vertically
+      const forward = dy > 0 ? 3 : -3;
+      eye1X = cx - 4;
+      eye1Y = cy + forward;
+      eye2X = cx + 4;
+      eye2Y = cy + forward;
+      pupilOffsetX = 0;
+      pupilOffsetY = dy * 1.2;
+    }
 
     // Eye glow
     g.fillStyle(0x00ffff, 0.3);
-    g.fillCircle(cx - eyeOffset, cy - 2, eyeSize + 1);
-    g.fillCircle(cx + eyeOffset, cy - 2, eyeSize + 1);
+    g.fillCircle(eye1X, eye1Y, eyeSize + 1);
+    g.fillCircle(eye2X, eye2Y, eyeSize + 1);
 
     // Eye whites
     g.fillStyle(0xffffff, 1);
-    g.fillCircle(cx - eyeOffset, cy - 2, eyeSize);
-    g.fillCircle(cx + eyeOffset, cy - 2, eyeSize);
+    g.fillCircle(eye1X, eye1Y, eyeSize);
+    g.fillCircle(eye2X, eye2Y, eyeSize);
 
-    // Pupils with slight animation
-    const pupilOffset = Math.sin(this.frameCount * 0.05) * 0.5;
+    // Pupils looking in movement direction
     g.fillStyle(0x000000, 1);
-    g.fillCircle(cx - eyeOffset + pupilOffset, cy - 2, 1.8);
-    g.fillCircle(cx + eyeOffset + pupilOffset, cy - 2, 1.8);
+    g.fillCircle(eye1X + pupilOffsetX, eye1Y + pupilOffsetY, 1.8);
+    g.fillCircle(eye2X + pupilOffsetX, eye2Y + pupilOffsetY, 1.8);
 
     // Eye shine
     g.fillStyle(0xffffff, 0.8);
-    g.fillCircle(cx - eyeOffset - 1, cy - 3, 1);
-    g.fillCircle(cx + eyeOffset - 1, cy - 3, 1);
+    g.fillCircle(eye1X - 1, eye1Y - 1, 1);
+    g.fillCircle(eye2X - 1, eye2Y - 1, 1);
+
+    // Direction indicator - chevron in front of head
+    if (!this.currentState?.gameOver) {
+      const chevronDist = 14;
+      const chevronX = cx + dx * chevronDist;
+      const chevronY = cy + dy * chevronDist;
+      const pulse = Math.sin(this.frameCount * 0.15) * 0.3 + 0.7;
+
+      g.fillStyle(0x00ffcc, 0.4 * pulse);
+      g.beginPath();
+
+      if (dx > 0) {
+        // Right
+        g.moveTo(chevronX, chevronY - 6);
+        g.lineTo(chevronX + 5, chevronY);
+        g.lineTo(chevronX, chevronY + 6);
+      } else if (dx < 0) {
+        // Left
+        g.moveTo(chevronX, chevronY - 6);
+        g.lineTo(chevronX - 5, chevronY);
+        g.lineTo(chevronX, chevronY + 6);
+      } else if (dy > 0) {
+        // Down
+        g.moveTo(chevronX - 6, chevronY);
+        g.lineTo(chevronX, chevronY + 5);
+        g.lineTo(chevronX + 6, chevronY);
+      } else {
+        // Up
+        g.moveTo(chevronX - 6, chevronY);
+        g.lineTo(chevronX, chevronY - 5);
+        g.lineTo(chevronX + 6, chevronY);
+      }
+
+      g.closePath();
+      g.fillPath();
+    }
   }
 
   private drawGameOverEffect(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
