@@ -23,6 +23,7 @@ This baseline serves as:
 - `App.css` - Boring UI styles (gray/white, no effects)
 - `GameBoard.css` - Simple gray border, white background
 - `GameBoard.tsx` - Simple rendering (no glows, gradients, or effects)
+- `SnakeScene.ts` - Basic Phaser scene (no visual enhancements)
 
 ## How to Restore Baseline
 
@@ -36,11 +37,12 @@ npm run reset-to-baseline
 cp .baseline/App.css src/App.css
 cp .baseline/GameBoard.css src/components/GameBoard.css
 cp .baseline/GameBoard.tsx src/components/GameBoard.tsx
+cp .baseline/SnakeScene.ts src/components/SnakeScene.ts
 ```
 
 ### Option 3: Git Tag
 ```bash
-git checkout baseline-v0 -- src/App.css src/components/GameBoard.css src/components/GameBoard.tsx
+git checkout baseline-v0 -- src/App.css src/components/GameBoard.css src/components/GameBoard.tsx src/components/SnakeScene.ts
 ```
 
 ## After Restoring
