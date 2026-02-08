@@ -56,6 +56,12 @@ for (let i = 0; i < 60; i++) {
   });
 }
 
+// Static shooting stars (decorative)
+const SHOOTING_STARS: Array<{ x: number; y: number; angle: number; length: number }> = [
+  { x: 50, y: 30, angle: Math.PI * 0.75, length: 25 },
+  { x: 320, y: 80, angle: Math.PI * 0.8, length: 20 },
+];
+
 function lerpColor(color1: string, color2: string, t: number): string {
   const c1 = parseInt(color1.slice(1), 16);
   const c2 = parseInt(color2.slice(1), 16);
@@ -129,6 +135,32 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.fill();
       ctx.globalAlpha = 1;
     }
+  }
+
+  // Draw shooting stars (decorative streaks)
+  for (const ss of SHOOTING_STARS) {
+    const tailX = ss.x + Math.cos(ss.angle) * ss.length;
+    const tailY = ss.y + Math.sin(ss.angle) * ss.length;
+
+    // Gradient trail
+    const grad = ctx.createLinearGradient(ss.x, ss.y, tailX, tailY);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+    grad.addColorStop(1, 'rgba(136, 204, 255, 0)');
+
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ss.x, ss.y);
+    ctx.lineTo(tailX, tailY);
+    ctx.stroke();
+
+    // Bright head
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.arc(ss.x, ss.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
   }
 
   // Subtle grid pattern
@@ -410,6 +442,43 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.roundRect(x + offset + 2, y + offset + 1, size / 2 - 2, size / 3, 2);
       ctx.fill();
     }
+  }
+
+  // Neon border glow (only when game is active)
+  if (!gameState.gameOver) {
+    const borderColor = '#00ffcc';
+
+    // Outer glow layers
+    ctx.strokeStyle = borderColor;
+    ctx.globalAlpha = 0.08;
+    ctx.lineWidth = 6;
+    ctx.strokeRect(2, 2, width - 4, height - 4);
+
+    ctx.globalAlpha = 0.15;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(3, 3, width - 6, height - 6);
+
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(4, 4, width - 8, height - 8);
+
+    // Corner accent glows
+    const cornerSize = 15;
+    ctx.fillStyle = borderColor;
+    ctx.globalAlpha = 0.2;
+    ctx.beginPath();
+    ctx.arc(cornerSize, cornerSize, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(width - cornerSize, cornerSize, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cornerSize, height - cornerSize, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(width - cornerSize, height - cornerSize, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
   }
 
   // Game over overlay

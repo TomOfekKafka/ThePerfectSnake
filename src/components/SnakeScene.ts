@@ -22,6 +22,25 @@ interface Particle {
   size: number;
 }
 
+interface ShockWave {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  life: number;
+  color: number;
+}
+
+interface ShootingStar {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  length: number;
+  brightness: number;
+  life: number;
+}
+
 interface Star {
   x: number;
   y: number;
@@ -89,6 +108,8 @@ export class SnakeScene extends Phaser.Scene {
   private stars: Star[] = [];
   private energyOrbs: EnergyOrb[] = [];
   private plasmaWaves: PlasmaWave[] = [];
+  private shockWaves: ShockWave[] = [];
+  private shootingStars: ShootingStar[] = [];
 
   // Previous state for detecting food eaten
   private prevFoodPos: Position | null = null;
@@ -192,6 +213,48 @@ export class SnakeScene extends Phaser.Scene {
         size: 3 + Math.random() * 2,
       });
     }
+
+    // Spawn shockwave effect
+    this.shockWaves.push({
+      x: centerX,
+      y: centerY,
+      radius: 5,
+      maxRadius: 60,
+      life: 20,
+      color: COLORS.food,
+    });
+  }
+
+  private spawnShootingStar(): void {
+    if (this.shootingStars.length >= 3) return;
+
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+
+    // Start from edges
+    const side = Math.floor(Math.random() * 2);
+    let x: number, y: number, vx: number, vy: number;
+
+    if (side === 0) {
+      // From top
+      x = Math.random() * width;
+      y = -10;
+      vx = (Math.random() - 0.5) * 3;
+      vy = 4 + Math.random() * 3;
+    } else {
+      // From left
+      x = -10;
+      y = Math.random() * height * 0.5;
+      vx = 4 + Math.random() * 3;
+      vy = 2 + Math.random() * 2;
+    }
+
+    this.shootingStars.push({
+      x, y, vx, vy,
+      length: 15 + Math.random() * 15,
+      brightness: 0.7 + Math.random() * 0.3,
+      life: 60,
+    });
   }
 
   private spawnTrailParticle(x: number, y: number, color: number): void {
@@ -250,6 +313,32 @@ export class SnakeScene extends Phaser.Scene {
     } else {
       this.shakeIntensity = 0;
     }
+
+    // Update shockwaves
+    for (let i = this.shockWaves.length - 1; i >= 0; i--) {
+      const sw = this.shockWaves[i];
+      sw.radius += (sw.maxRadius - sw.radius) * 0.15;
+      sw.life--;
+      if (sw.life <= 0) {
+        this.shockWaves.splice(i, 1);
+      }
+    }
+
+    // Update shooting stars
+    for (let i = this.shootingStars.length - 1; i >= 0; i--) {
+      const ss = this.shootingStars[i];
+      ss.x += ss.vx;
+      ss.y += ss.vy;
+      ss.life--;
+      if (ss.life <= 0 || ss.x > GRID_SIZE * CELL_SIZE + 50 || ss.y > GRID_SIZE * CELL_SIZE + 50) {
+        this.shootingStars.splice(i, 1);
+      }
+    }
+
+    // Randomly spawn shooting stars
+    if (Math.random() < 0.02) {
+      this.spawnShootingStar();
+    }
   }
 
   update(): void {
@@ -302,6 +391,11 @@ export class SnakeScene extends Phaser.Scene {
     // Draw snake with rainbow shimmer and electric effects
     this.drawSnake(g, shakeX, shakeY);
 
+    // Neon border glow (only when game is active)
+    if (!this.currentState.gameOver) {
+      this.drawNeonBorder(g, width, height);
+    }
+
     // Game over overlay
     if (this.currentState.gameOver) {
       this.drawGameOverEffect(g, width, height);
@@ -340,6 +434,28 @@ export class SnakeScene extends Phaser.Scene {
         g.fillStyle(haloColor, alpha * 0.3);
         g.fillCircle(x, y, star.size + 2);
       }
+    }
+
+    // Draw shooting stars
+    for (const ss of this.shootingStars) {
+      const alpha = (ss.life / 60) * ss.brightness;
+      const tailX = ss.x - ss.vx * (ss.length / 5);
+      const tailY = ss.y - ss.vy * (ss.length / 5);
+
+      // Glowing trail
+      g.lineStyle(3, 0xffffff, alpha * 0.3);
+      g.lineBetween(ss.x + shakeX, ss.y + shakeY, tailX + shakeX, tailY + shakeY);
+
+      g.lineStyle(2, 0xffffff, alpha * 0.6);
+      g.lineBetween(ss.x + shakeX, ss.y + shakeY, tailX + shakeX, tailY + shakeY);
+
+      // Bright head
+      g.fillStyle(0xffffff, alpha);
+      g.fillCircle(ss.x + shakeX, ss.y + shakeY, 2);
+
+      // Color tint
+      g.fillStyle(0x88ccff, alpha * 0.5);
+      g.fillCircle(ss.x + shakeX, ss.y + shakeY, 3);
     }
   }
 
@@ -394,6 +510,23 @@ export class SnakeScene extends Phaser.Scene {
       // Bright center
       g.fillStyle(0xffffff, alpha * 0.9);
       g.fillCircle(x, y, size * 0.3);
+    }
+
+    // Draw shockwaves
+    for (const sw of this.shockWaves) {
+      const alpha = (sw.life / 20) * 0.6;
+      const x = sw.x + shakeX;
+      const y = sw.y + shakeY;
+
+      // Multiple expanding rings
+      g.lineStyle(3, sw.color, alpha * 0.4);
+      g.strokeCircle(x, y, sw.radius);
+
+      g.lineStyle(2, 0xffffff, alpha * 0.6);
+      g.strokeCircle(x, y, sw.radius * 0.7);
+
+      g.lineStyle(1, sw.color, alpha * 0.8);
+      g.strokeCircle(x, y, sw.radius * 0.4);
     }
   }
 
@@ -504,6 +637,11 @@ export class SnakeScene extends Phaser.Scene {
         g.fillStyle(connectorColor, 0.9);
         g.lineStyle(connectorSize * 0.7, connectorColor, 0.9);
         g.lineBetween(cx, cy, nx, ny);
+
+        // Lightning arc effect between segments (only near head, every few frames)
+        if (i < 3 && !this.currentState.gameOver && (this.frameCount + i * 7) % 4 === 0) {
+          this.drawLightningArc(g, cx, cy, nx, ny, 0.3);
+        }
       }
     }
 
@@ -650,6 +788,50 @@ export class SnakeScene extends Phaser.Scene {
     g.fillCircle(width / 2, height, 50);
     g.fillCircle(0, height / 2, 50);
     g.fillCircle(width, height / 2, 50);
+  }
+
+  private drawLightningArc(g: Phaser.GameObjects.Graphics, x1: number, y1: number, x2: number, y2: number, alpha: number): void {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const segments = 3;
+
+    g.lineStyle(1, 0x00ffff, alpha);
+    g.beginPath();
+    g.moveTo(x1, y1);
+
+    for (let i = 1; i < segments; i++) {
+      const t = i / segments;
+      const midX = x1 + dx * t + (Math.random() - 0.5) * 8;
+      const midY = y1 + dy * t + (Math.random() - 0.5) * 8;
+      g.lineTo(midX, midY);
+    }
+    g.lineTo(x2, y2);
+    g.strokePath();
+  }
+
+  private drawNeonBorder(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+    const pulse = Math.sin(this.frameCount * 0.08) * 0.3 + 0.7;
+    const colors = [0x00ffcc, 0x00ff88, 0x00ccff];
+    const colorIndex = Math.floor(this.frameCount * 0.02) % colors.length;
+    const borderColor = colors[colorIndex];
+
+    // Outer glow
+    g.lineStyle(6, borderColor, 0.08 * pulse);
+    g.strokeRect(2, 2, width - 4, height - 4);
+
+    g.lineStyle(4, borderColor, 0.15 * pulse);
+    g.strokeRect(3, 3, width - 6, height - 6);
+
+    g.lineStyle(2, borderColor, 0.3 * pulse);
+    g.strokeRect(4, 4, width - 8, height - 8);
+
+    // Corner accent glows
+    const cornerSize = 15;
+    g.fillStyle(borderColor, 0.2 * pulse);
+    g.fillCircle(cornerSize, cornerSize, 8);
+    g.fillCircle(width - cornerSize, cornerSize, 8);
+    g.fillCircle(cornerSize, height - cornerSize, 8);
+    g.fillCircle(width - cornerSize, height - cornerSize, 8);
   }
 
   private lerpColor(color1: number, color2: number, t: number): number {
