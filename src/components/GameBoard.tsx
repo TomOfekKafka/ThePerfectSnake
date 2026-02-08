@@ -21,19 +21,33 @@ interface GameBoardProps {
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 
-// Color palette - neon cyberpunk theme (matching Phaser scene)
+// Color palette - cosmic neon theme (matching Phaser scene)
 const COLORS = {
-  bgDark: '#0a0a1a',
-  bgGrid: '#1a1a3a',
-  snakeHead: '#00ff88',
-  snakeHeadGlow: '#00ffaa',
-  snakeBody: '#00cc66',
-  snakeTail: '#007733',
+  bgDark: '#050510',
+  bgGrid: '#0f0f2a',
+  snakeHead: '#00ffcc',
+  snakeHeadGlow: '#00ffff',
+  snakeBody: '#00ff88',
+  snakeTail: '#00aa44',
   food: '#ff0066',
   foodGlow: '#ff3388',
   foodCore: '#ffffff',
-  gameOverOverlay: 'rgba(0, 0, 0, 0.5)',
+  gameOverOverlay: 'rgba(0, 0, 0, 0.6)',
+  // Rainbow colors for shimmer effect
+  rainbow: ['#ff0000', '#ff8800', '#ffff00', '#00ff00', '#0088ff', '#8800ff', '#ff00ff'],
+  trailGlow: '#00ffaa',
 };
+
+// Static stars for Canvas2D fallback (no animation)
+const STARS: Array<{ x: number; y: number; size: number; brightness: number }> = [];
+for (let i = 0; i < 60; i++) {
+  STARS.push({
+    x: Math.random() * GRID_SIZE * CELL_SIZE,
+    y: Math.random() * GRID_SIZE * CELL_SIZE,
+    size: Math.random() * 1.5 + 0.5,
+    brightness: Math.random() * 0.5 + 0.3,
+  });
+}
 
 function lerpColor(color1: string, color2: string, t: number): string {
   const c1 = parseInt(color1.slice(1), 16);
@@ -61,13 +75,32 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   const width = canvas.width;
   const height = canvas.height;
 
-  // Dark background
+  // Deep space background
   ctx.fillStyle = COLORS.bgDark;
   ctx.fillRect(0, 0, width, height);
 
+  // Draw twinkling stars
+  for (const star of STARS) {
+    ctx.fillStyle = `rgba(255, 255, 255, ${star.brightness})`;
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Colored halo for larger stars
+    if (star.size > 1.2) {
+      const haloColor = COLORS.rainbow[Math.floor(star.x) % COLORS.rainbow.length];
+      ctx.fillStyle = haloColor;
+      ctx.globalAlpha = star.brightness * 0.2;
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.size + 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
   // Subtle grid pattern
   ctx.strokeStyle = COLORS.bgGrid;
-  ctx.globalAlpha = 0.3;
+  ctx.globalAlpha = 0.2;
   ctx.lineWidth = 1;
   for (let i = 0; i <= GRID_SIZE; i++) {
     ctx.beginPath();
@@ -81,19 +114,49 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   }
   ctx.globalAlpha = 1;
 
-  // Draw food with glow effect
+  // Subtle glow at grid corners
+  ctx.fillStyle = '#00ffff';
+  for (let x = 0; x <= GRID_SIZE; x += 5) {
+    for (let y = 0; y <= GRID_SIZE; y += 5) {
+      ctx.globalAlpha = 0.05;
+      ctx.beginPath();
+      ctx.arc(x * CELL_SIZE, y * CELL_SIZE, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw food with enhanced glow effect
   const food = gameState.food;
   const foodCenterX = food.x * CELL_SIZE + CELL_SIZE / 2;
   const foodCenterY = food.y * CELL_SIZE + CELL_SIZE / 2;
 
-  // Outer glow
+  // Outer corona glow
   ctx.fillStyle = COLORS.food;
-  ctx.globalAlpha = 0.2;
+  ctx.globalAlpha = 0.1;
+  ctx.beginPath();
+  ctx.arc(foodCenterX, foodCenterY, 16, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Rainbow ring effect (static for Canvas2D)
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 6) * Math.PI * 2;
+    const rx = foodCenterX + Math.cos(angle) * 7;
+    const ry = foodCenterY + Math.sin(angle) * 7;
+    ctx.fillStyle = COLORS.rainbow[i];
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    ctx.arc(rx, ry, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Main glow layers
+  ctx.fillStyle = COLORS.food;
+  ctx.globalAlpha = 0.15;
   ctx.beginPath();
   ctx.arc(foodCenterX, foodCenterY, 12, 0, Math.PI * 2);
   ctx.fill();
 
-  // Middle glow
   ctx.fillStyle = COLORS.foodGlow;
   ctx.globalAlpha = 0.4;
   ctx.beginPath();
@@ -107,11 +170,18 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   ctx.arc(foodCenterX, foodCenterY, 6, 0, Math.PI * 2);
   ctx.fill();
 
-  // Bright center
+  // Inner bright spot
   ctx.fillStyle = COLORS.foodCore;
-  ctx.globalAlpha = 0.8;
+  ctx.globalAlpha = 0.9;
   ctx.beginPath();
-  ctx.arc(foodCenterX, foodCenterY, 2, 0, Math.PI * 2);
+  ctx.arc(foodCenterX, foodCenterY, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sparkle highlight
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.arc(foodCenterX - 2, foodCenterY - 2, 1.5, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
 
@@ -129,8 +199,13 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     const progress = segmentCount > 1 ? i / (segmentCount - 1) : 0;
 
     if (isHead) {
-      // Head glow
+      // Head glow layers
       ctx.fillStyle = COLORS.snakeHeadGlow;
+      ctx.globalAlpha = 0.15;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 16, 0, Math.PI * 2);
+      ctx.fill();
+
       ctx.globalAlpha = 0.3;
       ctx.beginPath();
       ctx.arc(centerX, centerY, 12, 0, Math.PI * 2);
@@ -143,39 +218,83 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.roundRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 6);
       ctx.fill();
 
-      // Eyes
-      const eyeOffset = 4;
-      ctx.fillStyle = '#ffffff';
+      // Shiny highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
       ctx.beginPath();
-      ctx.arc(centerX - eyeOffset, centerY - 2, 3, 0, Math.PI * 2);
+      ctx.roundRect(x + 3, y + 3, 8, 6, 3);
+      ctx.fill();
+
+      // Eye glow
+      ctx.fillStyle = '#00ffff';
+      ctx.globalAlpha = 0.3;
+      const eyeOffset = 4;
+      ctx.beginPath();
+      ctx.arc(centerX - eyeOffset, centerY - 2, 4.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(centerX + eyeOffset, centerY - 2, 3, 0, Math.PI * 2);
+      ctx.arc(centerX + eyeOffset, centerY - 2, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Eyes
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(centerX - eyeOffset, centerY - 2, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(centerX + eyeOffset, centerY - 2, 3.5, 0, Math.PI * 2);
       ctx.fill();
 
       // Pupils
       ctx.fillStyle = '#000000';
       ctx.beginPath();
-      ctx.arc(centerX - eyeOffset, centerY - 2, 1.5, 0, Math.PI * 2);
+      ctx.arc(centerX - eyeOffset, centerY - 2, 1.8, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(centerX + eyeOffset, centerY - 2, 1.5, 0, Math.PI * 2);
+      ctx.arc(centerX + eyeOffset, centerY - 2, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye shine
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.beginPath();
+      ctx.arc(centerX - eyeOffset - 1, centerY - 3, 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(centerX + eyeOffset - 1, centerY - 3, 1, 0, Math.PI * 2);
       ctx.fill();
     } else {
       // Body gradient from bright to dark
-      const color = lerpColor(COLORS.snakeBody, COLORS.snakeTail, progress);
-      const size = CELL_SIZE - 2 - progress * 2;
+      const baseColor = lerpColor(COLORS.snakeBody, COLORS.snakeTail, progress);
+      const size = CELL_SIZE - 2 - progress * 3;
       const offset = (CELL_SIZE - size) / 2;
 
-      ctx.fillStyle = color;
+      // Outer glow for body segments
+      ctx.fillStyle = baseColor;
+      ctx.globalAlpha = 0.2;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, size / 2 + 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Main body segment
+      ctx.fillStyle = baseColor;
       ctx.beginPath();
       ctx.roundRect(x + offset, y + offset, size, size, 4);
       ctx.fill();
 
-      // Subtle highlight
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      // Rainbow shimmer overlay (static color based on segment index)
+      const shimmerColor = COLORS.rainbow[i % COLORS.rainbow.length];
+      ctx.fillStyle = shimmerColor;
+      ctx.globalAlpha = 0.15;
       ctx.beginPath();
-      ctx.roundRect(x + offset + 1, y + offset + 1, size / 2, size / 2, 2);
+      ctx.roundRect(x + offset, y + offset, size, size, 4);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Subtle highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.beginPath();
+      ctx.roundRect(x + offset + 1, y + offset + 1, size / 2, size / 3, 2);
       ctx.fill();
     }
   }
@@ -185,13 +304,32 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.fillStyle = COLORS.gameOverOverlay;
     ctx.fillRect(0, 0, width, height);
 
-    // Red vignette
+    // Red vignette with more layers
     ctx.strokeStyle = '#ff0000';
-    for (let i = 0; i < 5; i++) {
-      ctx.globalAlpha = 0.1 * (5 - i);
-      ctx.lineWidth = 3;
-      ctx.strokeRect(i * 4, i * 4, width - i * 8, height - i * 8);
+    ctx.lineWidth = 4;
+    for (let i = 0; i < 8; i++) {
+      const intensity = (8 - i) / 8;
+      ctx.globalAlpha = 0.12 * intensity;
+      const vOffset = i * 5;
+      ctx.strokeRect(vOffset, vOffset, width - vOffset * 2, height - vOffset * 2);
     }
+
+    // Corner glows
+    ctx.fillStyle = '#ff0000';
+    ctx.globalAlpha = 0.2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 40, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(width, 0, 40, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, height, 40, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(width, height, 40, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.globalAlpha = 1;
   }
 }
