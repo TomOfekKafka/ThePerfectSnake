@@ -399,9 +399,48 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   }
   ctx.globalAlpha = 1;
 
-  // Draw snake (from tail to head so head is on top)
+  // Draw hyper speed trails behind snake (static version for Canvas2D)
   const snake = gameState.snake;
   const segmentCount = snake.length;
+
+  // Draw motion trails for dramatic effect
+  if (segmentCount > 0 && !gameState.gameOver) {
+    for (let i = 0; i < segmentCount; i += Math.max(1, Math.floor(segmentCount / 6))) {
+      const seg = snake[i];
+      const progress = i / Math.max(segmentCount - 1, 1);
+      const trailColor = i === 0 ? COLORS.snakeHeadGlow : COLORS.rainbow[i % COLORS.rainbow.length];
+      const trailWidth = i === 0 ? 6 : 3 - progress * 1.5;
+
+      // Draw trail extending backward (assuming rightward movement as default)
+      const segX = seg.x * CELL_SIZE + CELL_SIZE / 2;
+      const segY = seg.y * CELL_SIZE + CELL_SIZE / 2;
+      const trailLength = 15 + (1 - progress) * 10;
+
+      // Outer glow
+      const gradient = ctx.createLinearGradient(segX, segY, segX - trailLength, segY);
+      gradient.addColorStop(0, trailColor + '40');
+      gradient.addColorStop(1, 'transparent');
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = trailWidth + 4;
+      ctx.beginPath();
+      ctx.moveTo(segX, segY);
+      ctx.lineTo(segX - trailLength, segY);
+      ctx.stroke();
+
+      // Core trail
+      const coreGradient = ctx.createLinearGradient(segX, segY, segX - trailLength, segY);
+      coreGradient.addColorStop(0, '#ffffff80');
+      coreGradient.addColorStop(1, 'transparent');
+      ctx.strokeStyle = coreGradient;
+      ctx.lineWidth = trailWidth;
+      ctx.beginPath();
+      ctx.moveTo(segX, segY);
+      ctx.lineTo(segX - trailLength, segY);
+      ctx.stroke();
+    }
+  }
+
+  // Draw snake (from tail to head so head is on top)
 
   // First pass: Draw segment connectors (smooth body connections)
   if (segmentCount > 1) {

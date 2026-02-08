@@ -127,6 +127,28 @@ interface BodyWake {
   size: number;
 }
 
+interface HyperTrail {
+  x: number;
+  y: number;
+  prevX: number;
+  prevY: number;
+  color: number;
+  life: number;
+  maxLife: number;
+  width: number;
+}
+
+interface PowerSurge {
+  x: number;
+  y: number;
+  angle: number;
+  radius: number;
+  speed: number;
+  life: number;
+  maxLife: number;
+  color: number;
+}
+
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 
@@ -181,6 +203,8 @@ export class SnakeScene extends Phaser.Scene {
   private pulseWaves: PulseWave[] = [];
   private nebulaNodes: NebulaNode[] = [];
   private bodyWakes: BodyWake[] = [];
+  private hyperTrails: HyperTrail[] = [];
+  private powerSurges: PowerSurge[] = [];
 
   // Color cycling for dynamic theme
   private colorCycleOffset = 0;
@@ -306,6 +330,12 @@ export class SnakeScene extends Phaser.Scene {
           // Spawn pulse wave from head at higher power levels
           if (this.powerLevel >= 1.5 && this.frameCount % 3 === 0) {
             this.spawnPulseWave(head);
+          }
+          // Spawn hyper trails from snake body
+          this.spawnHyperTrails(state.snake);
+          // Spawn power surges from head
+          if (this.frameCount % 2 === 0) {
+            this.spawnPowerSurge(head);
           }
         }
       }
@@ -519,6 +549,59 @@ export class SnakeScene extends Phaser.Scene {
     });
   }
 
+  private spawnHyperTrails(snake: Position[]): void {
+    if (this.hyperTrails.length > 60) return; // Limit trails
+
+    // Create trails from every few segments
+    const step = Math.max(1, Math.floor(snake.length / 8));
+    for (let i = 0; i < snake.length; i += step) {
+      const seg = snake[i];
+      const progress = i / Math.max(snake.length - 1, 1);
+
+      // Calculate trail direction (opposite of movement)
+      const trailLength = 12 + (1 - progress) * 8;
+      const prevX = seg.x * CELL_SIZE + CELL_SIZE / 2 - this.moveDirection.dx * trailLength;
+      const prevY = seg.y * CELL_SIZE + CELL_SIZE / 2 - this.moveDirection.dy * trailLength;
+
+      this.hyperTrails.push({
+        x: seg.x * CELL_SIZE + CELL_SIZE / 2,
+        y: seg.y * CELL_SIZE + CELL_SIZE / 2,
+        prevX: prevX,
+        prevY: prevY,
+        color: i === 0 ? COLORS.snakeHeadGlow : COLORS.rainbow[i % COLORS.rainbow.length],
+        life: 12,
+        maxLife: 12,
+        width: i === 0 ? 8 : 4 - progress * 2,
+      });
+    }
+  }
+
+  private spawnPowerSurge(head: Position): void {
+    if (this.powerSurges.length > 20) return;
+
+    const centerX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Spawn radial power lines emanating from head
+    const surgeCount = Math.min(2 + Math.floor(this.powerLevel), 4);
+    for (let i = 0; i < surgeCount; i++) {
+      const baseAngle = Math.atan2(this.moveDirection.dy, this.moveDirection.dx);
+      const spreadAngle = (i - (surgeCount - 1) / 2) * 0.4;
+      const angle = baseAngle + spreadAngle;
+
+      this.powerSurges.push({
+        x: centerX,
+        y: centerY,
+        angle: angle,
+        radius: 5,
+        speed: 6 + Math.random() * 4,
+        life: 10 + Math.random() * 5,
+        maxLife: 15,
+        color: COLORS.electric[i % COLORS.electric.length],
+      });
+    }
+  }
+
   private drawBodyWakes(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
     for (const bw of this.bodyWakes) {
       const alpha = (bw.life / bw.maxLife) * 0.5;
@@ -533,6 +616,52 @@ export class SnakeScene extends Phaser.Scene {
       // Core
       g.fillStyle(bw.color, alpha * 0.7);
       g.fillCircle(x, y, size);
+    }
+  }
+
+  private drawHyperTrails(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const ht of this.hyperTrails) {
+      const alpha = (ht.life / ht.maxLife);
+      const x = ht.x + shakeX;
+      const y = ht.y + shakeY;
+      const px = ht.prevX + shakeX;
+      const py = ht.prevY + shakeY;
+
+      // Outer glow trail
+      g.lineStyle(ht.width + 4, ht.color, alpha * 0.15);
+      g.lineBetween(x, y, px, py);
+
+      // Middle glow
+      g.lineStyle(ht.width + 2, ht.color, alpha * 0.3);
+      g.lineBetween(x, y, px, py);
+
+      // Core bright trail
+      g.lineStyle(ht.width, 0xffffff, alpha * 0.5);
+      g.lineBetween(x, y, px, py);
+
+      // Trail head glow
+      g.fillStyle(0xffffff, alpha * 0.7);
+      g.fillCircle(x, y, ht.width * 0.5);
+    }
+  }
+
+  private drawPowerSurges(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const ps of this.powerSurges) {
+      const alpha = (ps.life / ps.maxLife);
+      const x = ps.x + shakeX;
+      const y = ps.y + shakeY;
+
+      // Outer electric glow
+      g.fillStyle(ps.color, alpha * 0.2);
+      g.fillCircle(x, y, ps.radius + 4);
+
+      // Core energy ball
+      g.fillStyle(ps.color, alpha * 0.5);
+      g.fillCircle(x, y, ps.radius);
+
+      // Bright center
+      g.fillStyle(0xffffff, alpha * 0.8);
+      g.fillCircle(x, y, ps.radius * 0.4);
     }
   }
 
@@ -664,6 +793,27 @@ export class SnakeScene extends Phaser.Scene {
       node.phase += node.speed;
     }
 
+    // Update hyper trails
+    for (let i = this.hyperTrails.length - 1; i >= 0; i--) {
+      const ht = this.hyperTrails[i];
+      ht.life--;
+      if (ht.life <= 0) {
+        this.hyperTrails.splice(i, 1);
+      }
+    }
+
+    // Update power surges
+    for (let i = this.powerSurges.length - 1; i >= 0; i--) {
+      const ps = this.powerSurges[i];
+      ps.x += Math.cos(ps.angle) * ps.speed;
+      ps.y += Math.sin(ps.angle) * ps.speed;
+      ps.radius += 0.3;
+      ps.life--;
+      if (ps.life <= 0) {
+        this.powerSurges.splice(i, 1);
+      }
+    }
+
     // Update color cycle offset for dynamic theming
     this.colorCycleOffset += 0.002;
   }
@@ -724,6 +874,12 @@ export class SnakeScene extends Phaser.Scene {
     // Draw food explosion particles and energy rings
     this.drawFoodParticles(g, shakeX, shakeY);
     this.drawEnergyRings(g, shakeX, shakeY);
+
+    // Draw hyper trails behind the snake
+    this.drawHyperTrails(g, shakeX, shakeY);
+
+    // Draw power surges
+    this.drawPowerSurges(g, shakeX, shakeY);
 
     // Draw snake with rainbow shimmer and electric effects
     this.drawSnake(g, shakeX, shakeY);
