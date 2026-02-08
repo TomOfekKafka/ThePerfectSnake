@@ -203,7 +203,6 @@ describe('Message Format', () => {
       gameStarted: true,
       gameOver: false,
       score: 100,
-      version: 0,
       timestamp: Date.now()
     };
 
@@ -211,7 +210,6 @@ describe('Message Format', () => {
     expect(message).toHaveProperty('gameStarted');
     expect(message).toHaveProperty('gameOver');
     expect(message).toHaveProperty('score');
-    expect(message).toHaveProperty('version');
     expect(typeof message.gameStarted).toBe('boolean');
     expect(typeof message.score).toBe('number');
   });

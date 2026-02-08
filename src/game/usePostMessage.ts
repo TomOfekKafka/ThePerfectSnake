@@ -8,20 +8,17 @@
 
 import { useEffect, useCallback } from 'react';
 import { Direction } from './types';
-import { GAME_VERSION } from '../version';
 
 export interface GameStateMessage {
   type: 'GAME_STATE';
   gameStarted: boolean;
   gameOver: boolean;
   score: number;
-  version: number;
   timestamp: number;
 }
 
 export interface GameReadyMessage {
   type: 'GAME_READY';
-  version: number;
   timestamp: number;
 }
 
@@ -105,7 +102,6 @@ export function usePostMessage({
       gameStarted: state.gameStarted,
       gameOver: state.gameOver,
       score: state.score,
-      version: GAME_VERSION,
       timestamp: Date.now()
     };
 
@@ -118,7 +114,6 @@ export function usePostMessage({
 
     const message: GameReadyMessage = {
       type: 'GAME_READY',
-      version: GAME_VERSION,
       timestamp: Date.now()
     };
 
