@@ -805,8 +805,53 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.globalAlpha = 1;
   }
 
-  // Game over overlay
+  // Game over overlay with cinematic death effects
   if (gameState.gameOver) {
+    // Death ripple effect from snake head position
+    if (snake.length > 0) {
+      const deathX = snake[0].x * CELL_SIZE + CELL_SIZE / 2;
+      const deathY = snake[0].y * CELL_SIZE + CELL_SIZE / 2;
+
+      // Expanding shock rings
+      const ringColors = ['#ff0033', '#ff6600', '#ffff00', '#ffffff'];
+      for (let r = 0; r < 4; r++) {
+        const rippleRadius = 80 + r * 30;
+        ctx.strokeStyle = ringColors[r];
+        ctx.lineWidth = 4 - r;
+        ctx.globalAlpha = 0.4 - r * 0.08;
+        ctx.beginPath();
+        ctx.arc(deathX, deathY, rippleRadius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Inner distortion rings
+      for (let i = 0; i < 3; i++) {
+        const innerRadius = 30 + i * 20;
+        ctx.strokeStyle = '#ff0066';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.2;
+        ctx.beginPath();
+        ctx.arc(deathX, deathY, innerRadius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Chromatic aberration effect (color channel shifts)
+    ctx.fillStyle = '#ff0000';
+    ctx.globalAlpha = 0.06;
+    ctx.fillRect(-4, -4, width, height);
+
+    ctx.fillStyle = '#0000ff';
+    ctx.globalAlpha = 0.06;
+    ctx.fillRect(4, 4, width, height);
+
+    ctx.fillStyle = '#00ffff';
+    ctx.globalAlpha = 0.04;
+    ctx.fillRect(2, -2, width, height);
+    ctx.globalAlpha = 1;
+
+    // Main dark overlay
     ctx.fillStyle = COLORS.gameOverOverlay;
     ctx.fillRect(0, 0, width, height);
 
@@ -858,6 +903,15 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.beginPath();
     ctx.arc(width, height / 2, 50, 0, Math.PI * 2);
     ctx.fill();
+
+    // Death flash overlay (white with red tinge)
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.15;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = '#ff0033';
+    ctx.globalAlpha = 0.08;
+    ctx.fillRect(0, 0, width, height);
 
     ctx.globalAlpha = 1;
   }

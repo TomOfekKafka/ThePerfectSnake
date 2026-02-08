@@ -299,6 +299,14 @@ export class SnakeScene extends Phaser.Scene {
   private shakeIntensity = 0;
   private shakeDecay = 0.9;
 
+  // Cinematic death effect - chromatic aberration and time dilation
+  private chromaticAberration = 0;
+  private timeDilation = 1;
+  private deathFlashIntensity = 0;
+  private deathRippleRadius = 0;
+  private deathRippleActive = false;
+  private deathPosition: Position | null = null;
+
   // Direction tracking for warp effect
   private moveDirection: { dx: number; dy: number } = { dx: 1, dy: 0 };
 
@@ -444,9 +452,15 @@ export class SnakeScene extends Phaser.Scene {
       this.spawnSpiralBurst(this.prevFoodPos || state.food);
     }
 
-    // Trigger screen shake on game over
+    // Trigger screen shake and cinematic death effect on game over
     if (state.gameOver && this.currentState && !this.currentState.gameOver) {
-      this.shakeIntensity = 8;
+      this.shakeIntensity = 12;
+      this.chromaticAberration = 8;
+      this.deathFlashIntensity = 1;
+      this.deathRippleActive = true;
+      this.deathRippleRadius = 0;
+      this.deathPosition = state.snake.length > 0 ? { ...state.snake[0] } : null;
+      this.timeDilation = 0.3; // Slow down time
     }
 
     // Track movement direction for warp effect
@@ -1138,6 +1152,31 @@ export class SnakeScene extends Phaser.Scene {
       this.shakeIntensity = 0;
     }
 
+    // Update cinematic death effects
+    if (this.chromaticAberration > 0.1) {
+      this.chromaticAberration *= 0.94;
+    } else {
+      this.chromaticAberration = 0;
+    }
+
+    if (this.deathFlashIntensity > 0.01) {
+      this.deathFlashIntensity *= 0.88;
+    } else {
+      this.deathFlashIntensity = 0;
+    }
+
+    if (this.deathRippleActive) {
+      this.deathRippleRadius += 8;
+      if (this.deathRippleRadius > 500) {
+        this.deathRippleActive = false;
+      }
+    }
+
+    // Gradually restore time to normal
+    if (this.timeDilation < 1) {
+      this.timeDilation = Math.min(1, this.timeDilation + 0.015);
+    }
+
     // Update shockwaves
     for (let i = this.shockWaves.length - 1; i >= 0; i--) {
       const sw = this.shockWaves[i];
@@ -1412,7 +1451,11 @@ export class SnakeScene extends Phaser.Scene {
 
     // Game over overlay
     if (this.currentState.gameOver) {
+      // Cinematic death effects (drawn before final overlay for layering)
+      this.drawDeathRipple(g, shakeX, shakeY);
+      this.drawChromaticAberration(g, width, height);
       this.drawGameOverEffect(g, width, height);
+      this.drawDeathFlash(g, width, height);
     }
   }
 
@@ -2134,6 +2177,63 @@ export class SnakeScene extends Phaser.Scene {
     g.fillCircle(width - cornerSize, cornerSize, 8);
     g.fillCircle(cornerSize, height - cornerSize, 8);
     g.fillCircle(width - cornerSize, height - cornerSize, 8);
+  }
+
+  private drawDeathRipple(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    if (!this.deathRippleActive || !this.deathPosition) return;
+
+    const centerX = this.deathPosition.x * CELL_SIZE + CELL_SIZE / 2 + shakeX;
+    const centerY = this.deathPosition.y * CELL_SIZE + CELL_SIZE / 2 + shakeY;
+    const progress = this.deathRippleRadius / 500;
+    const alpha = (1 - progress) * 0.6;
+
+    // Multiple expanding rings with different colors
+    const ringColors = [0xff0033, 0xff6600, 0xffff00, 0xffffff];
+    for (let i = 0; i < ringColors.length; i++) {
+      const ringRadius = this.deathRippleRadius - i * 20;
+      if (ringRadius > 0) {
+        const ringAlpha = alpha * (1 - i * 0.2);
+        g.lineStyle(4 - i, ringColors[i], ringAlpha);
+        g.strokeCircle(centerX, centerY, ringRadius);
+      }
+    }
+
+    // Inner distortion circles
+    for (let i = 0; i < 3; i++) {
+      const innerRadius = this.deathRippleRadius * (0.3 + i * 0.2);
+      g.lineStyle(2, 0xff0066, alpha * 0.3);
+      g.strokeCircle(centerX, centerY, innerRadius);
+    }
+  }
+
+  private drawChromaticAberration(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+    if (this.chromaticAberration < 0.5) return;
+
+    const offset = this.chromaticAberration;
+
+    // Red channel shift (left-up)
+    g.fillStyle(0xff0000, 0.08 * (offset / 8));
+    g.fillRect(-offset, -offset, width, height);
+
+    // Blue channel shift (right-down)
+    g.fillStyle(0x0000ff, 0.08 * (offset / 8));
+    g.fillRect(offset, offset, width, height);
+
+    // Cyan shift (subtle, opposite of red)
+    g.fillStyle(0x00ffff, 0.05 * (offset / 8));
+    g.fillRect(offset * 0.5, -offset * 0.5, width, height);
+  }
+
+  private drawDeathFlash(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+    if (this.deathFlashIntensity < 0.01) return;
+
+    // Bright white flash that fades
+    g.fillStyle(0xffffff, this.deathFlashIntensity * 0.8);
+    g.fillRect(0, 0, width, height);
+
+    // Red tinge underneath
+    g.fillStyle(0xff0033, this.deathFlashIntensity * 0.4);
+    g.fillRect(0, 0, width, height);
   }
 
   private lerpColor(color1: number, color2: number, t: number): number {
