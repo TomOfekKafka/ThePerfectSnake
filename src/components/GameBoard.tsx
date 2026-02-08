@@ -47,6 +47,11 @@ const COLORS = {
   nebula: ['#1a0033', '#330066', '#000033', '#003344', '#220044'],
   // Aurora colors
   aurora: ['#00ff88', '#00ffcc', '#00ccff', '#8844ff'],
+  // Matrix digital rain colors
+  matrixBright: '#00ff00',
+  matrixMid: '#00cc00',
+  matrixDim: '#008800',
+  matrixHead: '#ccffcc',
 };
 
 // Static stars for Canvas2D fallback (no animation)
@@ -86,6 +91,19 @@ for (let i = 0; i < 6; i++) {
     y: Math.random() * GRID_SIZE * CELL_SIZE,
     radius: 60 + Math.random() * 80,
     color: COLORS.nebula[i % COLORS.nebula.length],
+  });
+}
+
+// Static Matrix rain drops for Canvas2D fallback
+const MATRIX_DROPS: Array<{ x: number; y: number; length: number; brightness: number }> = [];
+const MATRIX_COLUMN_WIDTH = 14;
+const MATRIX_NUM_COLUMNS = Math.floor((GRID_SIZE * CELL_SIZE) / MATRIX_COLUMN_WIDTH);
+for (let i = 0; i < MATRIX_NUM_COLUMNS; i++) {
+  MATRIX_DROPS.push({
+    x: i * MATRIX_COLUMN_WIDTH + MATRIX_COLUMN_WIDTH / 2,
+    y: Math.random() * GRID_SIZE * CELL_SIZE,
+    length: 8 + Math.floor(Math.random() * 12),
+    brightness: 0.3 + Math.random() * 0.4,
   });
 }
 
@@ -137,6 +155,55 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.arc(node.x, node.y, node.radius * 1.5, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  // Draw Matrix digital rain effect (static version for Canvas2D fallback)
+  const charHeight = 14;
+  for (const drop of MATRIX_DROPS) {
+    for (let i = 0; i < drop.length; i++) {
+      const charY = drop.y - i * charHeight;
+
+      // Skip if off screen
+      if (charY < -charHeight || charY > GRID_SIZE * CELL_SIZE + charHeight) continue;
+
+      const fadeProgress = i / drop.length;
+      const alpha = drop.brightness * (1 - fadeProgress * 0.8);
+
+      if (i === 0) {
+        // Bright head
+        ctx.fillStyle = COLORS.matrixHead;
+        ctx.globalAlpha = alpha * 1.2;
+        ctx.beginPath();
+        ctx.arc(drop.x, charY, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Glow
+        ctx.fillStyle = COLORS.matrixBright;
+        ctx.globalAlpha = alpha * 0.5;
+        ctx.beginPath();
+        ctx.arc(drop.x, charY, 6, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (i < 3) {
+        ctx.fillStyle = COLORS.matrixBright;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(drop.x, charY, 3, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (i < drop.length * 0.5) {
+        ctx.fillStyle = COLORS.matrixMid;
+        ctx.globalAlpha = alpha * 0.8;
+        ctx.beginPath();
+        ctx.arc(drop.x, charY, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = COLORS.matrixDim;
+        ctx.globalAlpha = alpha * 0.6;
+        ctx.beginPath();
+        ctx.arc(drop.x, charY, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
 
   // Draw aurora borealis effect (static version for Canvas2D)
   for (let layer = 0; layer < 3; layer++) {

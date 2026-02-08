@@ -199,6 +199,16 @@ interface GhostImage {
   alpha: number;
 }
 
+interface MatrixDrop {
+  x: number;
+  y: number;
+  speed: number;
+  chars: string[];
+  charIndex: number;
+  brightness: number;
+  length: number;
+}
+
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 
@@ -235,6 +245,11 @@ const COLORS = {
   aurora: [0x00ff88, 0x00ffcc, 0x00ccff, 0x8844ff, 0xff44aa, 0x44ff88],
   // Lightning colors
   lightning: [0x00ffff, 0xaaffff, 0xffffff, 0x88ffff],
+  // Matrix digital rain colors
+  matrixBright: 0x00ff00,
+  matrixMid: 0x00cc00,
+  matrixDim: 0x008800,
+  matrixHead: 0xccffcc,
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -264,6 +279,10 @@ export class SnakeScene extends Phaser.Scene {
   private cometTrails: CometTrail[] = [];
   private electricSparks: ElectricSpark[] = [];
   private ghostImages: GhostImage[] = [];
+  private matrixDrops: MatrixDrop[] = [];
+
+  // Matrix character set (katakana-like + numbers + symbols)
+  private matrixChars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
 
   // Color cycling for dynamic theme
   private colorCycleOffset = 0;
@@ -294,6 +313,7 @@ export class SnakeScene extends Phaser.Scene {
     this.initPlasmaWaves();
     this.initNebulaNodes();
     this.initAuroraWaves();
+    this.initMatrixRain();
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -377,6 +397,37 @@ export class SnakeScene extends Phaser.Scene {
           COLORS.aurora[(i + 2) % COLORS.aurora.length],
         ],
         thickness: 35 + Math.random() * 25,
+      });
+    }
+  }
+
+  private initMatrixRain(): void {
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+
+    // Create vertical columns of falling characters
+    const columnWidth = 14;
+    const numColumns = Math.floor(width / columnWidth);
+
+    for (let i = 0; i < numColumns; i++) {
+      // Random starting positions (some above screen for staggered effect)
+      const startY = Math.random() * height * 2 - height;
+      const length = 8 + Math.floor(Math.random() * 12);
+      const chars: string[] = [];
+
+      // Pre-generate random characters for this drop
+      for (let j = 0; j < length; j++) {
+        chars.push(this.matrixChars[Math.floor(Math.random() * this.matrixChars.length)]);
+      }
+
+      this.matrixDrops.push({
+        x: i * columnWidth + columnWidth / 2,
+        y: startY,
+        speed: 1.5 + Math.random() * 2.5,
+        chars,
+        charIndex: 0,
+        brightness: 0.3 + Math.random() * 0.4,
+        length,
       });
     }
   }
@@ -1244,6 +1295,25 @@ export class SnakeScene extends Phaser.Scene {
       }
     }
 
+    // Update matrix rain drops
+    const height = GRID_SIZE * CELL_SIZE;
+    for (const drop of this.matrixDrops) {
+      drop.y += drop.speed;
+
+      // Occasionally change a random character for glitchy effect
+      if (Math.random() < 0.05) {
+        const idx = Math.floor(Math.random() * drop.chars.length);
+        drop.chars[idx] = this.matrixChars[Math.floor(Math.random() * this.matrixChars.length)];
+      }
+
+      // Reset when drop goes off screen
+      if (drop.y > height + drop.length * 14) {
+        drop.y = -drop.length * 14;
+        drop.speed = 1.5 + Math.random() * 2.5;
+        drop.brightness = 0.3 + Math.random() * 0.4;
+      }
+    }
+
     // Update color cycle offset for dynamic theming
     this.colorCycleOffset += 0.002;
   }
@@ -1279,6 +1349,9 @@ export class SnakeScene extends Phaser.Scene {
 
     // Draw cosmic nebula effect (deep background)
     this.drawNebula(g, shakeX, shakeY);
+
+    // Draw Matrix digital rain effect (behind aurora)
+    this.drawMatrixRain(g, shakeX, shakeY);
 
     // Draw aurora borealis effect
     this.drawAurora(g, width, shakeX, shakeY);
@@ -1360,6 +1433,49 @@ export class SnakeScene extends Phaser.Scene {
 
       g.fillStyle(node.color, 0.08 * breathe);
       g.fillCircle(x, y, radius * 0.6);
+    }
+  }
+
+  private drawMatrixRain(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    const charHeight = 14;
+
+    for (const drop of this.matrixDrops) {
+      const baseX = drop.x + shakeX;
+
+      // Draw each character in the drop from top to bottom
+      for (let i = 0; i < drop.chars.length; i++) {
+        const charY = drop.y - i * charHeight + shakeY;
+
+        // Skip if off screen
+        if (charY < -charHeight || charY > GRID_SIZE * CELL_SIZE + charHeight) continue;
+
+        // Calculate fade based on position in drop (head is brightest)
+        const fadeProgress = i / drop.chars.length;
+        let alpha = drop.brightness * (1 - fadeProgress * 0.8);
+
+        // The head character (i=0) is extra bright with white tint
+        if (i === 0) {
+          // Bright white/green head with glow
+          g.fillStyle(COLORS.matrixHead, alpha * 1.2);
+          g.fillCircle(baseX, charY, 4);
+
+          // Small glow behind head
+          g.fillStyle(COLORS.matrixBright, alpha * 0.5);
+          g.fillCircle(baseX, charY, 6);
+        } else if (i < 3) {
+          // Near-head characters are bright green
+          g.fillStyle(COLORS.matrixBright, alpha);
+          g.fillCircle(baseX, charY, 3);
+        } else if (i < drop.chars.length * 0.5) {
+          // Mid characters are medium green
+          g.fillStyle(COLORS.matrixMid, alpha * 0.8);
+          g.fillCircle(baseX, charY, 2.5);
+        } else {
+          // Tail characters are dim
+          g.fillStyle(COLORS.matrixDim, alpha * 0.6);
+          g.fillCircle(baseX, charY, 2);
+        }
+      }
     }
   }
 
