@@ -43,6 +43,8 @@ const COLORS = {
   trailGlow: '#00ffaa',
   // Plasma wave colors
   plasma: ['#440066', '#660044', '#330066'],
+  // Nebula colors for cosmic background
+  nebula: ['#1a0033', '#330066', '#000033', '#003344', '#220044'],
 };
 
 // Static stars for Canvas2D fallback (no animation)
@@ -71,6 +73,17 @@ for (let i = 0; i < 8; i++) {
     angle: Math.PI * (0.7 + Math.random() * 0.3),
     length: 20 + Math.random() * 30,
     color: COLORS.rainbow[i % COLORS.rainbow.length],
+  });
+}
+
+// Static nebula nodes for cosmic background
+const NEBULA_NODES: Array<{ x: number; y: number; radius: number; color: string }> = [];
+for (let i = 0; i < 6; i++) {
+  NEBULA_NODES.push({
+    x: Math.random() * GRID_SIZE * CELL_SIZE,
+    y: Math.random() * GRID_SIZE * CELL_SIZE,
+    radius: 60 + Math.random() * 80,
+    color: COLORS.nebula[i % COLORS.nebula.length],
   });
 }
 
@@ -110,6 +123,18 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   gradient.addColorStop(1, 'rgba(3, 3, 8, 0)');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
+
+  // Draw cosmic nebula clouds
+  for (const node of NEBULA_NODES) {
+    const grad = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, node.radius);
+    grad.addColorStop(0, node.color + '20');
+    grad.addColorStop(0.5, node.color + '10');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, node.radius * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   // Draw plasma waves (static for Canvas2D)
   ctx.globalAlpha = 0.12;
@@ -303,32 +328,75 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   ctx.beginPath();
   ctx.arc(foodCenterX, foodCenterY, 9, 0, Math.PI * 2);
   ctx.fill();
-
-  // Core
   ctx.globalAlpha = 1;
-  ctx.fillStyle = COLORS.food;
+
+  // Crystalline hexagon effect
+  const crystalSize = 9;
+  const facets = 6;
+  const rotation = 0; // Static rotation for Canvas2D fallback
+
+  // Crystal glow
+  ctx.fillStyle = COLORS.foodGlow;
+  ctx.globalAlpha = 0.3;
   ctx.beginPath();
-  ctx.arc(foodCenterX, foodCenterY, 6, 0, Math.PI * 2);
+  for (let i = 0; i < facets; i++) {
+    const angle = (i / facets) * Math.PI * 2 + rotation;
+    const fx = foodCenterX + Math.cos(angle) * (crystalSize + 3);
+    const fy = foodCenterY + Math.sin(angle) * (crystalSize + 3);
+    if (i === 0) ctx.moveTo(fx, fy);
+    else ctx.lineTo(fx, fy);
+  }
+  ctx.closePath();
   ctx.fill();
 
-  // Inner bright spot
+  // Crystal body
+  ctx.fillStyle = COLORS.food;
+  ctx.globalAlpha = 0.9;
+  ctx.beginPath();
+  for (let i = 0; i < facets; i++) {
+    const angle = (i / facets) * Math.PI * 2 + rotation;
+    const fx = foodCenterX + Math.cos(angle) * crystalSize;
+    const fy = foodCenterY + Math.sin(angle) * crystalSize;
+    if (i === 0) ctx.moveTo(fx, fy);
+    else ctx.lineTo(fx, fy);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Crystal facet lines
+  ctx.strokeStyle = COLORS.foodGlow;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.4;
+  for (let i = 0; i < facets; i++) {
+    const angle = (i / facets) * Math.PI * 2 + rotation;
+    const fx = foodCenterX + Math.cos(angle) * crystalSize;
+    const fy = foodCenterY + Math.sin(angle) * crystalSize;
+    ctx.beginPath();
+    ctx.moveTo(foodCenterX, foodCenterY);
+    ctx.lineTo(fx, fy);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Inner bright core
   ctx.fillStyle = COLORS.foodCore;
   ctx.globalAlpha = 0.95;
   ctx.beginPath();
-  ctx.arc(foodCenterX, foodCenterY, 3.5, 0, Math.PI * 2);
+  ctx.arc(foodCenterX, foodCenterY, 4, 0, Math.PI * 2);
   ctx.fill();
 
-  // Sparkle highlights
+  // Sparkle highlights on facets
   ctx.fillStyle = '#ffffff';
-  ctx.globalAlpha = 0.8;
-  ctx.beginPath();
-  ctx.arc(foodCenterX - 2, foodCenterY - 2, 1.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.globalAlpha = 0.5;
-  ctx.beginPath();
-  ctx.arc(foodCenterX + 1, foodCenterY + 1, 1, 0, Math.PI * 2);
-  ctx.fill();
+  for (let i = 0; i < 3; i++) {
+    const sparkleAngle = rotation + (i / 3) * Math.PI * 2;
+    const sparkleR = crystalSize * 0.5;
+    const sparkleX = foodCenterX + Math.cos(sparkleAngle) * sparkleR;
+    const sparkleY = foodCenterY + Math.sin(sparkleAngle) * sparkleR;
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(sparkleX, sparkleY, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.globalAlpha = 1;
 
   // Draw snake (from tail to head so head is on top)

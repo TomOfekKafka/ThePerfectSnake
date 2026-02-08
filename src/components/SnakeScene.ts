@@ -107,6 +107,26 @@ interface PlasmaWave {
   alpha: number;
 }
 
+interface NebulaNode {
+  x: number;
+  y: number;
+  radius: number;
+  color: number;
+  phase: number;
+  speed: number;
+}
+
+interface BodyWake {
+  x: number;
+  y: number;
+  angle: number;
+  speed: number;
+  life: number;
+  maxLife: number;
+  color: number;
+  size: number;
+}
+
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 
@@ -135,6 +155,10 @@ const COLORS = {
   electric: [0x00ffff, 0x00ccff, 0x0099ff, 0x00ffcc],
   // Plasma wave colors
   plasma: [0x440066, 0x660044, 0x330066, 0x220044],
+  // Nebula colors for cosmic background
+  nebula: [0x1a0033, 0x330066, 0x000033, 0x003344, 0x220044],
+  // Crystal food colors
+  crystal: [0xff0066, 0xff3399, 0xff66aa, 0xffaacc, 0xffffff],
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -155,6 +179,11 @@ export class SnakeScene extends Phaser.Scene {
   private energyRings: EnergyRing[] = [];
   private floatingTexts: FloatingText[] = [];
   private pulseWaves: PulseWave[] = [];
+  private nebulaNodes: NebulaNode[] = [];
+  private bodyWakes: BodyWake[] = [];
+
+  // Color cycling for dynamic theme
+  private colorCycleOffset = 0;
 
   // Power level (increases with snake length for intensity scaling)
   private powerLevel = 1;
@@ -180,6 +209,7 @@ export class SnakeScene extends Phaser.Scene {
     this.initStars();
     this.initEnergyOrbs();
     this.initPlasmaWaves();
+    this.initNebulaNodes();
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -225,6 +255,23 @@ export class SnakeScene extends Phaser.Scene {
         frequency: 0.02 + Math.random() * 0.01,
         color: COLORS.plasma[i % COLORS.plasma.length],
         alpha: 0.15 + Math.random() * 0.1,
+      });
+    }
+  }
+
+  private initNebulaNodes(): void {
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+
+    // Create cosmic nebula cloud nodes
+    for (let i = 0; i < 6; i++) {
+      this.nebulaNodes.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: 60 + Math.random() * 80,
+        color: COLORS.nebula[i % COLORS.nebula.length],
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.005 + Math.random() * 0.01,
       });
     }
   }
@@ -452,6 +499,43 @@ export class SnakeScene extends Phaser.Scene {
     });
   }
 
+  private spawnBodyWake(x: number, y: number, progress: number): void {
+    if (this.bodyWakes.length > 40) return; // Limit particles
+
+    // Spawn wake perpendicular to movement direction
+    const perpAngle = Math.atan2(-this.moveDirection.dx, this.moveDirection.dy);
+    const side = Math.random() > 0.5 ? 1 : -1;
+    const angle = perpAngle + (Math.random() - 0.5) * 0.5 + side * Math.PI * 0.3;
+
+    this.bodyWakes.push({
+      x: x + (Math.random() - 0.5) * 4,
+      y: y + (Math.random() - 0.5) * 4,
+      angle: angle,
+      speed: 1 + Math.random() * 2,
+      life: 15 + Math.random() * 10,
+      maxLife: 25,
+      color: this.lerpColor(COLORS.snakeBody, COLORS.snakeTail, progress),
+      size: 2 + Math.random() * 2 * (1 - progress),
+    });
+  }
+
+  private drawBodyWakes(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const bw of this.bodyWakes) {
+      const alpha = (bw.life / bw.maxLife) * 0.5;
+      const size = bw.size * (bw.life / bw.maxLife);
+      const x = bw.x + shakeX;
+      const y = bw.y + shakeY;
+
+      // Outer glow
+      g.fillStyle(bw.color, alpha * 0.3);
+      g.fillCircle(x, y, size + 2);
+
+      // Core
+      g.fillStyle(bw.color, alpha * 0.7);
+      g.fillCircle(x, y, size);
+    }
+  }
+
   private updateParticles(): void {
     // Update trail particles
     for (let i = this.trailParticles.length - 1; i >= 0; i--) {
@@ -562,6 +646,26 @@ export class SnakeScene extends Phaser.Scene {
         this.pulseWaves.splice(i, 1);
       }
     }
+
+    // Update body wake particles
+    for (let i = this.bodyWakes.length - 1; i >= 0; i--) {
+      const bw = this.bodyWakes[i];
+      bw.x += Math.cos(bw.angle) * bw.speed;
+      bw.y += Math.sin(bw.angle) * bw.speed;
+      bw.life--;
+      bw.speed *= 0.95;
+      if (bw.life <= 0) {
+        this.bodyWakes.splice(i, 1);
+      }
+    }
+
+    // Update nebula nodes (breathing/pulsing motion)
+    for (const node of this.nebulaNodes) {
+      node.phase += node.speed;
+    }
+
+    // Update color cycle offset for dynamic theming
+    this.colorCycleOffset += 0.002;
   }
 
   update(): void {
@@ -592,6 +696,9 @@ export class SnakeScene extends Phaser.Scene {
     // Subtle radial gradient overlay (center lighter)
     g.fillStyle(COLORS.bgMid, 0.3);
     g.fillCircle(width / 2, height / 2, width * 0.6);
+
+    // Draw cosmic nebula effect (deep background)
+    this.drawNebula(g, shakeX, shakeY);
 
     // Draw plasma waves in background
     this.drawPlasmaWaves(g, width, shakeX, shakeY);
@@ -632,6 +739,26 @@ export class SnakeScene extends Phaser.Scene {
     // Game over overlay
     if (this.currentState.gameOver) {
       this.drawGameOverEffect(g, width, height);
+    }
+  }
+
+  private drawNebula(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    // Draw cosmic nebula clouds with breathing animation
+    for (const node of this.nebulaNodes) {
+      const breathe = Math.sin(node.phase) * 0.3 + 0.7;
+      const radius = node.radius * breathe;
+      const x = node.x + shakeX + Math.sin(node.phase * 0.5) * 10;
+      const y = node.y + shakeY + Math.cos(node.phase * 0.7) * 8;
+
+      // Multiple layers for soft nebula effect
+      g.fillStyle(node.color, 0.04 * breathe);
+      g.fillCircle(x, y, radius * 1.5);
+
+      g.fillStyle(node.color, 0.06 * breathe);
+      g.fillCircle(x, y, radius);
+
+      g.fillStyle(node.color, 0.08 * breathe);
+      g.fillCircle(x, y, radius * 0.6);
     }
   }
 
@@ -877,6 +1004,7 @@ export class SnakeScene extends Phaser.Scene {
     const pulse1 = Math.sin(this.frameCount * 0.12) * 0.3 + 0.7;
     const pulse2 = Math.sin(this.frameCount * 0.08 + 1) * 0.2 + 0.8;
     const pulse3 = Math.sin(this.frameCount * 0.2) * 0.15 + 0.85;
+    const rotation = this.frameCount * 0.03;
 
     // Outer corona glow (larger, more dramatic)
     g.fillStyle(COLORS.food, 0.08 * pulse2);
@@ -903,6 +1031,45 @@ export class SnakeScene extends Phaser.Scene {
       g.fillCircle(orbX - orb.size * 0.3, orbY - orb.size * 0.3, orb.size * 0.4);
     }
 
+    // Crystalline facet effect - rotating hexagon with inner structure
+    const crystalSize = 9 * pulse1;
+    const facets = 6;
+
+    // Outer crystal glow
+    g.fillStyle(COLORS.foodGlow, 0.3 * pulse1);
+    g.beginPath();
+    for (let i = 0; i < facets; i++) {
+      const angle = (i / facets) * Math.PI * 2 + rotation;
+      const fx = centerX + Math.cos(angle) * (crystalSize + 3);
+      const fy = centerY + Math.sin(angle) * (crystalSize + 3);
+      if (i === 0) g.moveTo(fx, fy);
+      else g.lineTo(fx, fy);
+    }
+    g.closePath();
+    g.fillPath();
+
+    // Main crystal body
+    g.fillStyle(COLORS.food, 0.9);
+    g.beginPath();
+    for (let i = 0; i < facets; i++) {
+      const angle = (i / facets) * Math.PI * 2 + rotation;
+      const fx = centerX + Math.cos(angle) * crystalSize;
+      const fy = centerY + Math.sin(angle) * crystalSize;
+      if (i === 0) g.moveTo(fx, fy);
+      else g.lineTo(fx, fy);
+    }
+    g.closePath();
+    g.fillPath();
+
+    // Inner crystal facets (connecting lines to center)
+    g.lineStyle(1, COLORS.foodGlow, 0.4 * pulse1);
+    for (let i = 0; i < facets; i++) {
+      const angle = (i / facets) * Math.PI * 2 + rotation;
+      const fx = centerX + Math.cos(angle) * crystalSize;
+      const fy = centerY + Math.sin(angle) * crystalSize;
+      g.lineBetween(centerX, centerY, fx, fy);
+    }
+
     // Rainbow ring effect (rotating)
     const ringRadius = 14 * pulse1;
     for (let i = 0; i < 6; i++) {
@@ -913,29 +1080,20 @@ export class SnakeScene extends Phaser.Scene {
       g.fillCircle(rx, ry, 3);
     }
 
-    // Main glow layers
-    g.fillStyle(COLORS.food, 0.18 * pulse1);
-    g.fillCircle(centerX, centerY, 14 * pulse1);
-
-    g.fillStyle(COLORS.foodGlow, 0.45 * pulse1);
-    g.fillCircle(centerX, centerY, 10 * pulse1);
-
-    // Core with gradient effect
-    g.fillStyle(COLORS.food, 1);
-    g.fillCircle(centerX, centerY, 6);
-
-    // Inner bright spot
+    // Inner bright core
     g.fillStyle(COLORS.foodCore, 0.95 * pulse3);
-    g.fillCircle(centerX, centerY, 3.5);
+    g.fillCircle(centerX, centerY, 4);
 
-    // Sparkle highlights (two for more shimmer)
-    const sparkleOffset = Math.sin(this.frameCount * 0.1) * 2;
-    g.fillStyle(0xffffff, 0.8);
-    g.fillCircle(centerX - 2 + sparkleOffset, centerY - 2, 1.5);
-
-    const sparkleOffset2 = Math.cos(this.frameCount * 0.15) * 1.5;
-    g.fillStyle(0xffffff, 0.5);
-    g.fillCircle(centerX + 1 + sparkleOffset2, centerY + 1, 1);
+    // Sparkle highlights (animated reflections on crystal facets)
+    for (let i = 0; i < 3; i++) {
+      const sparkleAngle = rotation + (i / 3) * Math.PI * 2;
+      const sparkleR = crystalSize * 0.5;
+      const sparkleX = centerX + Math.cos(sparkleAngle) * sparkleR;
+      const sparkleY = centerY + Math.sin(sparkleAngle) * sparkleR;
+      const sparkleAlpha = (Math.sin(this.frameCount * 0.2 + i * 2) * 0.3 + 0.5);
+      g.fillStyle(0xffffff, sparkleAlpha);
+      g.fillCircle(sparkleX, sparkleY, 1.5);
+    }
   }
 
   private drawSnake(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
@@ -944,6 +1102,9 @@ export class SnakeScene extends Phaser.Scene {
     const snake = this.currentState.snake;
     const segmentCount = snake.length;
 
+    // Draw body wake particles first (behind snake)
+    this.drawBodyWakes(g, shakeX, shakeY);
+
     // Spawn trail particles from tail
     if (segmentCount > 0 && !this.currentState.gameOver) {
       const tail = snake[snake.length - 1];
@@ -951,6 +1112,16 @@ export class SnakeScene extends Phaser.Scene {
       const tailY = tail.y * CELL_SIZE + CELL_SIZE / 2;
       if (this.frameCount % 2 === 0) {
         this.spawnTrailParticle(tailX, tailY, COLORS.trailGlow);
+      }
+
+      // Spawn body wake particles from every few segments
+      if (this.frameCount % 3 === 0 && segmentCount > 2) {
+        for (let i = 1; i < segmentCount; i += 3) {
+          const seg = snake[i];
+          const segX = seg.x * CELL_SIZE + CELL_SIZE / 2;
+          const segY = seg.y * CELL_SIZE + CELL_SIZE / 2;
+          this.spawnBodyWake(segX, segY, i / segmentCount);
+        }
       }
     }
 
@@ -984,8 +1155,16 @@ export class SnakeScene extends Phaser.Scene {
     // Second pass: Draw body segments from tail to head (so head renders on top)
     for (let i = segmentCount - 1; i >= 0; i--) {
       const segment = snake[i];
-      const x = segment.x * CELL_SIZE + shakeX;
-      const y = segment.y * CELL_SIZE + shakeY;
+
+      // Body wave animation - segments undulate perpendicular to movement
+      const wavePhase = (this.frameCount * 0.15 + i * 0.8);
+      const waveAmplitude = Math.min(i * 0.3, 2.5) * (1 - (i / Math.max(segmentCount, 1)));
+      const perpX = -this.moveDirection.dy;
+      const perpY = this.moveDirection.dx;
+      const waveOffset = Math.sin(wavePhase) * waveAmplitude;
+
+      const x = segment.x * CELL_SIZE + shakeX + perpX * waveOffset;
+      const y = segment.y * CELL_SIZE + shakeY + perpY * waveOffset;
       const centerX = x + CELL_SIZE / 2;
       const centerY = y + CELL_SIZE / 2;
 
