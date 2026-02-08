@@ -24,6 +24,7 @@ export class SnakeScene extends Phaser.Scene {
 
   create(): void {
     this.graphics = this.add.graphics();
+
     if (this.currentState) {
       this.needsRedraw = true;
     }
