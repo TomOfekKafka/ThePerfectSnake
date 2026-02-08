@@ -62,6 +62,26 @@ interface EnergyRing {
   thickness: number;
 }
 
+interface FloatingText {
+  x: number;
+  y: number;
+  text: string;
+  life: number;
+  maxLife: number;
+  color: number;
+  vy: number;
+  scale: number;
+}
+
+interface PulseWave {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  life: number;
+  color: number;
+}
+
 interface Star {
   x: number;
   y: number;
@@ -133,6 +153,11 @@ export class SnakeScene extends Phaser.Scene {
   private shootingStars: ShootingStar[] = [];
   private warpLines: WarpLine[] = [];
   private energyRings: EnergyRing[] = [];
+  private floatingTexts: FloatingText[] = [];
+  private pulseWaves: PulseWave[] = [];
+
+  // Power level (increases with snake length for intensity scaling)
+  private powerLevel = 1;
 
   // Previous state for detecting food eaten
   private prevFoodPos: Position | null = null;
@@ -205,10 +230,15 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   updateGameState(state: GameState): void {
+    // Update power level based on snake length (more dramatic effects as snake grows)
+    this.powerLevel = Math.min(1 + (state.snake.length - 1) * 0.15, 3);
+
     // Detect if food was eaten (snake grew)
     if (this.currentState && state.snake.length > this.prevSnakeLength) {
       this.spawnFoodExplosion(this.prevFoodPos || state.food);
       this.spawnEnergyRings(this.prevFoodPos || state.food);
+      this.spawnFloatingText(this.prevFoodPos || state.food, '+10');
+      this.spawnSpiralBurst(this.prevFoodPos || state.food);
     }
 
     // Trigger screen shake on game over
@@ -226,6 +256,10 @@ export class SnakeScene extends Phaser.Scene {
         // Spawn warp lines when moving
         if (!state.gameOver) {
           this.spawnWarpLines(head);
+          // Spawn pulse wave from head at higher power levels
+          if (this.powerLevel >= 1.5 && this.frameCount % 3 === 0) {
+            this.spawnPulseWave(head);
+          }
         }
       }
     }
@@ -272,18 +306,75 @@ export class SnakeScene extends Phaser.Scene {
     const centerX = pos.x * CELL_SIZE + CELL_SIZE / 2;
     const centerY = pos.y * CELL_SIZE + CELL_SIZE / 2;
 
-    // Spawn multiple expanding energy rings
-    for (let i = 0; i < 3; i++) {
+    // Spawn multiple expanding energy rings (scale with power level)
+    const ringCount = Math.min(3 + Math.floor(this.powerLevel), 5);
+    for (let i = 0; i < ringCount; i++) {
       this.energyRings.push({
         x: centerX,
         y: centerY,
         radius: 5 + i * 8,
-        maxRadius: 80 + i * 20,
-        color: COLORS.rainbow[i * 2],
-        life: 30 - i * 5,
-        thickness: 3 - i * 0.5,
+        maxRadius: (80 + i * 20) * this.powerLevel,
+        color: COLORS.rainbow[i % COLORS.rainbow.length],
+        life: 30 - i * 4,
+        thickness: 3 - i * 0.4,
       });
     }
+  }
+
+  private spawnFloatingText(pos: Position, text: string): void {
+    const centerX = pos.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = pos.y * CELL_SIZE + CELL_SIZE / 2;
+
+    this.floatingTexts.push({
+      x: centerX,
+      y: centerY,
+      text,
+      life: 45,
+      maxLife: 45,
+      color: 0xffff00,
+      vy: -2,
+      scale: 1 + this.powerLevel * 0.3,
+    });
+  }
+
+  private spawnSpiralBurst(pos: Position): void {
+    const centerX = pos.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = pos.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Spiral particle burst (more particles at higher power levels)
+    const particleCount = Math.floor(12 * this.powerLevel);
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (i / particleCount) * Math.PI * 4 + this.frameCount * 0.1;
+      const spiralOffset = i * 0.15;
+      const speed = 2 + Math.random() * 3 * this.powerLevel;
+
+      this.foodParticles.push({
+        x: centerX,
+        y: centerY,
+        vx: Math.cos(angle + spiralOffset) * speed,
+        vy: Math.sin(angle + spiralOffset) * speed,
+        life: 40,
+        maxLife: 40,
+        color: COLORS.rainbow[i % COLORS.rainbow.length],
+        size: 2 + Math.random() * 2 * this.powerLevel,
+      });
+    }
+  }
+
+  private spawnPulseWave(head: Position): void {
+    if (this.pulseWaves.length > 5) return;
+
+    const centerX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+    this.pulseWaves.push({
+      x: centerX,
+      y: centerY,
+      radius: 5,
+      maxRadius: 30 + this.powerLevel * 10,
+      life: 15,
+      color: COLORS.snakeHeadGlow,
+    });
   }
 
   private spawnWarpLines(head: Position): void {
@@ -450,6 +541,27 @@ export class SnakeScene extends Phaser.Scene {
         this.energyRings.splice(i, 1);
       }
     }
+
+    // Update floating texts
+    for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+      const ft = this.floatingTexts[i];
+      ft.y += ft.vy;
+      ft.vy *= 0.95;
+      ft.life--;
+      if (ft.life <= 0) {
+        this.floatingTexts.splice(i, 1);
+      }
+    }
+
+    // Update pulse waves
+    for (let i = this.pulseWaves.length - 1; i >= 0; i--) {
+      const pw = this.pulseWaves[i];
+      pw.radius += (pw.maxRadius - pw.radius) * 0.2;
+      pw.life--;
+      if (pw.life <= 0) {
+        this.pulseWaves.splice(i, 1);
+      }
+    }
   }
 
   update(): void {
@@ -499,12 +611,18 @@ export class SnakeScene extends Phaser.Scene {
     // Draw food with enhanced pulsing glow effect
     this.drawFood(g, shakeX, shakeY);
 
+    // Draw pulse waves (behind food and snake)
+    this.drawPulseWaves(g, shakeX, shakeY);
+
     // Draw food explosion particles and energy rings
     this.drawFoodParticles(g, shakeX, shakeY);
     this.drawEnergyRings(g, shakeX, shakeY);
 
     // Draw snake with rainbow shimmer and electric effects
     this.drawSnake(g, shakeX, shakeY);
+
+    // Draw floating texts (on top of everything)
+    this.drawFloatingTexts(g, shakeX, shakeY);
 
     // Neon border glow (only when game is active)
     if (!this.currentState.gameOver) {
@@ -691,6 +809,63 @@ export class SnakeScene extends Phaser.Scene {
     }
   }
 
+  private drawFloatingTexts(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const ft of this.floatingTexts) {
+      const alpha = ft.life / ft.maxLife;
+      const x = ft.x + shakeX;
+      const y = ft.y + shakeY;
+      const scale = ft.scale * (0.8 + alpha * 0.4);
+
+      // Draw score text as glowing circles forming "+10"
+      // Since Phaser Graphics doesn't have text, we use shapes to suggest the score
+      const radius = 3 * scale;
+
+      // Outer glow for the score indicator
+      g.fillStyle(ft.color, alpha * 0.3);
+      g.fillCircle(x, y, radius * 4);
+
+      // Core bright circle
+      g.fillStyle(ft.color, alpha * 0.8);
+      g.fillCircle(x, y, radius * 2);
+
+      // Inner white core
+      g.fillStyle(0xffffff, alpha);
+      g.fillCircle(x, y, radius);
+
+      // Sparkle rays (4 directions)
+      g.lineStyle(2 * scale, ft.color, alpha * 0.6);
+      const rayLength = radius * 3;
+      g.lineBetween(x - rayLength, y, x + rayLength, y);
+      g.lineBetween(x, y - rayLength, x, y + rayLength);
+
+      // Diagonal sparkles
+      g.lineStyle(1.5 * scale, ft.color, alpha * 0.4);
+      const diagLength = rayLength * 0.7;
+      g.lineBetween(x - diagLength, y - diagLength, x + diagLength, y + diagLength);
+      g.lineBetween(x + diagLength, y - diagLength, x - diagLength, y + diagLength);
+    }
+  }
+
+  private drawPulseWaves(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const pw of this.pulseWaves) {
+      const alpha = (pw.life / 15) * 0.4;
+      const x = pw.x + shakeX;
+      const y = pw.y + shakeY;
+
+      // Outer soft glow
+      g.lineStyle(4, pw.color, alpha * 0.2);
+      g.strokeCircle(x, y, pw.radius + 3);
+
+      // Main wave
+      g.lineStyle(2, pw.color, alpha * 0.5);
+      g.strokeCircle(x, y, pw.radius);
+
+      // Inner bright edge
+      g.lineStyle(1, 0xffffff, alpha * 0.3);
+      g.strokeCircle(x, y, pw.radius - 1);
+    }
+  }
+
   private drawFood(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
     if (!this.currentState) return;
 
@@ -818,15 +993,23 @@ export class SnakeScene extends Phaser.Scene {
       const progress = segmentCount > 1 ? i / (segmentCount - 1) : 0;
 
       if (isHead) {
-        // Head with enhanced electric glow effect
+        // Head with enhanced electric glow effect (scaled by power level)
         const headPulse = Math.sin(this.frameCount * 0.1) * 0.2 + 0.8;
         const electricPulse = Math.sin(this.frameCount * 0.25) * 0.5 + 0.5;
+        const powerGlow = this.powerLevel;
 
-        // Electric aura (outermost)
+        // Electric aura (outermost) - grows with power level
         if (!this.currentState.gameOver) {
           const electricColor = COLORS.electric[Math.floor(this.frameCount * 0.2) % COLORS.electric.length];
-          g.fillStyle(electricColor, 0.1 * electricPulse);
-          g.fillCircle(centerX, centerY, 22);
+          g.fillStyle(electricColor, 0.08 * electricPulse * powerGlow);
+          g.fillCircle(centerX, centerY, 18 + powerGlow * 6);
+
+          // Power corona (extra layer at high power)
+          if (powerGlow >= 1.5) {
+            const coronaColor = COLORS.rainbow[Math.floor(this.frameCount * 0.15) % COLORS.rainbow.length];
+            g.fillStyle(coronaColor, 0.04 * electricPulse * powerGlow);
+            g.fillCircle(centerX, centerY, 25 + powerGlow * 8);
+          }
         }
 
         // Outer glow layers

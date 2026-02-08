@@ -373,13 +373,25 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     const progress = segmentCount > 1 ? i / (segmentCount - 1) : 0;
 
     if (isHead) {
-      // Electric aura (outermost)
+      // Calculate power level based on snake length (visual intensity scaling)
+      const powerLevel = Math.min(1 + (segmentCount - 1) * 0.15, 3);
+
+      // Electric aura (outermost) - scales with power level
       if (!gameState.gameOver) {
         ctx.fillStyle = '#00ccff';
-        ctx.globalAlpha = 0.1;
+        ctx.globalAlpha = 0.08 * powerLevel;
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 22, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY, 18 + powerLevel * 6, 0, Math.PI * 2);
         ctx.fill();
+
+        // Power corona at high power
+        if (powerLevel >= 1.5) {
+          ctx.fillStyle = COLORS.rainbow[Math.floor(centerX) % COLORS.rainbow.length];
+          ctx.globalAlpha = 0.04 * powerLevel;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, 25 + powerLevel * 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
 
       // Head glow layers (more layers)
