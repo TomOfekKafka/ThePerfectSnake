@@ -209,6 +209,26 @@ interface MatrixDrop {
   length: number;
 }
 
+interface FireEmber {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  size: number;
+  heat: number; // 0-1, affects color (1 = white hot, 0 = dark ember)
+}
+
+interface HeatWave {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  life: number;
+  intensity: number;
+}
+
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 
@@ -243,6 +263,15 @@ const COLORS = {
   crystal: [0xff0066, 0xff3399, 0xff66aa, 0xffaacc, 0xffffff],
   // Aurora colors for northern lights effect
   aurora: [0x00ff88, 0x00ffcc, 0x00ccff, 0x8844ff, 0xff44aa, 0x44ff88],
+  // Fire colors for blazing snake effect (white-hot to ember)
+  fireWhiteHot: 0xffffff,
+  fireYellow: 0xffff44,
+  fireOrange: 0xff8800,
+  fireRed: 0xff2200,
+  fireEmber: 0x881100,
+  fireDarkEmber: 0x440800,
+  // Fire gradient array (hot to cool)
+  fireGradient: [0xffffff, 0xffffcc, 0xffff44, 0xffcc00, 0xff8800, 0xff4400, 0xff2200, 0xcc1100, 0x881100],
   // Lightning colors
   lightning: [0x00ffff, 0xaaffff, 0xffffff, 0x88ffff],
   // Matrix digital rain colors
@@ -280,6 +309,8 @@ export class SnakeScene extends Phaser.Scene {
   private electricSparks: ElectricSpark[] = [];
   private ghostImages: GhostImage[] = [];
   private matrixDrops: MatrixDrop[] = [];
+  private fireEmbers: FireEmber[] = [];
+  private heatWaves: HeatWave[] = [];
 
   // Matrix character set (katakana-like + numbers + symbols)
   private matrixChars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
@@ -450,6 +481,8 @@ export class SnakeScene extends Phaser.Scene {
       this.spawnEnergyRings(this.prevFoodPos || state.food);
       this.spawnFloatingText(this.prevFoodPos || state.food, '+10');
       this.spawnSpiralBurst(this.prevFoodPos || state.food);
+      // Fire burst when eating food
+      this.spawnFireBurst(this.prevFoodPos || state.food);
     }
 
     // Trigger screen shake and cinematic death effect on game over
@@ -496,6 +529,14 @@ export class SnakeScene extends Phaser.Scene {
           // Spawn lightning arcs between segments at higher power levels
           if (this.frameCount % 5 === 0 && state.snake.length > 3 && this.powerLevel >= 1.3) {
             this.spawnSnakeLightning(state.snake);
+          }
+          // Spawn blazing fire embers from snake body
+          if (this.frameCount % 2 === 0) {
+            this.spawnFireEmbers(state.snake);
+          }
+          // Spawn heat waves from head at higher power levels
+          if (this.frameCount % 4 === 0 && this.powerLevel >= 1.2) {
+            this.spawnHeatWave(head);
           }
         }
       }
@@ -830,6 +871,87 @@ export class SnakeScene extends Phaser.Scene {
     });
   }
 
+  private spawnFireEmbers(snake: Position[]): void {
+    if (this.fireEmbers.length > 80) return;
+
+    // Spawn embers from snake body - more from head, fewer from tail
+    for (let i = 0; i < snake.length; i += Math.max(1, Math.floor(snake.length / 12))) {
+      const seg = snake[i];
+      const progress = i / Math.max(snake.length - 1, 1);
+      const heat = 1 - progress * 0.7; // Head is hottest
+
+      // Spawn rate decreases toward tail
+      if (Math.random() > 0.4 + progress * 0.4) continue;
+
+      const centerX = seg.x * CELL_SIZE + CELL_SIZE / 2;
+      const centerY = seg.y * CELL_SIZE + CELL_SIZE / 2;
+
+      // Embers rise and drift opposite to movement
+      const riseSpeed = 1 + Math.random() * 2;
+      const driftX = -this.moveDirection.dx * (1 + Math.random()) + (Math.random() - 0.5) * 2;
+      const driftY = -this.moveDirection.dy * (1 + Math.random()) - riseSpeed;
+
+      this.fireEmbers.push({
+        x: centerX + (Math.random() - 0.5) * 8,
+        y: centerY + (Math.random() - 0.5) * 8,
+        vx: driftX,
+        vy: driftY,
+        life: 20 + Math.random() * 15,
+        maxLife: 35,
+        size: 2 + Math.random() * 3 * (1 - progress * 0.5),
+        heat: heat * (0.7 + Math.random() * 0.3),
+      });
+    }
+  }
+
+  private spawnHeatWave(head: Position): void {
+    if (this.heatWaves.length > 4) return;
+
+    const centerX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+    this.heatWaves.push({
+      x: centerX,
+      y: centerY,
+      radius: 5,
+      maxRadius: 35 + this.powerLevel * 10,
+      life: 12,
+      intensity: 0.5 + this.powerLevel * 0.2,
+    });
+  }
+
+  private spawnFireBurst(pos: Position): void {
+    const centerX = pos.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = pos.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Spawn intense burst of fire embers in all directions
+    for (let i = 0; i < 24; i++) {
+      const angle = (i / 24) * Math.PI * 2 + Math.random() * 0.3;
+      const speed = 3 + Math.random() * 4;
+
+      this.fireEmbers.push({
+        x: centerX,
+        y: centerY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1, // Slight upward bias
+        life: 30 + Math.random() * 20,
+        maxLife: 50,
+        size: 3 + Math.random() * 4,
+        heat: 0.8 + Math.random() * 0.2,
+      });
+    }
+
+    // Add a large heat wave
+    this.heatWaves.push({
+      x: centerX,
+      y: centerY,
+      radius: 10,
+      maxRadius: 80,
+      life: 20,
+      intensity: 1,
+    });
+  }
+
   private spawnLightningBolt(x1: number, y1: number, x2: number, y2: number): void {
     if (this.lightningBolts.length > 12) return;
 
@@ -1028,6 +1150,70 @@ export class SnakeScene extends Phaser.Scene {
             next.y + shakeY
           );
         }
+      }
+    }
+  }
+
+  private drawFireEmbers(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const ember of this.fireEmbers) {
+      const lifeRatio = ember.life / ember.maxLife;
+      const alpha = lifeRatio * 0.9;
+      const size = ember.size * (0.5 + lifeRatio * 0.5);
+      const x = ember.x + shakeX;
+      const y = ember.y + shakeY;
+
+      // Get fire color based on heat level (interpolate through fire gradient)
+      const heatIndex = Math.floor((1 - ember.heat) * (COLORS.fireGradient.length - 1));
+      const fireColor = COLORS.fireGradient[Math.min(heatIndex, COLORS.fireGradient.length - 1)];
+
+      // Outer glow (larger, more diffuse)
+      g.fillStyle(fireColor, alpha * 0.25);
+      g.fillCircle(x, y, size + 4);
+
+      // Middle glow
+      g.fillStyle(fireColor, alpha * 0.5);
+      g.fillCircle(x, y, size + 2);
+
+      // Core (brighter toward center)
+      const coreColor = ember.heat > 0.7 ? COLORS.fireWhiteHot : ember.heat > 0.4 ? COLORS.fireYellow : fireColor;
+      g.fillStyle(coreColor, alpha * 0.9);
+      g.fillCircle(x, y, size);
+
+      // White-hot center for hottest embers
+      if (ember.heat > 0.6) {
+        g.fillStyle(0xffffff, alpha * ember.heat * 0.8);
+        g.fillCircle(x, y, size * 0.4);
+      }
+    }
+  }
+
+  private drawHeatWaves(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const wave of this.heatWaves) {
+      const lifeRatio = wave.life / 20; // Assuming max life is ~20
+      const alpha = lifeRatio * wave.intensity * 0.4;
+      const x = wave.x + shakeX;
+      const y = wave.y + shakeY;
+
+      // Outer distortion ring (orange glow)
+      g.lineStyle(4, COLORS.fireOrange, alpha * 0.3);
+      g.strokeCircle(x, y, wave.radius + 4);
+
+      // Main heat ring
+      g.lineStyle(3, COLORS.fireYellow, alpha * 0.5);
+      g.strokeCircle(x, y, wave.radius);
+
+      // Inner bright ring
+      g.lineStyle(1.5, COLORS.fireWhiteHot, alpha * 0.7);
+      g.strokeCircle(x, y, wave.radius - 2);
+
+      // Shimmer effect - small dots around the ring
+      const dotCount = 8;
+      for (let i = 0; i < dotCount; i++) {
+        const angle = (i / dotCount) * Math.PI * 2 + this.frameCount * 0.1;
+        const dotX = x + Math.cos(angle) * wave.radius;
+        const dotY = y + Math.sin(angle) * wave.radius;
+        g.fillStyle(COLORS.fireYellow, alpha * 0.6);
+        g.fillCircle(dotX, dotY, 2);
       }
     }
   }
@@ -1334,6 +1520,32 @@ export class SnakeScene extends Phaser.Scene {
       }
     }
 
+    // Update fire embers
+    for (let i = this.fireEmbers.length - 1; i >= 0; i--) {
+      const ember = this.fireEmbers[i];
+      ember.x += ember.vx;
+      ember.y += ember.vy;
+      ember.vy -= 0.05; // Slight upward drift (fire rises)
+      ember.vx *= 0.98; // Air resistance
+      ember.vy *= 0.98;
+      ember.heat *= 0.97; // Cooling over time
+      ember.life--;
+      if (ember.life <= 0 || ember.heat < 0.05) {
+        this.fireEmbers.splice(i, 1);
+      }
+    }
+
+    // Update heat waves
+    for (let i = this.heatWaves.length - 1; i >= 0; i--) {
+      const wave = this.heatWaves[i];
+      wave.radius += (wave.maxRadius - wave.radius) * 0.15;
+      wave.life--;
+      wave.intensity *= 0.95;
+      if (wave.life <= 0 || wave.intensity < 0.05) {
+        this.heatWaves.splice(i, 1);
+      }
+    }
+
     // Update matrix rain drops
     const height = GRID_SIZE * CELL_SIZE;
     for (const drop of this.matrixDrops) {
@@ -1434,6 +1646,12 @@ export class SnakeScene extends Phaser.Scene {
 
     // Draw electric sparks
     this.drawElectricSparks(g, shakeX, shakeY);
+
+    // Draw heat waves (behind snake, creates heat distortion effect)
+    this.drawHeatWaves(g, shakeX, shakeY);
+
+    // Draw fire embers (behind snake for depth)
+    this.drawFireEmbers(g, shakeX, shakeY);
 
     // Draw snake with rainbow shimmer and electric effects
     this.drawSnake(g, shakeX, shakeY);
@@ -1991,7 +2209,17 @@ export class SnakeScene extends Phaser.Scene {
         const size = CELL_SIZE - 2 - progress * 3;
         const offset = (CELL_SIZE - size) / 2;
 
-        // Outer glow for body segments
+        // FIRE EFFECT: Calculate fire color based on position (hot near head, cooler at tail)
+        const fireProgress = progress; // 0 at head, 1 at tail
+        const fireIndex = Math.floor(fireProgress * (COLORS.fireGradient.length - 1));
+        const fireColor = COLORS.fireGradient[Math.min(fireIndex, COLORS.fireGradient.length - 1)];
+        const firePulse = Math.sin(this.frameCount * 0.15 + i * 0.3) * 0.3 + 0.7;
+
+        // Outer fire glow for body segments (orange/red aura)
+        g.fillStyle(fireColor, 0.35 * firePulse);
+        g.fillCircle(centerX, centerY, size / 2 + 5);
+
+        // Secondary fire glow
         g.fillStyle(baseColor, 0.25);
         g.fillCircle(centerX, centerY, size / 2 + 3);
 
@@ -1999,9 +2227,20 @@ export class SnakeScene extends Phaser.Scene {
         g.fillStyle(baseColor, 1);
         g.fillRoundedRect(x + offset, y + offset, size, size, 5);
 
-        // Rainbow shimmer overlay (more vibrant)
-        g.fillStyle(shimmerColor, 0.2);
+        // Fire gradient overlay (creates blazing effect)
+        g.fillStyle(fireColor, 0.3 * firePulse);
         g.fillRoundedRect(x + offset, y + offset, size, size, 5);
+
+        // Rainbow shimmer overlay (more vibrant)
+        g.fillStyle(shimmerColor, 0.15);
+        g.fillRoundedRect(x + offset, y + offset, size, size, 5);
+
+        // Hot core highlight (brighter near head)
+        const coreIntensity = (1 - progress) * 0.4;
+        if (coreIntensity > 0.1) {
+          g.fillStyle(COLORS.fireYellow, coreIntensity * firePulse);
+          g.fillRoundedRect(x + offset + 2, y + offset + 2, size - 4, size - 4, 3);
+        }
 
         // Subtle highlight on each segment
         g.fillStyle(0xffffff, 0.2);

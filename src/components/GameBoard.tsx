@@ -52,6 +52,13 @@ const COLORS = {
   matrixMid: '#00cc00',
   matrixDim: '#008800',
   matrixHead: '#ccffcc',
+  // Fire colors for blazing snake effect
+  fireWhiteHot: '#ffffff',
+  fireYellow: '#ffff44',
+  fireOrange: '#ff8800',
+  fireRed: '#ff2200',
+  fireEmber: '#881100',
+  fireGradient: ['#ffffff', '#ffffcc', '#ffff44', '#ffcc00', '#ff8800', '#ff4400', '#ff2200', '#cc1100', '#881100'],
 };
 
 // Static stars for Canvas2D fallback (no animation)
@@ -737,7 +744,18 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       const size = CELL_SIZE - 2 - progress * 3;
       const offset = (CELL_SIZE - size) / 2;
 
-      // Outer glow for body segments
+      // FIRE EFFECT: Calculate fire color based on position (hot near head, cooler at tail)
+      const fireIndex = Math.floor(progress * (COLORS.fireGradient.length - 1));
+      const fireColor = COLORS.fireGradient[Math.min(fireIndex, COLORS.fireGradient.length - 1)];
+
+      // Outer fire glow for body segments
+      ctx.fillStyle = fireColor;
+      ctx.globalAlpha = 0.35;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, size / 2 + 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Secondary glow
       ctx.fillStyle = baseColor;
       ctx.globalAlpha = 0.25;
       ctx.beginPath();
@@ -751,14 +769,33 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.roundRect(x + offset, y + offset, size, size, 5);
       ctx.fill();
 
-      // Rainbow shimmer overlay (static color based on segment index)
-      const shimmerColor = COLORS.rainbow[i % COLORS.rainbow.length];
-      ctx.fillStyle = shimmerColor;
-      ctx.globalAlpha = 0.2;
+      // Fire gradient overlay (creates blazing effect)
+      ctx.fillStyle = fireColor;
+      ctx.globalAlpha = 0.3;
       ctx.beginPath();
       ctx.roundRect(x + offset, y + offset, size, size, 5);
       ctx.fill();
       ctx.globalAlpha = 1;
+
+      // Rainbow shimmer overlay (static color based on segment index)
+      const shimmerColor = COLORS.rainbow[i % COLORS.rainbow.length];
+      ctx.fillStyle = shimmerColor;
+      ctx.globalAlpha = 0.15;
+      ctx.beginPath();
+      ctx.roundRect(x + offset, y + offset, size, size, 5);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Hot core highlight (brighter near head)
+      const coreIntensity = (1 - progress) * 0.4;
+      if (coreIntensity > 0.1) {
+        ctx.fillStyle = COLORS.fireYellow;
+        ctx.globalAlpha = coreIntensity;
+        ctx.beginPath();
+        ctx.roundRect(x + offset + 2, y + offset + 2, size - 4, size - 4, 3);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
 
       // Subtle highlight
       ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
