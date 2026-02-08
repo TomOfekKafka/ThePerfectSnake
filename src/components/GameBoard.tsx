@@ -403,6 +403,68 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   const snake = gameState.snake;
   const segmentCount = snake.length;
 
+  // Draw comet trail effect behind head (static version)
+  if (segmentCount > 0 && !gameState.gameOver) {
+    const head = snake[0];
+    const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Draw multiple comet trail particles
+    for (let i = 0; i < 8; i++) {
+      const angle = Math.PI + (Math.random() - 0.5) * 0.6;
+      const distance = 8 + i * 4 + Math.random() * 5;
+      const trailX = headX + Math.cos(angle) * distance;
+      const trailY = headY + Math.sin(angle) * distance;
+      const size = 4 - i * 0.4 + Math.random();
+      const alpha = 0.6 - i * 0.07;
+
+      // Outer glow
+      ctx.fillStyle = COLORS.rainbow[i % COLORS.rainbow.length];
+      ctx.globalAlpha = alpha * 0.3;
+      ctx.beginPath();
+      ctx.arc(trailX, trailY, size + 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Core
+      ctx.globalAlpha = alpha * 0.7;
+      ctx.beginPath();
+      ctx.arc(trailX, trailY, size, 0, Math.PI * 2);
+      ctx.fill();
+
+      // White center
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = alpha * 0.9;
+      ctx.beginPath();
+      ctx.arc(trailX, trailY, size * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Draw electric spark effect (static version)
+    for (let i = 0; i < 5; i++) {
+      const sparkAngle = (Math.random() - 0.5) * 1.5;
+      const sparkDist = 12 + Math.random() * 15;
+      const sparkX = headX + Math.cos(sparkAngle) * sparkDist;
+      const sparkY = headY + Math.sin(sparkAngle) * sparkDist;
+      const sparkSize = 2 + Math.random() * 2;
+
+      // Spark glow
+      ctx.fillStyle = COLORS.snakeHeadGlow;
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.arc(sparkX, sparkY, sparkSize + 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Spark core
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      ctx.arc(sparkX, sparkY, sparkSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   // Draw motion trails for dramatic effect
   if (segmentCount > 0 && !gameState.gameOver) {
     for (let i = 0; i < segmentCount; i += Math.max(1, Math.floor(segmentCount / 6))) {

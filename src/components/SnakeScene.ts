@@ -149,6 +149,34 @@ interface PowerSurge {
   color: number;
 }
 
+interface CometTrail {
+  x: number;
+  y: number;
+  size: number;
+  color: number;
+  life: number;
+  maxLife: number;
+  alpha: number;
+}
+
+interface ElectricSpark {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: number;
+  size: number;
+}
+
+interface GhostImage {
+  segments: Array<{ x: number; y: number }>;
+  life: number;
+  maxLife: number;
+  alpha: number;
+}
+
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 
@@ -205,6 +233,9 @@ export class SnakeScene extends Phaser.Scene {
   private bodyWakes: BodyWake[] = [];
   private hyperTrails: HyperTrail[] = [];
   private powerSurges: PowerSurge[] = [];
+  private cometTrails: CometTrail[] = [];
+  private electricSparks: ElectricSpark[] = [];
+  private ghostImages: GhostImage[] = [];
 
   // Color cycling for dynamic theme
   private colorCycleOffset = 0;
@@ -336,6 +367,16 @@ export class SnakeScene extends Phaser.Scene {
           // Spawn power surges from head
           if (this.frameCount % 2 === 0) {
             this.spawnPowerSurge(head);
+          }
+          // Spawn comet trails behind head
+          this.spawnCometTrail(head);
+          // Spawn electric sparks from head
+          if (this.frameCount % 2 === 0) {
+            this.spawnElectricSparks(head);
+          }
+          // Spawn ghost image trail every few frames
+          if (this.frameCount % 4 === 0 && state.snake.length > 2) {
+            this.spawnGhostImage(state.snake);
           }
         }
       }
@@ -602,6 +643,74 @@ export class SnakeScene extends Phaser.Scene {
     }
   }
 
+  private spawnCometTrail(head: Position): void {
+    if (this.cometTrails.length > 40) return;
+
+    const centerX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Spawn multiple trail particles in a comet shape
+    for (let i = 0; i < 3; i++) {
+      const offsetAngle = Math.atan2(-this.moveDirection.dy, -this.moveDirection.dx);
+      const spread = (Math.random() - 0.5) * 0.6;
+      const distance = 5 + Math.random() * 10;
+
+      this.cometTrails.push({
+        x: centerX + Math.cos(offsetAngle + spread) * distance + (Math.random() - 0.5) * 4,
+        y: centerY + Math.sin(offsetAngle + spread) * distance + (Math.random() - 0.5) * 4,
+        size: 3 + Math.random() * 4 * this.powerLevel,
+        color: COLORS.rainbow[Math.floor(Math.random() * COLORS.rainbow.length)],
+        life: 20 + Math.random() * 10,
+        maxLife: 30,
+        alpha: 0.8,
+      });
+    }
+  }
+
+  private spawnElectricSparks(head: Position): void {
+    if (this.electricSparks.length > 30) return;
+
+    const centerX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Forward-facing sparks
+    const forwardAngle = Math.atan2(this.moveDirection.dy, this.moveDirection.dx);
+    const sparkCount = Math.min(2 + Math.floor(this.powerLevel), 4);
+
+    for (let i = 0; i < sparkCount; i++) {
+      const spreadAngle = forwardAngle + (Math.random() - 0.5) * 1.2;
+      const speed = 3 + Math.random() * 4 * this.powerLevel;
+
+      this.electricSparks.push({
+        x: centerX + this.moveDirection.dx * 8,
+        y: centerY + this.moveDirection.dy * 8,
+        vx: Math.cos(spreadAngle) * speed,
+        vy: Math.sin(spreadAngle) * speed,
+        life: 12 + Math.random() * 8,
+        maxLife: 20,
+        color: COLORS.electric[i % COLORS.electric.length],
+        size: 2 + Math.random() * 2,
+      });
+    }
+  }
+
+  private spawnGhostImage(snake: Position[]): void {
+    if (this.ghostImages.length > 5) return;
+
+    // Create a ghost copy of current snake position
+    const ghostSegments = snake.slice(0, Math.min(snake.length, 8)).map(seg => ({
+      x: seg.x * CELL_SIZE + CELL_SIZE / 2,
+      y: seg.y * CELL_SIZE + CELL_SIZE / 2,
+    }));
+
+    this.ghostImages.push({
+      segments: ghostSegments,
+      life: 15,
+      maxLife: 15,
+      alpha: 0.3,
+    });
+  }
+
   private drawBodyWakes(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
     for (const bw of this.bodyWakes) {
       const alpha = (bw.life / bw.maxLife) * 0.5;
@@ -662,6 +771,95 @@ export class SnakeScene extends Phaser.Scene {
       // Bright center
       g.fillStyle(0xffffff, alpha * 0.8);
       g.fillCircle(x, y, ps.radius * 0.4);
+    }
+  }
+
+  private drawCometTrails(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const ct of this.cometTrails) {
+      const alpha = (ct.life / ct.maxLife) * ct.alpha;
+      const size = ct.size * (ct.life / ct.maxLife);
+      const x = ct.x + shakeX;
+      const y = ct.y + shakeY;
+
+      // Outer glow with color
+      g.fillStyle(ct.color, alpha * 0.2);
+      g.fillCircle(x, y, size + 4);
+
+      // Middle layer
+      g.fillStyle(ct.color, alpha * 0.5);
+      g.fillCircle(x, y, size + 1);
+
+      // Core bright spot
+      g.fillStyle(0xffffff, alpha * 0.9);
+      g.fillCircle(x, y, size * 0.4);
+    }
+  }
+
+  private drawElectricSparks(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const es of this.electricSparks) {
+      const alpha = (es.life / es.maxLife);
+      const x = es.x + shakeX;
+      const y = es.y + shakeY;
+      const size = es.size * alpha;
+
+      // Electric arc effect - draw line from current to previous position
+      const prevX = x - es.vx * 2;
+      const prevY = y - es.vy * 2;
+
+      // Outer glow trail
+      g.lineStyle(size + 2, es.color, alpha * 0.3);
+      g.lineBetween(x, y, prevX, prevY);
+
+      // Core bright line
+      g.lineStyle(size, 0xffffff, alpha * 0.7);
+      g.lineBetween(x, y, prevX, prevY);
+
+      // Spark head
+      g.fillStyle(0xffffff, alpha);
+      g.fillCircle(x, y, size * 0.8);
+
+      // Color halo
+      g.fillStyle(es.color, alpha * 0.5);
+      g.fillCircle(x, y, size * 1.5);
+    }
+  }
+
+  private drawGhostImages(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const ghost of this.ghostImages) {
+      const alpha = (ghost.life / ghost.maxLife) * ghost.alpha;
+
+      // Draw ghost segments
+      for (let i = 0; i < ghost.segments.length; i++) {
+        const seg = ghost.segments[i];
+        const x = seg.x + shakeX;
+        const y = seg.y + shakeY;
+        const progress = i / Math.max(ghost.segments.length - 1, 1);
+        const size = (CELL_SIZE - 4 - progress * 4) / 2;
+
+        // Ghost glow
+        const ghostColor = i === 0 ? COLORS.snakeHeadGlow : this.lerpColor(COLORS.snakeBody, COLORS.snakeTail, progress);
+        g.fillStyle(ghostColor, alpha * 0.15);
+        g.fillCircle(x, y, size + 3);
+
+        // Ghost body
+        g.fillStyle(ghostColor, alpha * 0.25);
+        g.fillCircle(x, y, size);
+      }
+
+      // Connect ghost segments with faint lines
+      if (ghost.segments.length > 1) {
+        g.lineStyle(3, COLORS.snakeBody, alpha * 0.1);
+        for (let i = 0; i < ghost.segments.length - 1; i++) {
+          const curr = ghost.segments[i];
+          const next = ghost.segments[i + 1];
+          g.lineBetween(
+            curr.x + shakeX,
+            curr.y + shakeY,
+            next.x + shakeX,
+            next.y + shakeY
+          );
+        }
+      }
     }
   }
 
@@ -814,6 +1012,42 @@ export class SnakeScene extends Phaser.Scene {
       }
     }
 
+    // Update comet trails
+    for (let i = this.cometTrails.length - 1; i >= 0; i--) {
+      const ct = this.cometTrails[i];
+      // Drift away from snake head direction
+      ct.x += -this.moveDirection.dx * 0.5 + (Math.random() - 0.5) * 0.5;
+      ct.y += -this.moveDirection.dy * 0.5 + (Math.random() - 0.5) * 0.5;
+      ct.life--;
+      ct.alpha *= 0.97;
+      if (ct.life <= 0 || ct.alpha < 0.05) {
+        this.cometTrails.splice(i, 1);
+      }
+    }
+
+    // Update electric sparks
+    for (let i = this.electricSparks.length - 1; i >= 0; i--) {
+      const es = this.electricSparks[i];
+      es.x += es.vx;
+      es.y += es.vy;
+      es.vx *= 0.92;
+      es.vy *= 0.92;
+      es.life--;
+      if (es.life <= 0) {
+        this.electricSparks.splice(i, 1);
+      }
+    }
+
+    // Update ghost images
+    for (let i = this.ghostImages.length - 1; i >= 0; i--) {
+      const ghost = this.ghostImages[i];
+      ghost.life--;
+      ghost.alpha *= 0.92;
+      if (ghost.life <= 0 || ghost.alpha < 0.02) {
+        this.ghostImages.splice(i, 1);
+      }
+    }
+
     // Update color cycle offset for dynamic theming
     this.colorCycleOffset += 0.002;
   }
@@ -875,11 +1109,20 @@ export class SnakeScene extends Phaser.Scene {
     this.drawFoodParticles(g, shakeX, shakeY);
     this.drawEnergyRings(g, shakeX, shakeY);
 
+    // Draw ghost images (motion blur effect) - behind everything
+    this.drawGhostImages(g, shakeX, shakeY);
+
     // Draw hyper trails behind the snake
     this.drawHyperTrails(g, shakeX, shakeY);
 
+    // Draw comet trails
+    this.drawCometTrails(g, shakeX, shakeY);
+
     // Draw power surges
     this.drawPowerSurges(g, shakeX, shakeY);
+
+    // Draw electric sparks
+    this.drawElectricSparks(g, shakeX, shakeY);
 
     // Draw snake with rainbow shimmer and electric effects
     this.drawSnake(g, shakeX, shakeY);
