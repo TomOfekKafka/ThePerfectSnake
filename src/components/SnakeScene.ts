@@ -229,6 +229,26 @@ interface HeatWave {
   intensity: number;
 }
 
+interface HyperdrivePulse {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  life: number;
+  maxLife: number;
+  colors: number[];
+  intensity: number;
+}
+
+interface VortexRing {
+  angle: number;
+  radius: number;
+  speed: number;
+  wobble: number;
+  color: number;
+  thickness: number;
+}
+
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 
@@ -279,6 +299,10 @@ const COLORS = {
   matrixMid: 0x00cc00,
   matrixDim: 0x008800,
   matrixHead: 0xccffcc,
+  // Hyperdrive colors (epic milestone pulse)
+  hyperdrive: [0xff00ff, 0x00ffff, 0xffff00, 0xff8800, 0x00ff88],
+  // Vortex colors (cosmic swirl)
+  vortex: [0x8800ff, 0x0088ff, 0x00ff88, 0xff0088, 0xffaa00],
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -311,6 +335,8 @@ export class SnakeScene extends Phaser.Scene {
   private matrixDrops: MatrixDrop[] = [];
   private fireEmbers: FireEmber[] = [];
   private heatWaves: HeatWave[] = [];
+  private hyperdrivePulses: HyperdrivePulse[] = [];
+  private vortexRings: VortexRing[] = [];
 
   // Matrix character set (katakana-like + numbers + symbols)
   private matrixChars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
@@ -325,6 +351,9 @@ export class SnakeScene extends Phaser.Scene {
   private prevFoodPos: Position | null = null;
   private prevSnakeLength = 0;
   private prevHeadPos: Position | null = null;
+
+  // Score tracking for milestone effects
+  private lastMilestone = 0;
 
   // Screen shake for game over
   private shakeIntensity = 0;
@@ -353,6 +382,7 @@ export class SnakeScene extends Phaser.Scene {
     this.initNebulaNodes();
     this.initAuroraWaves();
     this.initMatrixRain();
+    this.initVortexRings();
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -471,6 +501,40 @@ export class SnakeScene extends Phaser.Scene {
     }
   }
 
+  private initVortexRings(): void {
+    // Create concentric vortex rings for cosmic swirl effect
+    for (let i = 0; i < 5; i++) {
+      this.vortexRings.push({
+        angle: (i / 5) * Math.PI * 2,
+        radius: 180 + i * 25,
+        speed: 0.008 + (i % 2 === 0 ? 0.004 : -0.002),
+        wobble: Math.random() * Math.PI * 2,
+        color: COLORS.vortex[i % COLORS.vortex.length],
+        thickness: 3 + (4 - i) * 0.5,
+      });
+    }
+  }
+
+  private spawnHyperdrivePulse(pos: Position): void {
+    const centerX = pos.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = pos.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Create a massive expanding pulse with multiple color rings
+    this.hyperdrivePulses.push({
+      x: centerX,
+      y: centerY,
+      radius: 10,
+      maxRadius: 500,
+      life: 60,
+      maxLife: 60,
+      colors: [...COLORS.hyperdrive],
+      intensity: 1.0,
+    });
+
+    // Trigger screen shake for milestone
+    this.shakeIntensity = Math.min(this.shakeIntensity + 6, 12);
+  }
+
   updateGameState(state: GameState): void {
     // Update power level based on snake length (more dramatic effects as snake grows)
     this.powerLevel = Math.min(1 + (state.snake.length - 1) * 0.15, 3);
@@ -483,6 +547,15 @@ export class SnakeScene extends Phaser.Scene {
       this.spawnSpiralBurst(this.prevFoodPos || state.food);
       // Fire burst when eating food
       this.spawnFireBurst(this.prevFoodPos || state.food);
+
+      // Check for score milestones (every 50 points = 5 food items)
+      const currentScore = (state.snake.length - 1) * 10;
+      const milestone = Math.floor(currentScore / 50) * 50;
+      if (milestone > this.lastMilestone && milestone > 0) {
+        this.lastMilestone = milestone;
+        // Epic hyperdrive pulse effect for milestone
+        this.spawnHyperdrivePulse(state.snake[0]);
+      }
     }
 
     // Trigger screen shake and cinematic death effect on game over
@@ -1567,6 +1640,23 @@ export class SnakeScene extends Phaser.Scene {
 
     // Update color cycle offset for dynamic theming
     this.colorCycleOffset += 0.002;
+
+    // Update hyperdrive pulses
+    for (let i = this.hyperdrivePulses.length - 1; i >= 0; i--) {
+      const pulse = this.hyperdrivePulses[i];
+      pulse.radius += (pulse.maxRadius - pulse.radius) * 0.08;
+      pulse.life--;
+      pulse.intensity = pulse.life / pulse.maxLife;
+      if (pulse.life <= 0) {
+        this.hyperdrivePulses.splice(i, 1);
+      }
+    }
+
+    // Update vortex rings (continuous rotation)
+    for (const ring of this.vortexRings) {
+      ring.angle += ring.speed;
+      ring.wobble += 0.02;
+    }
   }
 
   update(): void {
@@ -1597,6 +1687,9 @@ export class SnakeScene extends Phaser.Scene {
     // Subtle radial gradient overlay (center lighter)
     g.fillStyle(COLORS.bgMid, 0.3);
     g.fillCircle(width / 2, height / 2, width * 0.6);
+
+    // Draw cosmic vortex effect (deepest background layer)
+    this.drawVortex(g, width, height, shakeX, shakeY);
 
     // Draw cosmic nebula effect (deep background)
     this.drawNebula(g, shakeX, shakeY);
@@ -1661,6 +1754,9 @@ export class SnakeScene extends Phaser.Scene {
 
     // Draw floating texts (on top of everything)
     this.drawFloatingTexts(g, shakeX, shakeY);
+
+    // Draw hyperdrive pulses (dramatic milestone effect, on top of game elements)
+    this.drawHyperdrivePulses(g, shakeX, shakeY);
 
     // Neon border glow (only when game is active)
     if (!this.currentState.gameOver) {
@@ -2473,6 +2569,152 @@ export class SnakeScene extends Phaser.Scene {
     // Red tinge underneath
     g.fillStyle(0xff0033, this.deathFlashIntensity * 0.4);
     g.fillRect(0, 0, width, height);
+  }
+
+  private drawVortex(g: Phaser.GameObjects.Graphics, width: number, height: number, shakeX: number, shakeY: number): void {
+    const centerX = width / 2 + shakeX;
+    const centerY = height / 2 + shakeY;
+
+    // Draw swirling vortex rings around the play area
+    for (const ring of this.vortexRings) {
+      const wobbleOffset = Math.sin(ring.wobble) * 8;
+      const baseAlpha = 0.06 + Math.sin(this.frameCount * 0.03 + ring.angle) * 0.03;
+
+      // Draw ring as series of arcs with varying intensity
+      const segments = 8;
+      for (let i = 0; i < segments; i++) {
+        const startAngle = ring.angle + (i / segments) * Math.PI * 2;
+        const endAngle = startAngle + (Math.PI * 2 / segments) * 0.9;
+        const segmentAlpha = baseAlpha * (0.6 + Math.sin(startAngle * 3 + this.frameCount * 0.05) * 0.4);
+
+        // Outer glow
+        g.lineStyle(ring.thickness + 4, ring.color, segmentAlpha * 0.3);
+        g.beginPath();
+        g.arc(centerX, centerY, ring.radius + wobbleOffset, startAngle, endAngle, false);
+        g.strokePath();
+
+        // Core ring
+        g.lineStyle(ring.thickness, ring.color, segmentAlpha * 0.6);
+        g.beginPath();
+        g.arc(centerX, centerY, ring.radius + wobbleOffset, startAngle, endAngle, false);
+        g.strokePath();
+
+        // Inner bright edge
+        g.lineStyle(1, 0xffffff, segmentAlpha * 0.4);
+        g.beginPath();
+        g.arc(centerX, centerY, ring.radius + wobbleOffset - ring.thickness / 2, startAngle, endAngle, false);
+        g.strokePath();
+      }
+
+      // Add energy nodes at intervals around the ring
+      for (let i = 0; i < 4; i++) {
+        const nodeAngle = ring.angle + (i / 4) * Math.PI * 2;
+        const nodeX = centerX + Math.cos(nodeAngle) * (ring.radius + wobbleOffset);
+        const nodeY = centerY + Math.sin(nodeAngle) * (ring.radius + wobbleOffset);
+        const nodePulse = Math.sin(this.frameCount * 0.1 + i * 1.5) * 0.4 + 0.6;
+
+        g.fillStyle(ring.color, baseAlpha * nodePulse);
+        g.fillCircle(nodeX, nodeY, 4);
+
+        g.fillStyle(0xffffff, baseAlpha * nodePulse * 0.6);
+        g.fillCircle(nodeX, nodeY, 2);
+      }
+    }
+
+    // Draw connecting energy lines between adjacent rings
+    if (this.vortexRings.length >= 2) {
+      for (let i = 0; i < this.vortexRings.length - 1; i++) {
+        const ring1 = this.vortexRings[i];
+        const ring2 = this.vortexRings[i + 1];
+
+        // Draw 2 energy tendrils connecting the rings
+        for (let j = 0; j < 2; j++) {
+          const tendrilAngle = ring1.angle + j * Math.PI + this.frameCount * 0.02;
+          const r1 = ring1.radius + Math.sin(ring1.wobble) * 8;
+          const r2 = ring2.radius + Math.sin(ring2.wobble) * 8;
+
+          const x1 = centerX + Math.cos(tendrilAngle) * r1;
+          const y1 = centerY + Math.sin(tendrilAngle) * r1;
+          const x2 = centerX + Math.cos(tendrilAngle + 0.3) * r2;
+          const y2 = centerY + Math.sin(tendrilAngle + 0.3) * r2;
+
+          const tendrilAlpha = 0.04 + Math.sin(this.frameCount * 0.08 + j) * 0.02;
+
+          g.lineStyle(2, ring1.color, tendrilAlpha);
+          g.lineBetween(x1, y1, x2, y2);
+        }
+      }
+    }
+  }
+
+  private drawHyperdrivePulses(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const pulse of this.hyperdrivePulses) {
+      const x = pulse.x + shakeX;
+      const y = pulse.y + shakeY;
+      const alpha = pulse.intensity;
+
+      // Draw multiple concentric expanding rings with different colors
+      for (let i = 0; i < pulse.colors.length; i++) {
+        const ringOffset = i * 15;
+        const ringRadius = pulse.radius - ringOffset;
+        if (ringRadius <= 0) continue;
+
+        const ringAlpha = alpha * (1 - i * 0.15) * 0.6;
+        const color = pulse.colors[i];
+
+        // Outer glow
+        g.lineStyle(8 - i, color, ringAlpha * 0.3);
+        g.strokeCircle(x, y, ringRadius + 4);
+
+        // Main ring
+        g.lineStyle(4 - i * 0.5, color, ringAlpha * 0.7);
+        g.strokeCircle(x, y, ringRadius);
+
+        // Inner bright edge
+        g.lineStyle(1.5, 0xffffff, ringAlpha * 0.5);
+        g.strokeCircle(x, y, ringRadius - 2);
+
+        // Add sparkle nodes around the ring
+        const sparkleCount = 8 - i;
+        for (let j = 0; j < sparkleCount; j++) {
+          const sparkleAngle = (j / sparkleCount) * Math.PI * 2 + this.frameCount * 0.1 * (i % 2 === 0 ? 1 : -1);
+          const sparkleX = x + Math.cos(sparkleAngle) * ringRadius;
+          const sparkleY = y + Math.sin(sparkleAngle) * ringRadius;
+
+          g.fillStyle(color, ringAlpha);
+          g.fillCircle(sparkleX, sparkleY, 3 - i * 0.3);
+
+          g.fillStyle(0xffffff, ringAlpha * 0.8);
+          g.fillCircle(sparkleX, sparkleY, 1.5 - i * 0.2);
+        }
+      }
+
+      // Central bright flash
+      const coreSize = Math.max(5, 30 * alpha);
+      g.fillStyle(0xffffff, alpha * 0.6);
+      g.fillCircle(x, y, coreSize);
+
+      g.fillStyle(pulse.colors[0], alpha * 0.8);
+      g.fillCircle(x, y, coreSize * 0.6);
+
+      // Radial rays emanating outward
+      const rayCount = 12;
+      for (let i = 0; i < rayCount; i++) {
+        const rayAngle = (i / rayCount) * Math.PI * 2 + this.frameCount * 0.05;
+        const rayLength = pulse.radius * 0.8;
+        const rayStartX = x + Math.cos(rayAngle) * (coreSize * 2);
+        const rayStartY = y + Math.sin(rayAngle) * (coreSize * 2);
+        const rayEndX = x + Math.cos(rayAngle) * rayLength;
+        const rayEndY = y + Math.sin(rayAngle) * rayLength;
+
+        const rayColor = pulse.colors[i % pulse.colors.length];
+        g.lineStyle(2, rayColor, alpha * 0.4);
+        g.lineBetween(rayStartX, rayStartY, rayEndX, rayEndY);
+
+        g.lineStyle(1, 0xffffff, alpha * 0.3);
+        g.lineBetween(rayStartX, rayStartY, rayEndX, rayEndY);
+      }
+    }
   }
 
   private lerpColor(color1: number, color2: number, t: number): number {
