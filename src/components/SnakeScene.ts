@@ -116,6 +116,28 @@ interface NebulaNode {
   speed: number;
 }
 
+interface AuroraWave {
+  y: number;
+  amplitude: number;
+  frequency: number;
+  speed: number;
+  phase: number;
+  colors: number[];
+  thickness: number;
+}
+
+interface LightningBolt {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  segments: Array<{ x: number; y: number }>;
+  life: number;
+  maxLife: number;
+  color: number;
+  intensity: number;
+}
+
 interface BodyWake {
   x: number;
   y: number;
@@ -209,6 +231,10 @@ const COLORS = {
   nebula: [0x1a0033, 0x330066, 0x000033, 0x003344, 0x220044],
   // Crystal food colors
   crystal: [0xff0066, 0xff3399, 0xff66aa, 0xffaacc, 0xffffff],
+  // Aurora colors for northern lights effect
+  aurora: [0x00ff88, 0x00ffcc, 0x00ccff, 0x8844ff, 0xff44aa, 0x44ff88],
+  // Lightning colors
+  lightning: [0x00ffff, 0xaaffff, 0xffffff, 0x88ffff],
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -230,6 +256,8 @@ export class SnakeScene extends Phaser.Scene {
   private floatingTexts: FloatingText[] = [];
   private pulseWaves: PulseWave[] = [];
   private nebulaNodes: NebulaNode[] = [];
+  private auroraWaves: AuroraWave[] = [];
+  private lightningBolts: LightningBolt[] = [];
   private bodyWakes: BodyWake[] = [];
   private hyperTrails: HyperTrail[] = [];
   private powerSurges: PowerSurge[] = [];
@@ -265,6 +293,7 @@ export class SnakeScene extends Phaser.Scene {
     this.initEnergyOrbs();
     this.initPlasmaWaves();
     this.initNebulaNodes();
+    this.initAuroraWaves();
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -331,6 +360,27 @@ export class SnakeScene extends Phaser.Scene {
     }
   }
 
+  private initAuroraWaves(): void {
+    const height = GRID_SIZE * CELL_SIZE;
+
+    // Create multiple aurora wave layers
+    for (let i = 0; i < 4; i++) {
+      this.auroraWaves.push({
+        y: height * 0.15 + i * height * 0.12,
+        amplitude: 25 + Math.random() * 20,
+        frequency: 0.008 + Math.random() * 0.004,
+        speed: 0.02 + Math.random() * 0.015,
+        phase: Math.random() * Math.PI * 2,
+        colors: [
+          COLORS.aurora[i % COLORS.aurora.length],
+          COLORS.aurora[(i + 1) % COLORS.aurora.length],
+          COLORS.aurora[(i + 2) % COLORS.aurora.length],
+        ],
+        thickness: 35 + Math.random() * 25,
+      });
+    }
+  }
+
   updateGameState(state: GameState): void {
     // Update power level based on snake length (more dramatic effects as snake grows)
     this.powerLevel = Math.min(1 + (state.snake.length - 1) * 0.15, 3);
@@ -377,6 +427,10 @@ export class SnakeScene extends Phaser.Scene {
           // Spawn ghost image trail every few frames
           if (this.frameCount % 4 === 0 && state.snake.length > 2) {
             this.spawnGhostImage(state.snake);
+          }
+          // Spawn lightning arcs between segments at higher power levels
+          if (this.frameCount % 5 === 0 && state.snake.length > 3 && this.powerLevel >= 1.3) {
+            this.spawnSnakeLightning(state.snake);
           }
         }
       }
@@ -711,6 +765,56 @@ export class SnakeScene extends Phaser.Scene {
     });
   }
 
+  private spawnLightningBolt(x1: number, y1: number, x2: number, y2: number): void {
+    if (this.lightningBolts.length > 12) return;
+
+    // Generate jagged lightning path between two points
+    const segments: Array<{ x: number; y: number }> = [{ x: x1, y: y1 }];
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const numSegs = Math.max(3, Math.floor(dist / 8));
+
+    for (let i = 1; i < numSegs; i++) {
+      const t = i / numSegs;
+      const jitter = (1 - Math.abs(t - 0.5) * 2) * 12; // More jitter in middle
+      const mx = x1 + dx * t + (Math.random() - 0.5) * jitter;
+      const my = y1 + dy * t + (Math.random() - 0.5) * jitter;
+      segments.push({ x: mx, y: my });
+    }
+    segments.push({ x: x2, y: y2 });
+
+    this.lightningBolts.push({
+      x1, y1, x2, y2,
+      segments,
+      life: 8 + Math.random() * 6,
+      maxLife: 14,
+      color: COLORS.lightning[Math.floor(Math.random() * COLORS.lightning.length)],
+      intensity: 0.6 + Math.random() * 0.4,
+    });
+  }
+
+  private spawnSnakeLightning(snake: Position[]): void {
+    if (snake.length < 3 || this.lightningBolts.length > 8) return;
+
+    // Spawn lightning arcs between random non-adjacent segments
+    const numArcs = Math.min(Math.floor(this.powerLevel), 3);
+    for (let n = 0; n < numArcs; n++) {
+      const i = Math.floor(Math.random() * (snake.length - 2));
+      const j = Math.min(i + 2 + Math.floor(Math.random() * 3), snake.length - 1);
+
+      const seg1 = snake[i];
+      const seg2 = snake[j];
+
+      const x1 = seg1.x * CELL_SIZE + CELL_SIZE / 2;
+      const y1 = seg1.y * CELL_SIZE + CELL_SIZE / 2;
+      const x2 = seg2.x * CELL_SIZE + CELL_SIZE / 2;
+      const y2 = seg2.y * CELL_SIZE + CELL_SIZE / 2;
+
+      this.spawnLightningBolt(x1, y1, x2, y2);
+    }
+  }
+
   private drawBodyWakes(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
     for (const bw of this.bodyWakes) {
       const alpha = (bw.life / bw.maxLife) * 0.5;
@@ -863,6 +967,84 @@ export class SnakeScene extends Phaser.Scene {
     }
   }
 
+  private drawAurora(g: Phaser.GameObjects.Graphics, width: number, shakeX: number, shakeY: number): void {
+    for (const wave of this.auroraWaves) {
+      const baseY = wave.y + shakeY;
+
+      // Draw multiple layers for each aurora wave (creates depth)
+      for (let layer = 0; layer < 3; layer++) {
+        const layerOffset = layer * 8;
+        const layerAlpha = (0.12 - layer * 0.03) * (0.7 + Math.sin(this.frameCount * 0.03 + layer) * 0.3);
+        const color = wave.colors[layer % wave.colors.length];
+
+        // Draw the aurora as a series of vertical gradient strips
+        const stripWidth = 6;
+        for (let x = 0; x < width; x += stripWidth) {
+          const waveOffset = Math.sin((x * wave.frequency) + wave.phase) * wave.amplitude;
+          const secondaryWave = Math.sin((x * wave.frequency * 2.3) + wave.phase * 1.7) * (wave.amplitude * 0.4);
+          const y = baseY + waveOffset + secondaryWave + layerOffset;
+
+          // Varying height based on position
+          const heightVar = Math.sin((x * 0.02) + this.frameCount * 0.02) * 0.4 + 0.6;
+          const stripHeight = wave.thickness * heightVar;
+
+          // Draw vertical gradient strip
+          g.fillStyle(color, layerAlpha * heightVar);
+          g.fillRect(x + shakeX, y - stripHeight * 0.3, stripWidth - 1, stripHeight);
+
+          // Brighter core
+          g.fillStyle(0xffffff, layerAlpha * 0.3 * heightVar);
+          g.fillRect(x + shakeX + 1, y, stripWidth - 3, stripHeight * 0.3);
+        }
+      }
+    }
+  }
+
+  private drawLightningBolts(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const bolt of this.lightningBolts) {
+      const alpha = (bolt.life / bolt.maxLife) * bolt.intensity;
+
+      // Draw the lightning bolt segments
+      if (bolt.segments.length < 2) continue;
+
+      // Outer glow (wider, more diffuse)
+      g.lineStyle(6, bolt.color, alpha * 0.15);
+      g.beginPath();
+      g.moveTo(bolt.segments[0].x + shakeX, bolt.segments[0].y + shakeY);
+      for (let i = 1; i < bolt.segments.length; i++) {
+        g.lineTo(bolt.segments[i].x + shakeX, bolt.segments[i].y + shakeY);
+      }
+      g.strokePath();
+
+      // Middle glow
+      g.lineStyle(3, bolt.color, alpha * 0.4);
+      g.beginPath();
+      g.moveTo(bolt.segments[0].x + shakeX, bolt.segments[0].y + shakeY);
+      for (let i = 1; i < bolt.segments.length; i++) {
+        g.lineTo(bolt.segments[i].x + shakeX, bolt.segments[i].y + shakeY);
+      }
+      g.strokePath();
+
+      // Bright core
+      g.lineStyle(1.5, 0xffffff, alpha * 0.9);
+      g.beginPath();
+      g.moveTo(bolt.segments[0].x + shakeX, bolt.segments[0].y + shakeY);
+      for (let i = 1; i < bolt.segments.length; i++) {
+        g.lineTo(bolt.segments[i].x + shakeX, bolt.segments[i].y + shakeY);
+      }
+      g.strokePath();
+
+      // Endpoint glows
+      g.fillStyle(0xffffff, alpha * 0.8);
+      g.fillCircle(bolt.x1 + shakeX, bolt.y1 + shakeY, 3);
+      g.fillCircle(bolt.x2 + shakeX, bolt.y2 + shakeY, 3);
+
+      g.fillStyle(bolt.color, alpha * 0.5);
+      g.fillCircle(bolt.x1 + shakeX, bolt.y1 + shakeY, 5);
+      g.fillCircle(bolt.x2 + shakeX, bolt.y2 + shakeY, 5);
+    }
+  }
+
   private updateParticles(): void {
     // Update trail particles
     for (let i = this.trailParticles.length - 1; i >= 0; i--) {
@@ -991,6 +1173,20 @@ export class SnakeScene extends Phaser.Scene {
       node.phase += node.speed;
     }
 
+    // Update aurora waves
+    for (const wave of this.auroraWaves) {
+      wave.phase += wave.speed;
+    }
+
+    // Update lightning bolts
+    for (let i = this.lightningBolts.length - 1; i >= 0; i--) {
+      const bolt = this.lightningBolts[i];
+      bolt.life--;
+      if (bolt.life <= 0) {
+        this.lightningBolts.splice(i, 1);
+      }
+    }
+
     // Update hyper trails
     for (let i = this.hyperTrails.length - 1; i >= 0; i--) {
       const ht = this.hyperTrails[i];
@@ -1084,6 +1280,9 @@ export class SnakeScene extends Phaser.Scene {
     // Draw cosmic nebula effect (deep background)
     this.drawNebula(g, shakeX, shakeY);
 
+    // Draw aurora borealis effect
+    this.drawAurora(g, width, shakeX, shakeY);
+
     // Draw plasma waves in background
     this.drawPlasmaWaves(g, width, shakeX, shakeY);
 
@@ -1126,6 +1325,9 @@ export class SnakeScene extends Phaser.Scene {
 
     // Draw snake with rainbow shimmer and electric effects
     this.drawSnake(g, shakeX, shakeY);
+
+    // Draw lightning bolts between snake segments
+    this.drawLightningBolts(g, shakeX, shakeY);
 
     // Draw floating texts (on top of everything)
     this.drawFloatingTexts(g, shakeX, shakeY);

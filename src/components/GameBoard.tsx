@@ -45,6 +45,8 @@ const COLORS = {
   plasma: ['#440066', '#660044', '#330066'],
   // Nebula colors for cosmic background
   nebula: ['#1a0033', '#330066', '#000033', '#003344', '#220044'],
+  // Aurora colors
+  aurora: ['#00ff88', '#00ffcc', '#00ccff', '#8844ff'],
 };
 
 // Static stars for Canvas2D fallback (no animation)
@@ -135,6 +137,29 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.arc(node.x, node.y, node.radius * 1.5, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  // Draw aurora borealis effect (static version for Canvas2D)
+  for (let layer = 0; layer < 3; layer++) {
+    const baseY = 40 + layer * 45;
+    const auroraColor = COLORS.aurora[layer % COLORS.aurora.length];
+
+    ctx.globalAlpha = 0.08 - layer * 0.02;
+    for (let x = 0; x < width; x += 8) {
+      const waveOffset = Math.sin(x * 0.015 + layer * 0.5) * 25;
+      const stripHeight = 40 + Math.sin(x * 0.02) * 15;
+
+      // Vertical gradient strip
+      const auroraGrad = ctx.createLinearGradient(x, baseY + waveOffset, x, baseY + waveOffset + stripHeight);
+      auroraGrad.addColorStop(0, 'transparent');
+      auroraGrad.addColorStop(0.3, auroraColor);
+      auroraGrad.addColorStop(0.7, auroraColor);
+      auroraGrad.addColorStop(1, 'transparent');
+
+      ctx.fillStyle = auroraGrad;
+      ctx.fillRect(x, baseY + waveOffset, 6, stripHeight);
+    }
+  }
+  ctx.globalAlpha = 1;
 
   // Draw plasma waves (static for Canvas2D)
   ctx.globalAlpha = 0.12;
