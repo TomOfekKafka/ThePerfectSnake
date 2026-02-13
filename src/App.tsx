@@ -8,7 +8,7 @@ function App() {
   // When embedded, render only the game board (platform handles UI)
   if (isEmbedded) {
     return (
-      <div className="app">
+      <div className="app embedded">
         <div className="game-container">
           <GameBoard gameState={gameState} gridSize={gridSize} />
         </div>
