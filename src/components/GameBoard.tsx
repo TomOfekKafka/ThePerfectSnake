@@ -160,6 +160,35 @@ interface ShatterFragment {
 const SHATTER_FRAGMENTS: ShatterFragment[] = [];
 let gameOverTriggered = false;
 
+// Screen shake effect state
+interface ScreenShake {
+  intensity: number;
+  decay: number;
+  offsetX: number;
+  offsetY: number;
+}
+const screenShake: ScreenShake = {
+  intensity: 0,
+  decay: 0.92,
+  offsetX: 0,
+  offsetY: 0,
+};
+
+// Energy discharge effect for dramatic moments
+interface EnergyDischarge {
+  x: number;
+  y: number;
+  angle: number;
+  length: number;
+  life: number;
+  color: string;
+  branches: Array<{ angle: number; length: number; offset: number }>;
+}
+const ENERGY_DISCHARGES: EnergyDischarge[] = [];
+
+// Track previous snake length to detect food eaten
+let prevSnakeLength = 1;
+
 // Spawn particles at food position
 function spawnFoodParticles(x: number, y: number): void {
   const centerX = x * CELL_SIZE + CELL_SIZE / 2;
@@ -235,6 +264,46 @@ function spawnShatterEffect(snakeX: number, snakeY: number): void {
       life: 1
     });
   }
+
+  // Trigger intense screen shake on death
+  screenShake.intensity = 20;
+
+  // Spawn dramatic energy discharges across screen
+  spawnEnergyDischarges(centerX, centerY, 8);
+}
+
+// Trigger screen shake effect
+function triggerScreenShake(intensity: number): void {
+  screenShake.intensity = Math.max(screenShake.intensity, intensity);
+}
+
+// Spawn energy discharge lightning effects
+function spawnEnergyDischarges(centerX: number, centerY: number, count: number): void {
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.3;
+    const length = 60 + Math.random() * 100;
+    const branches: Array<{ angle: number; length: number; offset: number }> = [];
+
+    // Create branching lightning
+    const branchCount = 2 + Math.floor(Math.random() * 3);
+    for (let b = 0; b < branchCount; b++) {
+      branches.push({
+        angle: angle + (Math.random() - 0.5) * 1.2,
+        length: 20 + Math.random() * 40,
+        offset: 0.3 + Math.random() * 0.5,
+      });
+    }
+
+    ENERGY_DISCHARGES.push({
+      x: centerX,
+      y: centerY,
+      angle,
+      length,
+      life: 1,
+      color: COLORS.rainbow[i % COLORS.rainbow.length],
+      branches,
+    });
+  }
 }
 
 function lerpColor(color1: string, color2: string, t: number): string {
@@ -263,6 +332,34 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   const width = canvas.width;
   const height = canvas.height;
   const now = Date.now();
+
+  // Detect food eaten (snake grew)
+  if (gameState.snake.length > prevSnakeLength && prevSnakeLength > 0) {
+    triggerScreenShake(8);
+    // Spawn small energy discharge from snake head
+    if (gameState.snake.length > 0) {
+      const head = gameState.snake[0];
+      const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+      const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+      spawnEnergyDischarges(headX, headY, 4);
+    }
+  }
+  prevSnakeLength = gameState.snake.length;
+
+  // Update screen shake
+  if (screenShake.intensity > 0.5) {
+    screenShake.offsetX = (Math.random() - 0.5) * screenShake.intensity;
+    screenShake.offsetY = (Math.random() - 0.5) * screenShake.intensity;
+    screenShake.intensity *= screenShake.decay;
+  } else {
+    screenShake.intensity = 0;
+    screenShake.offsetX = 0;
+    screenShake.offsetY = 0;
+  }
+
+  // Apply screen shake transform
+  ctx.save();
+  ctx.translate(screenShake.offsetX, screenShake.offsetY);
 
   // Update grid pulses - spawn from snake head periodically
   if (gameState.snake.length > 0 && !gameState.gameOver) {
@@ -1606,6 +1703,91 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
 
     ctx.globalAlpha = 1;
   }
+
+  // Draw energy discharge lightning effects (always visible during active discharges)
+  for (let i = ENERGY_DISCHARGES.length - 1; i >= 0; i--) {
+    const discharge = ENERGY_DISCHARGES[i];
+
+    // Draw main lightning bolt with jagged segments
+    const segments = 8;
+    let prevX = discharge.x;
+    let prevY = discharge.y;
+
+    ctx.strokeStyle = discharge.color;
+    ctx.lineWidth = 3 * discharge.life;
+    ctx.globalAlpha = discharge.life * 0.8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Outer glow
+    ctx.shadowColor = discharge.color;
+    ctx.shadowBlur = 15 * discharge.life;
+
+    ctx.beginPath();
+    ctx.moveTo(prevX, prevY);
+
+    for (let s = 1; s <= segments; s++) {
+      const progress = s / segments;
+      const targetX = discharge.x + Math.cos(discharge.angle) * discharge.length * progress;
+      const targetY = discharge.y + Math.sin(discharge.angle) * discharge.length * progress;
+      const jitter = (1 - progress) * 12 * discharge.life;
+      const jitteredX = targetX + (Math.random() - 0.5) * jitter;
+      const jitteredY = targetY + (Math.random() - 0.5) * jitter;
+      ctx.lineTo(jitteredX, jitteredY);
+      prevX = jitteredX;
+      prevY = jitteredY;
+    }
+    ctx.stroke();
+
+    // Draw branches
+    for (const branch of discharge.branches) {
+      const branchStartX = discharge.x + Math.cos(discharge.angle) * discharge.length * branch.offset;
+      const branchStartY = discharge.y + Math.sin(discharge.angle) * discharge.length * branch.offset;
+
+      ctx.lineWidth = 2 * discharge.life;
+      ctx.globalAlpha = discharge.life * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(branchStartX, branchStartY);
+
+      let bx = branchStartX;
+      let by = branchStartY;
+      const branchSegments = 4;
+      for (let bs = 1; bs <= branchSegments; bs++) {
+        const bProgress = bs / branchSegments;
+        const btx = branchStartX + Math.cos(branch.angle) * branch.length * bProgress;
+        const bty = branchStartY + Math.sin(branch.angle) * branch.length * bProgress;
+        const bJitter = (1 - bProgress) * 8 * discharge.life;
+        bx = btx + (Math.random() - 0.5) * bJitter;
+        by = bty + (Math.random() - 0.5) * bJitter;
+        ctx.lineTo(bx, by);
+      }
+      ctx.stroke();
+    }
+
+    // White core
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5 * discharge.life;
+    ctx.globalAlpha = discharge.life;
+    ctx.beginPath();
+    ctx.moveTo(discharge.x, discharge.y);
+    const endX = discharge.x + Math.cos(discharge.angle) * discharge.length;
+    const endY = discharge.y + Math.sin(discharge.angle) * discharge.length;
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+
+    // Reset shadow
+    ctx.shadowBlur = 0;
+
+    // Update discharge
+    discharge.life -= 0.06;
+    if (discharge.life <= 0) {
+      ENERGY_DISCHARGES.splice(i, 1);
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Restore from screen shake transform
+  ctx.restore();
 }
 
 export function GameBoard({ gameState, gridSize }: GameBoardProps) {
