@@ -189,6 +189,39 @@ const ENERGY_DISCHARGES: EnergyDischarge[] = [];
 // Track previous snake length to detect food eaten
 let prevSnakeLength = 1;
 
+// TEMPORAL ECHO SYSTEM - Store previous snake positions for afterimage trail
+interface TemporalEcho {
+  snake: Array<{ x: number; y: number }>;
+  timestamp: number;
+  alpha: number;
+}
+const TEMPORAL_ECHOES: TemporalEcho[] = [];
+const MAX_ECHOES = 6;
+const ECHO_INTERVAL_MS = 50;
+let lastEchoTime = 0;
+
+// Dimensional Rift effect around snake head
+interface DimensionalRift {
+  angle: number;
+  radius: number;
+  rotationSpeed: number;
+  color: string;
+  pulsePhase: number;
+}
+const RIFT_NODES: DimensionalRift[] = [];
+const RIFT_NODE_COUNT = 8;
+
+// Initialize rift nodes
+for (let i = 0; i < RIFT_NODE_COUNT; i++) {
+  RIFT_NODES.push({
+    angle: (i / RIFT_NODE_COUNT) * Math.PI * 2,
+    radius: 25 + Math.random() * 10,
+    rotationSpeed: 0.02 + Math.random() * 0.02,
+    color: COLORS.rainbow[i % COLORS.rainbow.length],
+    pulsePhase: Math.random() * Math.PI * 2,
+  });
+}
+
 // Spawn particles at food position
 function spawnFoodParticles(x: number, y: number): void {
   const centerX = x * CELL_SIZE + CELL_SIZE / 2;
@@ -360,6 +393,42 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   // Apply screen shake transform
   ctx.save();
   ctx.translate(screenShake.offsetX, screenShake.offsetY);
+
+  // TEMPORAL ECHO SYSTEM - Capture snake positions for afterimage trail
+  if (!gameState.gameOver && gameState.snake.length > 0) {
+    if (now - lastEchoTime > ECHO_INTERVAL_MS) {
+      lastEchoTime = now;
+      // Capture current snake position
+      TEMPORAL_ECHOES.unshift({
+        snake: gameState.snake.map(s => ({ x: s.x, y: s.y })),
+        timestamp: now,
+        alpha: 1.0,
+      });
+      // Limit echoes
+      while (TEMPORAL_ECHOES.length > MAX_ECHOES) {
+        TEMPORAL_ECHOES.pop();
+      }
+    }
+  } else if (gameState.gameOver) {
+    // Clear echoes on game over
+    TEMPORAL_ECHOES.length = 0;
+  }
+
+  // Update echo alphas (fade out over time)
+  for (let i = TEMPORAL_ECHOES.length - 1; i >= 0; i--) {
+    const echo = TEMPORAL_ECHOES[i];
+    const age = now - echo.timestamp;
+    echo.alpha = Math.max(0, 1 - age / 400);
+    if (echo.alpha <= 0) {
+      TEMPORAL_ECHOES.splice(i, 1);
+    }
+  }
+
+  // Update dimensional rift nodes
+  for (const node of RIFT_NODES) {
+    node.angle += node.rotationSpeed;
+    node.pulsePhase += 0.08;
+  }
 
   // Update grid pulses - spawn from snake head periodically
   if (gameState.snake.length > 0 && !gameState.gameOver) {
@@ -1058,6 +1127,72 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     }
   }
 
+  // TEMPORAL ECHO RENDERING - Draw ghostly afterimages of the snake
+  for (let echoIdx = TEMPORAL_ECHOES.length - 1; echoIdx >= 0; echoIdx--) {
+    const echo = TEMPORAL_ECHOES[echoIdx];
+    if (echo.alpha <= 0) continue;
+
+    const echoSnake = echo.snake;
+    const fadeProgress = 1 - echo.alpha;
+    const echoColor = COLORS.rainbow[echoIdx % COLORS.rainbow.length];
+
+    // Draw echo segments with chromatic shift
+    for (let i = echoSnake.length - 1; i >= 0; i--) {
+      const seg = echoSnake[i];
+      const segX = seg.x * CELL_SIZE + CELL_SIZE / 2;
+      const segY = seg.y * CELL_SIZE + CELL_SIZE / 2;
+      const segProgress = echoSnake.length > 1 ? i / (echoSnake.length - 1) : 0;
+      const baseSize = CELL_SIZE - 4 - segProgress * 4;
+
+      // Chromatic aberration offset (RGB channel separation)
+      const aberrationOffset = (1 - echo.alpha) * 4;
+
+      // Red channel (offset left)
+      ctx.fillStyle = '#ff0000';
+      ctx.globalAlpha = echo.alpha * 0.15;
+      ctx.beginPath();
+      ctx.arc(segX - aberrationOffset, segY, baseSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Blue channel (offset right)
+      ctx.fillStyle = '#0088ff';
+      ctx.globalAlpha = echo.alpha * 0.15;
+      ctx.beginPath();
+      ctx.arc(segX + aberrationOffset, segY, baseSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Main echo body with rainbow tint
+      ctx.fillStyle = echoColor;
+      ctx.globalAlpha = echo.alpha * 0.25;
+      ctx.beginPath();
+      ctx.arc(segX, segY, baseSize / 2 + 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Outer temporal glow
+      ctx.fillStyle = '#00ffff';
+      ctx.globalAlpha = echo.alpha * 0.08;
+      ctx.beginPath();
+      ctx.arc(segX, segY, baseSize / 2 + 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw temporal distortion rings around echo head
+    if (echoSnake.length > 0) {
+      const echoHead = echoSnake[0];
+      const headX = echoHead.x * CELL_SIZE + CELL_SIZE / 2;
+      const headY = echoHead.y * CELL_SIZE + CELL_SIZE / 2;
+      const ringRadius = 15 + fadeProgress * 25;
+
+      ctx.strokeStyle = echoColor;
+      ctx.lineWidth = 2 * echo.alpha;
+      ctx.globalAlpha = echo.alpha * 0.3;
+      ctx.beginPath();
+      ctx.arc(headX, headY, ringRadius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+
   // Draw snake (from tail to head so head is on top)
 
   // First pass: Draw segment connectors (smooth body connections)
@@ -1240,6 +1375,69 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
         ctx.globalAlpha = 1;
       }
 
+      // DIMENSIONAL VORTEX EFFECT - Swirling temporal distortion around head
+      if (!gameState.gameOver && segmentCount >= 2) {
+        const vortexIntensity = Math.min((segmentCount - 1) * 0.1, 1);
+
+        // Draw spinning dimensional rift nodes
+        for (const node of RIFT_NODES) {
+          const pulseRadius = node.radius + Math.sin(node.pulsePhase) * 5;
+          const nodeX = centerX + Math.cos(node.angle) * pulseRadius;
+          const nodeY = centerY + Math.sin(node.angle) * pulseRadius;
+
+          // Temporal distortion trail (curved arc behind node)
+          const trailAngle = node.angle - 0.8;
+          const trailX = centerX + Math.cos(trailAngle) * pulseRadius;
+          const trailY = centerY + Math.sin(trailAngle) * pulseRadius;
+
+          const trailGrad = ctx.createLinearGradient(trailX, trailY, nodeX, nodeY);
+          trailGrad.addColorStop(0, 'transparent');
+          trailGrad.addColorStop(1, node.color);
+          ctx.strokeStyle = trailGrad;
+          ctx.lineWidth = 3;
+          ctx.globalAlpha = vortexIntensity * 0.4;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, pulseRadius, trailAngle, node.angle);
+          ctx.stroke();
+
+          // Node outer glow
+          ctx.fillStyle = node.color;
+          ctx.globalAlpha = vortexIntensity * 0.2;
+          ctx.beginPath();
+          ctx.arc(nodeX, nodeY, 8, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Node core
+          ctx.globalAlpha = vortexIntensity * 0.6;
+          ctx.beginPath();
+          ctx.arc(nodeX, nodeY, 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Bright center
+          ctx.fillStyle = '#ffffff';
+          ctx.globalAlpha = vortexIntensity * 0.9;
+          ctx.beginPath();
+          ctx.arc(nodeX, nodeY, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Central vortex spiral effect
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = vortexIntensity * 0.15;
+        ctx.beginPath();
+        for (let t = 0; t < Math.PI * 4; t += 0.2) {
+          const spiralRadius = 5 + t * 3;
+          const spiralAngle = t + now * 0.003;
+          const sx = centerX + Math.cos(spiralAngle) * spiralRadius;
+          const sy = centerY + Math.sin(spiralAngle) * spiralRadius;
+          if (t === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
       // Eye glow
       ctx.fillStyle = '#00ffff';
       ctx.globalAlpha = 0.3;
@@ -1348,6 +1546,25 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.beginPath();
       ctx.roundRect(x + offset + 2, y + offset + 1, size / 2 - 2, size / 3, 2);
       ctx.fill();
+
+      // CHROMATIC ABERRATION SHIMMER - RGB color channel separation for temporal distortion look
+      const aberrationAmount = 2 + wavePulse * 1.5;
+      const aberrationAlpha = 0.12 * (1 - progress);
+
+      // Cyan channel (offset up-left)
+      ctx.fillStyle = '#00ffff';
+      ctx.globalAlpha = aberrationAlpha;
+      ctx.beginPath();
+      ctx.roundRect(x + offset - aberrationAmount, y + offset - aberrationAmount, size, size, 5);
+      ctx.fill();
+
+      // Magenta channel (offset down-right)
+      ctx.fillStyle = '#ff00ff';
+      ctx.globalAlpha = aberrationAlpha * 0.8;
+      ctx.beginPath();
+      ctx.roundRect(x + offset + aberrationAmount, y + offset + aberrationAmount, size, size, 5);
+      ctx.fill();
+      ctx.globalAlpha = 1;
 
       // Energy spark on wave peak (when wavePulse is high)
       if (wavePulse > 1.1 && i % 3 === 0) {
