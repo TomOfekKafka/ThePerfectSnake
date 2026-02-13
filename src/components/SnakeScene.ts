@@ -270,6 +270,15 @@ interface VortexRing {
   thickness: number;
 }
 
+interface GridPulse {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  color: number;
+  intensity: number;
+}
+
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 
@@ -362,6 +371,8 @@ export class SnakeScene extends Phaser.Scene {
   private vortexRings: VortexRing[] = [];
   private prismaticShieldNodes: PrismaticShieldNode[] = [];
   private dimensionalRifts: DimensionalRift[] = [];
+  private gridPulses: GridPulse[] = [];
+  private lastGridPulseFrame = 0;
 
   // Matrix character set (katakana-like + numbers + symbols)
   private matrixChars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
@@ -607,6 +618,12 @@ export class SnakeScene extends Phaser.Scene {
       this.spawnFireBurst(this.prevFoodPos || state.food);
       // Dimensional rift effect when eating food
       this.spawnDimensionalRift(this.prevFoodPos || state.food);
+      // Grid pulse explosion when eating food
+      this.spawnGridPulse(this.prevFoodPos || state.food, COLORS.food, 200, 0.7);
+      // Add rainbow burst grid pulses
+      for (let i = 0; i < 3; i++) {
+        this.spawnGridPulse(this.prevFoodPos || state.food, COLORS.rainbow[i * 2], 180 - i * 20, 0.5 - i * 0.1);
+      }
 
       // Check for score milestones (every 50 points = 5 food items)
       const currentScore = (state.snake.length - 1) * 10;
@@ -670,6 +687,11 @@ export class SnakeScene extends Phaser.Scene {
           // Spawn heat waves from head at higher power levels
           if (this.frameCount % 4 === 0 && this.powerLevel >= 1.2) {
             this.spawnHeatWave(head);
+          }
+          // Spawn grid pulses from head periodically
+          if (this.frameCount - this.lastGridPulseFrame >= 4) {
+            this.lastGridPulseFrame = this.frameCount;
+            this.spawnGridPulse(head, COLORS.snakeHeadGlow, 120 + state.snake.length * 3, 0.4);
           }
         }
       }
@@ -1351,6 +1373,81 @@ export class SnakeScene extends Phaser.Scene {
     }
   }
 
+  private spawnGridPulse(pos: Position, color: number, maxRadius: number, intensity: number): void {
+    if (this.gridPulses.length > 12) return;
+
+    const centerX = pos.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = pos.y * CELL_SIZE + CELL_SIZE / 2;
+
+    this.gridPulses.push({
+      x: centerX,
+      y: centerY,
+      radius: 0,
+      maxRadius,
+      color,
+      intensity,
+    });
+  }
+
+  private drawGridPulses(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const pulse of this.gridPulses) {
+      const innerRadius = Math.max(0, pulse.radius - 20);
+      const outerRadius = pulse.radius;
+
+      // Draw pulsing grid lines within the wave band
+      for (let i = 0; i <= GRID_SIZE; i++) {
+        const lineX = i * CELL_SIZE + shakeX;
+        const lineY = i * CELL_SIZE + shakeY;
+
+        // Vertical lines - draw segments within pulse range
+        for (let y = 0; y < GRID_SIZE * CELL_SIZE; y += 4) {
+          const distToCenter = Math.sqrt((lineX - shakeX - pulse.x) ** 2 + (y - pulse.y) ** 2);
+          if (distToCenter >= innerRadius && distToCenter <= outerRadius) {
+            const waveIntensity = 1 - Math.abs(distToCenter - (innerRadius + outerRadius) / 2) / ((outerRadius - innerRadius) / 2);
+            const alpha = pulse.intensity * waveIntensity * 0.8;
+
+            g.fillStyle(pulse.color, alpha);
+            g.fillRect(lineX - 1, y + shakeY, 2, 3);
+          }
+        }
+
+        // Horizontal lines - draw segments within pulse range
+        for (let x = 0; x < GRID_SIZE * CELL_SIZE; x += 4) {
+          const distToCenter = Math.sqrt((x - pulse.x) ** 2 + (lineY - shakeY - pulse.y) ** 2);
+          if (distToCenter >= innerRadius && distToCenter <= outerRadius) {
+            const waveIntensity = 1 - Math.abs(distToCenter - (innerRadius + outerRadius) / 2) / ((outerRadius - innerRadius) / 2);
+            const alpha = pulse.intensity * waveIntensity * 0.8;
+
+            g.fillStyle(pulse.color, alpha);
+            g.fillRect(x + shakeX, lineY - 1, 3, 2);
+          }
+        }
+      }
+
+      // Draw glowing intersection nodes within the pulse wave
+      for (let gx = 0; gx <= GRID_SIZE; gx++) {
+        for (let gy = 0; gy <= GRID_SIZE; gy++) {
+          const nodeX = gx * CELL_SIZE;
+          const nodeY = gy * CELL_SIZE;
+          const distToCenter = Math.sqrt((nodeX - pulse.x) ** 2 + (nodeY - pulse.y) ** 2);
+
+          if (distToCenter >= innerRadius && distToCenter <= outerRadius) {
+            const waveIntensity = 1 - Math.abs(distToCenter - (innerRadius + outerRadius) / 2) / ((outerRadius - innerRadius) / 2);
+            const alpha = pulse.intensity * waveIntensity;
+
+            // Outer glow
+            g.fillStyle(pulse.color, alpha * 0.4);
+            g.fillCircle(nodeX + shakeX, nodeY + shakeY, 6);
+
+            // Inner bright core
+            g.fillStyle(0xffffff, alpha * 0.8);
+            g.fillCircle(nodeX + shakeX, nodeY + shakeY, 2);
+          }
+        }
+      }
+    }
+  }
+
   private drawAurora(g: Phaser.GameObjects.Graphics, width: number, shakeX: number, shakeY: number): void {
     for (const wave of this.auroraWaves) {
       const baseY = wave.y + shakeY;
@@ -1679,6 +1776,16 @@ export class SnakeScene extends Phaser.Scene {
       }
     }
 
+    // Update grid pulses
+    for (let i = this.gridPulses.length - 1; i >= 0; i--) {
+      const pulse = this.gridPulses[i];
+      pulse.radius += 6;
+      pulse.intensity *= 0.96;
+      if (pulse.radius > pulse.maxRadius || pulse.intensity < 0.02) {
+        this.gridPulses.splice(i, 1);
+      }
+    }
+
     // Update matrix rain drops
     const height = GRID_SIZE * CELL_SIZE;
     for (const drop of this.matrixDrops) {
@@ -1788,6 +1895,9 @@ export class SnakeScene extends Phaser.Scene {
 
     // Subtle grid pattern with glow
     this.drawGrid(g, width, height, shakeX, shakeY);
+
+    // Draw grid pulses - energy waves that light up the grid
+    this.drawGridPulses(g, shakeX, shakeY);
 
     // Draw warp lines (behind everything else game-related)
     this.drawWarpLines(g, shakeX, shakeY);

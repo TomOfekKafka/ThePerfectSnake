@@ -116,6 +116,20 @@ for (let i = 0; i < MATRIX_NUM_COLUMNS; i++) {
   });
 }
 
+// Grid pulse wave state for animated grid effect
+interface GridPulse {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  color: string;
+  intensity: number;
+}
+const GRID_PULSES: GridPulse[] = [];
+let lastPulseTime = 0;
+let lastFoodX = -1;
+let lastFoodY = -1;
+
 function lerpColor(color1: string, color2: string, t: number): string {
   const c1 = parseInt(color1.slice(1), 16);
   const c2 = parseInt(color2.slice(1), 16);
@@ -141,6 +155,72 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
 
   const width = canvas.width;
   const height = canvas.height;
+  const now = Date.now();
+
+  // Update grid pulses - spawn from snake head periodically
+  if (gameState.snake.length > 0 && !gameState.gameOver) {
+    const head = gameState.snake[0];
+    const headCenterX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const headCenterY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Spawn head pulse every 200ms
+    if (now - lastPulseTime > 200) {
+      lastPulseTime = now;
+      GRID_PULSES.push({
+        x: headCenterX,
+        y: headCenterY,
+        radius: 0,
+        maxRadius: 120 + gameState.snake.length * 3,
+        color: COLORS.snakeHeadGlow,
+        intensity: 0.4,
+      });
+    }
+
+    // Detect food eaten (food position changed)
+    if (lastFoodX !== gameState.food.x || lastFoodY !== gameState.food.y) {
+      if (lastFoodX >= 0) {
+        // Food was eaten at old position - create explosion pulse
+        const oldFoodX = lastFoodX * CELL_SIZE + CELL_SIZE / 2;
+        const oldFoodY = lastFoodY * CELL_SIZE + CELL_SIZE / 2;
+        GRID_PULSES.push({
+          x: oldFoodX,
+          y: oldFoodY,
+          radius: 0,
+          maxRadius: 200,
+          color: COLORS.food,
+          intensity: 0.7,
+        });
+        // Add rainbow burst pulses
+        for (let i = 0; i < 3; i++) {
+          GRID_PULSES.push({
+            x: oldFoodX,
+            y: oldFoodY,
+            radius: i * 15,
+            maxRadius: 180 - i * 20,
+            color: COLORS.rainbow[i * 2],
+            intensity: 0.5 - i * 0.1,
+          });
+        }
+      }
+      lastFoodX = gameState.food.x;
+      lastFoodY = gameState.food.y;
+    }
+  }
+
+  // Update pulse animations
+  for (let i = GRID_PULSES.length - 1; i >= 0; i--) {
+    const pulse = GRID_PULSES[i];
+    pulse.radius += 6;
+    pulse.intensity *= 0.96;
+    if (pulse.radius > pulse.maxRadius || pulse.intensity < 0.02) {
+      GRID_PULSES.splice(i, 1);
+    }
+  }
+
+  // Limit max pulses to prevent performance issues
+  while (GRID_PULSES.length > 12) {
+    GRID_PULSES.shift();
+  }
 
   // Deep space background
   ctx.fillStyle = COLORS.bgDark;
@@ -341,6 +421,73 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.moveTo(0, i * CELL_SIZE);
     ctx.lineTo(width, i * CELL_SIZE);
     ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // PULSE GRID EFFECT - Grid lines that light up with energy waves
+  for (const pulse of GRID_PULSES) {
+    const innerRadius = Math.max(0, pulse.radius - 20);
+    const outerRadius = pulse.radius;
+
+    // Draw pulsing grid lines within the wave band
+    for (let i = 0; i <= GRID_SIZE; i++) {
+      const lineX = i * CELL_SIZE;
+      const lineY = i * CELL_SIZE;
+
+      // Vertical lines
+      for (let y = 0; y < height; y += 4) {
+        const distToCenter = Math.sqrt((lineX - pulse.x) ** 2 + (y - pulse.y) ** 2);
+        if (distToCenter >= innerRadius && distToCenter <= outerRadius) {
+          const waveIntensity = 1 - Math.abs(distToCenter - (innerRadius + outerRadius) / 2) / ((outerRadius - innerRadius) / 2);
+          const alpha = pulse.intensity * waveIntensity * 0.8;
+
+          ctx.fillStyle = pulse.color;
+          ctx.globalAlpha = alpha;
+          ctx.fillRect(lineX - 1, y, 2, 3);
+        }
+      }
+
+      // Horizontal lines
+      for (let x = 0; x < width; x += 4) {
+        const distToCenter = Math.sqrt((x - pulse.x) ** 2 + (lineY - pulse.y) ** 2);
+        if (distToCenter >= innerRadius && distToCenter <= outerRadius) {
+          const waveIntensity = 1 - Math.abs(distToCenter - (innerRadius + outerRadius) / 2) / ((outerRadius - innerRadius) / 2);
+          const alpha = pulse.intensity * waveIntensity * 0.8;
+
+          ctx.fillStyle = pulse.color;
+          ctx.globalAlpha = alpha;
+          ctx.fillRect(x, lineY - 1, 3, 2);
+        }
+      }
+    }
+
+    // Draw glowing intersection nodes within the pulse wave
+    for (let gx = 0; gx <= GRID_SIZE; gx++) {
+      for (let gy = 0; gy <= GRID_SIZE; gy++) {
+        const nodeX = gx * CELL_SIZE;
+        const nodeY = gy * CELL_SIZE;
+        const distToCenter = Math.sqrt((nodeX - pulse.x) ** 2 + (nodeY - pulse.y) ** 2);
+
+        if (distToCenter >= innerRadius && distToCenter <= outerRadius) {
+          const waveIntensity = 1 - Math.abs(distToCenter - (innerRadius + outerRadius) / 2) / ((outerRadius - innerRadius) / 2);
+          const alpha = pulse.intensity * waveIntensity;
+
+          // Outer glow
+          ctx.fillStyle = pulse.color;
+          ctx.globalAlpha = alpha * 0.4;
+          ctx.beginPath();
+          ctx.arc(nodeX, nodeY, 6, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Inner bright core
+          ctx.fillStyle = '#ffffff';
+          ctx.globalAlpha = alpha * 0.8;
+          ctx.beginPath();
+          ctx.arc(nodeX, nodeY, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
   }
   ctx.globalAlpha = 1;
 
