@@ -240,6 +240,27 @@ interface HyperdrivePulse {
   intensity: number;
 }
 
+interface PrismaticShieldNode {
+  angle: number;
+  distance: number;
+  baseDistance: number;
+  pulsePhase: number;
+  color: number;
+  size: number;
+}
+
+interface DimensionalRift {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  rotation: number;
+  rotationSpeed: number;
+  life: number;
+  maxLife: number;
+  colors: number[];
+}
+
 interface VortexRing {
   angle: number;
   radius: number;
@@ -337,6 +358,8 @@ export class SnakeScene extends Phaser.Scene {
   private heatWaves: HeatWave[] = [];
   private hyperdrivePulses: HyperdrivePulse[] = [];
   private vortexRings: VortexRing[] = [];
+  private prismaticShieldNodes: PrismaticShieldNode[] = [];
+  private dimensionalRifts: DimensionalRift[] = [];
 
   // Matrix character set (katakana-like + numbers + symbols)
   private matrixChars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
@@ -383,6 +406,7 @@ export class SnakeScene extends Phaser.Scene {
     this.initAuroraWaves();
     this.initMatrixRain();
     this.initVortexRings();
+    this.initPrismaticShield();
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -515,6 +539,38 @@ export class SnakeScene extends Phaser.Scene {
     }
   }
 
+  private initPrismaticShield(): void {
+    // Create orbiting energy nodes for the prismatic shield effect
+    const nodeCount = 12;
+    for (let i = 0; i < nodeCount; i++) {
+      this.prismaticShieldNodes.push({
+        angle: (i / nodeCount) * Math.PI * 2,
+        distance: 0,
+        baseDistance: 35,
+        pulsePhase: Math.random() * Math.PI * 2,
+        color: COLORS.rainbow[i % COLORS.rainbow.length],
+        size: 3 + Math.random() * 2,
+      });
+    }
+  }
+
+  private spawnDimensionalRift(pos: Position): void {
+    const centerX = pos.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = pos.y * CELL_SIZE + CELL_SIZE / 2;
+
+    this.dimensionalRifts.push({
+      x: centerX,
+      y: centerY,
+      radius: 5,
+      maxRadius: 120 * this.powerLevel,
+      rotation: 0,
+      rotationSpeed: 0.08 + Math.random() * 0.04,
+      life: 45,
+      maxLife: 45,
+      colors: [...COLORS.rainbow],
+    });
+  }
+
   private spawnHyperdrivePulse(pos: Position): void {
     const centerX = pos.x * CELL_SIZE + CELL_SIZE / 2;
     const centerY = pos.y * CELL_SIZE + CELL_SIZE / 2;
@@ -547,6 +603,8 @@ export class SnakeScene extends Phaser.Scene {
       this.spawnSpiralBurst(this.prevFoodPos || state.food);
       // Fire burst when eating food
       this.spawnFireBurst(this.prevFoodPos || state.food);
+      // Dimensional rift effect when eating food
+      this.spawnDimensionalRift(this.prevFoodPos || state.food);
 
       // Check for score milestones (every 50 points = 5 food items)
       const currentScore = (state.snake.length - 1) * 10;
@@ -1657,6 +1715,26 @@ export class SnakeScene extends Phaser.Scene {
       ring.angle += ring.speed;
       ring.wobble += 0.02;
     }
+
+    // Update prismatic shield nodes
+    for (const node of this.prismaticShieldNodes) {
+      node.angle += 0.025;
+      node.pulsePhase += 0.08;
+      // Distance pulses based on power level and phase
+      const pulseFactor = Math.sin(node.pulsePhase) * 0.25 + 0.75;
+      node.distance = node.baseDistance * this.powerLevel * pulseFactor;
+    }
+
+    // Update dimensional rifts
+    for (let i = this.dimensionalRifts.length - 1; i >= 0; i--) {
+      const rift = this.dimensionalRifts[i];
+      rift.radius += (rift.maxRadius - rift.radius) * 0.1;
+      rift.rotation += rift.rotationSpeed;
+      rift.life--;
+      if (rift.life <= 0) {
+        this.dimensionalRifts.splice(i, 1);
+      }
+    }
   }
 
   update(): void {
@@ -1748,6 +1826,12 @@ export class SnakeScene extends Phaser.Scene {
 
     // Draw snake with rainbow shimmer and electric effects
     this.drawSnake(g, shakeX, shakeY);
+
+    // Draw prismatic energy shield around snake (on top of snake for visibility)
+    this.drawPrismaticShield(g, shakeX, shakeY);
+
+    // Draw dimensional rifts (dramatic food collection effect)
+    this.drawDimensionalRifts(g, shakeX, shakeY);
 
     // Draw lightning bolts between snake segments
     this.drawLightningBolts(g, shakeX, shakeY);
@@ -2714,6 +2798,187 @@ export class SnakeScene extends Phaser.Scene {
         g.lineStyle(1, 0xffffff, alpha * 0.3);
         g.lineBetween(rayStartX, rayStartY, rayEndX, rayEndY);
       }
+    }
+  }
+
+  private drawPrismaticShield(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    if (!this.currentState || this.currentState.gameOver || this.currentState.snake.length < 2) return;
+
+    const snake = this.currentState.snake;
+    const head = snake[0];
+    const centerX = head.x * CELL_SIZE + CELL_SIZE / 2 + shakeX;
+    const centerY = head.y * CELL_SIZE + CELL_SIZE / 2 + shakeY;
+
+    // Shield intensity based on snake length (more visible as snake grows)
+    const shieldIntensity = Math.min((snake.length - 1) * 0.08, 1);
+    if (shieldIntensity < 0.1) return;
+
+    // Draw the prismatic shield as orbiting energy nodes with connecting beams
+    const activePulse = Math.sin(this.frameCount * 0.08) * 0.3 + 0.7;
+
+    // Draw outer energy ring connecting all nodes
+    g.lineStyle(2, 0x00ffff, shieldIntensity * 0.15 * activePulse);
+    g.beginPath();
+    for (let i = 0; i <= this.prismaticShieldNodes.length; i++) {
+      const node = this.prismaticShieldNodes[i % this.prismaticShieldNodes.length];
+      const nodeX = centerX + Math.cos(node.angle) * node.distance;
+      const nodeY = centerY + Math.sin(node.angle) * node.distance;
+      if (i === 0) {
+        g.moveTo(nodeX, nodeY);
+      } else {
+        g.lineTo(nodeX, nodeY);
+      }
+    }
+    g.strokePath();
+
+    // Draw rainbow energy beams from center to each node
+    for (let i = 0; i < this.prismaticShieldNodes.length; i++) {
+      const node = this.prismaticShieldNodes[i];
+      const nodeX = centerX + Math.cos(node.angle) * node.distance;
+      const nodeY = centerY + Math.sin(node.angle) * node.distance;
+      const nodePulse = Math.sin(node.pulsePhase) * 0.4 + 0.6;
+
+      // Energy beam from center to node
+      g.lineStyle(2, node.color, shieldIntensity * 0.2 * nodePulse);
+      g.lineBetween(centerX, centerY, nodeX, nodeY);
+
+      // Outer node glow
+      g.fillStyle(node.color, shieldIntensity * 0.25 * nodePulse);
+      g.fillCircle(nodeX, nodeY, node.size + 4);
+
+      // Node core
+      g.fillStyle(node.color, shieldIntensity * 0.7 * nodePulse);
+      g.fillCircle(nodeX, nodeY, node.size);
+
+      // Bright center
+      g.fillStyle(0xffffff, shieldIntensity * 0.9 * nodePulse);
+      g.fillCircle(nodeX, nodeY, node.size * 0.4);
+
+      // Draw connecting arc to next node
+      const nextNode = this.prismaticShieldNodes[(i + 1) % this.prismaticShieldNodes.length];
+      const nextX = centerX + Math.cos(nextNode.angle) * nextNode.distance;
+      const nextY = centerY + Math.sin(nextNode.angle) * nextNode.distance;
+
+      // Rainbow gradient between nodes
+      const midX = (nodeX + nextX) / 2;
+      const midY = (nodeY + nextY) / 2;
+      const blendColor = this.lerpColor(node.color, nextNode.color, 0.5);
+
+      g.fillStyle(blendColor, shieldIntensity * 0.15 * activePulse);
+      g.fillCircle(midX, midY, 2);
+    }
+
+    // Draw hexagonal shield frame at high power levels
+    if (this.powerLevel >= 1.3) {
+      const hexRadius = 35 * this.powerLevel;
+      const hexSides = 6;
+      const hexRotation = this.frameCount * 0.01;
+
+      // Outer hex glow
+      g.lineStyle(4, COLORS.snakeHeadGlow, shieldIntensity * 0.1 * activePulse);
+      g.beginPath();
+      for (let i = 0; i <= hexSides; i++) {
+        const angle = (i / hexSides) * Math.PI * 2 + hexRotation;
+        const hx = centerX + Math.cos(angle) * (hexRadius + 3);
+        const hy = centerY + Math.sin(angle) * (hexRadius + 3);
+        if (i === 0) g.moveTo(hx, hy);
+        else g.lineTo(hx, hy);
+      }
+      g.strokePath();
+
+      // Inner hex
+      g.lineStyle(1.5, 0x00ffff, shieldIntensity * 0.3 * activePulse);
+      g.beginPath();
+      for (let i = 0; i <= hexSides; i++) {
+        const angle = (i / hexSides) * Math.PI * 2 + hexRotation;
+        const hx = centerX + Math.cos(angle) * hexRadius;
+        const hy = centerY + Math.sin(angle) * hexRadius;
+        if (i === 0) g.moveTo(hx, hy);
+        else g.lineTo(hx, hy);
+      }
+      g.strokePath();
+
+      // Vertex energy nodes
+      for (let i = 0; i < hexSides; i++) {
+        const angle = (i / hexSides) * Math.PI * 2 + hexRotation;
+        const vertexX = centerX + Math.cos(angle) * hexRadius;
+        const vertexY = centerY + Math.sin(angle) * hexRadius;
+        const vertexPulse = Math.sin(this.frameCount * 0.12 + i) * 0.4 + 0.6;
+
+        g.fillStyle(COLORS.rainbow[i % COLORS.rainbow.length], shieldIntensity * 0.5 * vertexPulse);
+        g.fillCircle(vertexX, vertexY, 4);
+
+        g.fillStyle(0xffffff, shieldIntensity * 0.7 * vertexPulse);
+        g.fillCircle(vertexX, vertexY, 2);
+      }
+    }
+  }
+
+  private drawDimensionalRifts(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    for (const rift of this.dimensionalRifts) {
+      const x = rift.x + shakeX;
+      const y = rift.y + shakeY;
+      const lifeRatio = rift.life / rift.maxLife;
+      const alpha = lifeRatio;
+
+      // Draw multiple spiral arms emanating from center
+      const armCount = 7;
+      for (let arm = 0; arm < armCount; arm++) {
+        const armAngle = rift.rotation + (arm / armCount) * Math.PI * 2;
+        const armColor = rift.colors[arm % rift.colors.length];
+
+        // Draw spiral arm as series of dots
+        const spiralTurns = 1.5;
+        const dotsPerArm = 15;
+        for (let dot = 0; dot < dotsPerArm; dot++) {
+          const dotProgress = dot / dotsPerArm;
+          const spiralAngle = armAngle + dotProgress * spiralTurns * Math.PI * 2;
+          const spiralRadius = dotProgress * rift.radius;
+
+          const dotX = x + Math.cos(spiralAngle) * spiralRadius;
+          const dotY = y + Math.sin(spiralAngle) * spiralRadius;
+          const dotSize = (1 - dotProgress) * 4 + 1;
+          const dotAlpha = alpha * (1 - dotProgress * 0.7) * 0.7;
+
+          // Outer glow
+          g.fillStyle(armColor, dotAlpha * 0.3);
+          g.fillCircle(dotX, dotY, dotSize + 3);
+
+          // Core
+          g.fillStyle(armColor, dotAlpha);
+          g.fillCircle(dotX, dotY, dotSize);
+
+          // Bright center for inner dots
+          if (dotProgress < 0.3) {
+            g.fillStyle(0xffffff, dotAlpha * 0.8);
+            g.fillCircle(dotX, dotY, dotSize * 0.4);
+          }
+        }
+      }
+
+      // Central vortex effect
+      const vortexPulse = Math.sin(this.frameCount * 0.2) * 0.3 + 0.7;
+
+      // Outer ring
+      g.lineStyle(3, 0xffffff, alpha * 0.3 * vortexPulse);
+      g.strokeCircle(x, y, 15);
+
+      // Inner rings with rainbow colors
+      for (let ring = 0; ring < 3; ring++) {
+        const ringRadius = 8 - ring * 2;
+        const ringColor = rift.colors[ring % rift.colors.length];
+        g.lineStyle(2, ringColor, alpha * 0.5 * vortexPulse);
+        g.strokeCircle(x, y, ringRadius);
+      }
+
+      // Bright core
+      g.fillStyle(0xffffff, alpha * 0.9 * vortexPulse);
+      g.fillCircle(x, y, 5);
+
+      // Pulsing energy corona
+      const coronaRadius = 20 + Math.sin(this.frameCount * 0.15) * 5;
+      g.lineStyle(1, 0x00ffff, alpha * 0.2);
+      g.strokeCircle(x, y, coronaRadius);
     }
   }
 

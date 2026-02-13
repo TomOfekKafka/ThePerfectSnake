@@ -700,6 +700,89 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.roundRect(x + 3, y + 3, 8, 5, 3);
       ctx.fill();
 
+      // Prismatic Shield Effect (static version for Canvas2D fallback)
+      if (segmentCount >= 3) {
+        const shieldIntensity = Math.min((segmentCount - 1) * 0.08, 1);
+        const shieldRadius = 35 * powerLevel;
+        const nodeCount = 12;
+
+        // Draw rainbow energy nodes orbiting the head
+        for (let n = 0; n < nodeCount; n++) {
+          const nodeAngle = (n / nodeCount) * Math.PI * 2;
+          const nodeX = centerX + Math.cos(nodeAngle) * shieldRadius;
+          const nodeY = centerY + Math.sin(nodeAngle) * shieldRadius;
+          const nodeColor = COLORS.rainbow[n % COLORS.rainbow.length];
+
+          // Energy beam from center to node
+          ctx.strokeStyle = nodeColor;
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = shieldIntensity * 0.15;
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.lineTo(nodeX, nodeY);
+          ctx.stroke();
+
+          // Node glow
+          ctx.fillStyle = nodeColor;
+          ctx.globalAlpha = shieldIntensity * 0.25;
+          ctx.beginPath();
+          ctx.arc(nodeX, nodeY, 6, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Node core
+          ctx.globalAlpha = shieldIntensity * 0.7;
+          ctx.beginPath();
+          ctx.arc(nodeX, nodeY, 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Bright center
+          ctx.fillStyle = '#ffffff';
+          ctx.globalAlpha = shieldIntensity * 0.9;
+          ctx.beginPath();
+          ctx.arc(nodeX, nodeY, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Draw hexagonal shield frame
+        if (powerLevel >= 1.3) {
+          const hexRadius = shieldRadius;
+          const hexSides = 6;
+
+          ctx.strokeStyle = COLORS.snakeHeadGlow;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = shieldIntensity * 0.25;
+          ctx.beginPath();
+          for (let i = 0; i <= hexSides; i++) {
+            const angle = (i / hexSides) * Math.PI * 2;
+            const hx = centerX + Math.cos(angle) * hexRadius;
+            const hy = centerY + Math.sin(angle) * hexRadius;
+            if (i === 0) ctx.moveTo(hx, hy);
+            else ctx.lineTo(hx, hy);
+          }
+          ctx.stroke();
+
+          // Vertex energy nodes
+          for (let i = 0; i < hexSides; i++) {
+            const angle = (i / hexSides) * Math.PI * 2;
+            const vertexX = centerX + Math.cos(angle) * hexRadius;
+            const vertexY = centerY + Math.sin(angle) * hexRadius;
+
+            ctx.fillStyle = COLORS.rainbow[i % COLORS.rainbow.length];
+            ctx.globalAlpha = shieldIntensity * 0.5;
+            ctx.beginPath();
+            ctx.arc(vertexX, vertexY, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha = shieldIntensity * 0.7;
+            ctx.beginPath();
+            ctx.arc(vertexX, vertexY, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+
       // Eye glow
       ctx.fillStyle = '#00ffff';
       ctx.globalAlpha = 0.3;
