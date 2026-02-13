@@ -324,6 +324,8 @@ const COLORS = {
   hyperdrive: [0xff00ff, 0x00ffff, 0xffff00, 0xff8800, 0x00ff88],
   // Vortex colors (cosmic swirl)
   vortex: [0x8800ff, 0x0088ff, 0x00ff88, 0xff0088, 0xffaa00],
+  // Quantum entanglement colors
+  quantum: [0xff00ff, 0x00ffff, 0xffff00, 0xff8800, 0x00ff88, 0x8888ff],
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -1830,6 +1832,9 @@ export class SnakeScene extends Phaser.Scene {
     // Draw prismatic energy shield around snake (on top of snake for visibility)
     this.drawPrismaticShield(g, shakeX, shakeY);
 
+    // Draw quantum entanglement effect (glowing threads between segments)
+    this.drawQuantumEntanglement(g, shakeX, shakeY);
+
     // Draw dimensional rifts (dramatic food collection effect)
     this.drawDimensionalRifts(g, shakeX, shakeY);
 
@@ -2911,6 +2916,102 @@ export class SnakeScene extends Phaser.Scene {
         g.fillStyle(0xffffff, shieldIntensity * 0.7 * vertexPulse);
         g.fillCircle(vertexX, vertexY, 2);
       }
+    }
+  }
+
+  private drawQuantumEntanglement(g: Phaser.GameObjects.Graphics, shakeX: number, shakeY: number): void {
+    if (!this.currentState || this.currentState.gameOver) return;
+
+    const snake = this.currentState.snake;
+    const segmentCount = snake.length;
+
+    if (segmentCount < 5) return;
+
+    const entanglementIntensity = Math.min((segmentCount - 4) * 0.12, 1);
+    const pulse = Math.sin(this.frameCount * 0.05) * 0.3 + 0.7;
+
+    // Draw quantum threads between every 3rd segment
+    for (let i = 0; i < segmentCount - 3; i += 2) {
+      const seg1 = snake[i];
+      const seg2 = snake[Math.min(i + 3, segmentCount - 1)];
+
+      const x1 = seg1.x * CELL_SIZE + CELL_SIZE / 2 + shakeX;
+      const y1 = seg1.y * CELL_SIZE + CELL_SIZE / 2 + shakeY;
+      const x2 = seg2.x * CELL_SIZE + CELL_SIZE / 2 + shakeX;
+      const y2 = seg2.y * CELL_SIZE + CELL_SIZE / 2 + shakeY;
+
+      // Calculate distance - only draw if segments are close enough
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < CELL_SIZE * 6) {
+        const threadColor = COLORS.quantum[i % COLORS.quantum.length];
+
+        // Outer glow
+        g.lineStyle(4, threadColor, entanglementIntensity * 0.15 * pulse);
+        g.lineBetween(x1, y1, x2, y2);
+
+        // Core thread
+        g.lineStyle(2, threadColor, entanglementIntensity * 0.4 * pulse);
+        g.lineBetween(x1, y1, x2, y2);
+
+        // Bright inner core
+        g.lineStyle(1, 0xffffff, entanglementIntensity * 0.6 * pulse);
+        g.lineBetween(x1, y1, x2, y2);
+
+        // Energy nodes at connection points
+        g.fillStyle(threadColor, entanglementIntensity * 0.5 * pulse);
+        g.fillCircle(x1, y1, 5);
+        g.fillCircle(x2, y2, 5);
+
+        // White center for nodes
+        g.fillStyle(0xffffff, entanglementIntensity * 0.8 * pulse);
+        g.fillCircle(x1, y1, 2);
+        g.fillCircle(x2, y2, 2);
+      }
+    }
+
+    // Draw a central quantum core at the snake's center of mass
+    if (segmentCount >= 8) {
+      let centerOfMassX = 0;
+      let centerOfMassY = 0;
+      for (const seg of snake) {
+        centerOfMassX += seg.x * CELL_SIZE + CELL_SIZE / 2;
+        centerOfMassY += seg.y * CELL_SIZE + CELL_SIZE / 2;
+      }
+      centerOfMassX = centerOfMassX / segmentCount + shakeX;
+      centerOfMassY = centerOfMassY / segmentCount + shakeY;
+
+      const coreRadius = 12 * entanglementIntensity * pulse;
+
+      // Outer corona
+      for (let ring = 3; ring >= 0; ring--) {
+        const ringRadius = coreRadius + ring * 4;
+        const ringColor = COLORS.quantum[ring % COLORS.quantum.length];
+        g.fillStyle(ringColor, entanglementIntensity * 0.1 * pulse);
+        g.fillCircle(centerOfMassX, centerOfMassY, ringRadius);
+      }
+
+      // Core glow
+      g.fillStyle(0xffffff, entanglementIntensity * 0.6 * pulse);
+      g.fillCircle(centerOfMassX, centerOfMassY, coreRadius * 0.5);
+
+      // Draw energy beams from core to head and tail
+      const head = snake[0];
+      const tail = snake[segmentCount - 1];
+      const headX = head.x * CELL_SIZE + CELL_SIZE / 2 + shakeX;
+      const headY = head.y * CELL_SIZE + CELL_SIZE / 2 + shakeY;
+      const tailX = tail.x * CELL_SIZE + CELL_SIZE / 2 + shakeX;
+      const tailY = tail.y * CELL_SIZE + CELL_SIZE / 2 + shakeY;
+
+      // Beam to head
+      g.lineStyle(3, COLORS.quantum[0], entanglementIntensity * 0.3 * pulse);
+      g.lineBetween(centerOfMassX, centerOfMassY, headX, headY);
+
+      // Beam to tail
+      g.lineStyle(3, COLORS.quantum[2], entanglementIntensity * 0.25 * pulse);
+      g.lineBetween(centerOfMassX, centerOfMassY, tailX, tailY);
     }
   }
 

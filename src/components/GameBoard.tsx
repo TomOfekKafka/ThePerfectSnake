@@ -59,6 +59,8 @@ const COLORS = {
   fireRed: '#ff2200',
   fireEmber: '#881100',
   fireGradient: ['#ffffff', '#ffffcc', '#ffff44', '#ffcc00', '#ff8800', '#ff4400', '#ff2200', '#cc1100', '#881100'],
+  // Quantum entanglement colors
+  quantum: ['#ff00ff', '#00ffff', '#ffff00', '#ff8800', '#00ff88', '#8888ff'],
 };
 
 // Static stars for Canvas2D fallback (no animation)
@@ -886,6 +888,146 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.roundRect(x + offset + 2, y + offset + 1, size / 2 - 2, size / 3, 2);
       ctx.fill();
     }
+  }
+
+  // QUANTUM ENTANGLEMENT EFFECT - Draw glowing energy threads between non-adjacent segments
+  if (segmentCount >= 5 && !gameState.gameOver) {
+    const entanglementIntensity = Math.min((segmentCount - 4) * 0.12, 1);
+
+    // Draw quantum threads between every 3rd segment for a web effect
+    for (let i = 0; i < segmentCount - 3; i += 2) {
+      const seg1 = snake[i];
+      const seg2 = snake[Math.min(i + 3, segmentCount - 1)];
+
+      const x1 = seg1.x * CELL_SIZE + CELL_SIZE / 2;
+      const y1 = seg1.y * CELL_SIZE + CELL_SIZE / 2;
+      const x2 = seg2.x * CELL_SIZE + CELL_SIZE / 2;
+      const y2 = seg2.y * CELL_SIZE + CELL_SIZE / 2;
+
+      // Calculate distance - only draw if segments are close enough (not wrapping)
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < CELL_SIZE * 6) {
+        const threadColor = COLORS.quantum[i % COLORS.quantum.length];
+
+        // Outer glow
+        ctx.strokeStyle = threadColor;
+        ctx.lineWidth = 4;
+        ctx.globalAlpha = entanglementIntensity * 0.15;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        // Curved path for more organic look
+        const midX = (x1 + x2) / 2 + (Math.random() - 0.5) * 8;
+        const midY = (y1 + y2) / 2 + (Math.random() - 0.5) * 8;
+        ctx.quadraticCurveTo(midX, midY, x2, y2);
+        ctx.stroke();
+
+        // Core thread
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = entanglementIntensity * 0.4;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.quadraticCurveTo(midX, midY, x2, y2);
+        ctx.stroke();
+
+        // Bright inner core
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = entanglementIntensity * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.quadraticCurveTo(midX, midY, x2, y2);
+        ctx.stroke();
+
+        // Energy nodes at connection points
+        ctx.fillStyle = threadColor;
+        ctx.globalAlpha = entanglementIntensity * 0.5;
+        ctx.beginPath();
+        ctx.arc(x1, y1, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x2, y2, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // White center for nodes
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = entanglementIntensity * 0.8;
+        ctx.beginPath();
+        ctx.arc(x1, y1, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x2, y2, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Draw a central quantum core at the snake's center of mass
+    if (segmentCount >= 8) {
+      let centerOfMassX = 0;
+      let centerOfMassY = 0;
+      for (const seg of snake) {
+        centerOfMassX += seg.x * CELL_SIZE + CELL_SIZE / 2;
+        centerOfMassY += seg.y * CELL_SIZE + CELL_SIZE / 2;
+      }
+      centerOfMassX /= segmentCount;
+      centerOfMassY /= segmentCount;
+
+      // Pulsing quantum core
+      const corePulse = 0.7 + Math.sin(Date.now() * 0.003) * 0.3;
+      const coreRadius = 12 * entanglementIntensity * corePulse;
+
+      // Outer corona
+      for (let ring = 3; ring >= 0; ring--) {
+        const ringRadius = coreRadius + ring * 4;
+        const ringColor = COLORS.quantum[ring % COLORS.quantum.length];
+        ctx.fillStyle = ringColor;
+        ctx.globalAlpha = entanglementIntensity * 0.1 * corePulse;
+        ctx.beginPath();
+        ctx.arc(centerOfMassX, centerOfMassY, ringRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Core glow
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = entanglementIntensity * 0.6 * corePulse;
+      ctx.beginPath();
+      ctx.arc(centerOfMassX, centerOfMassY, coreRadius * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw energy beams from core to head and tail
+      const head = snake[0];
+      const tail = snake[segmentCount - 1];
+      const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+      const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+      const tailX = tail.x * CELL_SIZE + CELL_SIZE / 2;
+      const tailY = tail.y * CELL_SIZE + CELL_SIZE / 2;
+
+      // Beam to head
+      const headGrad = ctx.createLinearGradient(centerOfMassX, centerOfMassY, headX, headY);
+      headGrad.addColorStop(0, COLORS.quantum[0] + '60');
+      headGrad.addColorStop(1, 'transparent');
+      ctx.strokeStyle = headGrad;
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = entanglementIntensity * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(centerOfMassX, centerOfMassY);
+      ctx.lineTo(headX, headY);
+      ctx.stroke();
+
+      // Beam to tail
+      const tailGrad = ctx.createLinearGradient(centerOfMassX, centerOfMassY, tailX, tailY);
+      tailGrad.addColorStop(0, COLORS.quantum[2] + '60');
+      tailGrad.addColorStop(1, 'transparent');
+      ctx.strokeStyle = tailGrad;
+      ctx.globalAlpha = entanglementIntensity * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(centerOfMassX, centerOfMassY);
+      ctx.lineTo(tailX, tailY);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
   }
 
   // Neon border glow (only when game is active)
