@@ -130,6 +130,113 @@ let lastPulseTime = 0;
 let lastFoodX = -1;
 let lastFoodY = -1;
 
+// Particle explosion system for food consumption
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  color: string;
+  life: number;
+  maxLife: number;
+  type: 'spark' | 'ember' | 'ring';
+}
+const PARTICLES: Particle[] = [];
+const MAX_PARTICLES = 80;
+
+// Shatter fragments for game over effect
+interface ShatterFragment {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  rotation: number;
+  rotationSpeed: number;
+  size: number;
+  color: string;
+  life: number;
+}
+const SHATTER_FRAGMENTS: ShatterFragment[] = [];
+let gameOverTriggered = false;
+
+// Spawn particles at food position
+function spawnFoodParticles(x: number, y: number): void {
+  const centerX = x * CELL_SIZE + CELL_SIZE / 2;
+  const centerY = y * CELL_SIZE + CELL_SIZE / 2;
+
+  // Spark particles - fast, bright
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.3;
+    const speed = 3 + Math.random() * 4;
+    PARTICLES.push({
+      x: centerX,
+      y: centerY,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: 3 + Math.random() * 3,
+      color: COLORS.rainbow[i % COLORS.rainbow.length],
+      life: 1,
+      maxLife: 1,
+      type: 'spark'
+    });
+  }
+
+  // Ember particles - slower, glowing
+  for (let i = 0; i < 8; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1 + Math.random() * 2;
+    PARTICLES.push({
+      x: centerX,
+      y: centerY,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: 4 + Math.random() * 4,
+      color: COLORS.food,
+      life: 1,
+      maxLife: 1,
+      type: 'ember'
+    });
+  }
+
+  // Ring particles - expanding circles
+  for (let i = 0; i < 3; i++) {
+    PARTICLES.push({
+      x: centerX,
+      y: centerY,
+      vx: 0,
+      vy: 0,
+      size: 5 + i * 8,
+      color: i === 0 ? '#ffffff' : COLORS.foodGlow,
+      life: 1,
+      maxLife: 1,
+      type: 'ring'
+    });
+  }
+}
+
+// Spawn shatter effect on game over
+function spawnShatterEffect(snakeX: number, snakeY: number): void {
+  const centerX = snakeX * CELL_SIZE + CELL_SIZE / 2;
+  const centerY = snakeY * CELL_SIZE + CELL_SIZE / 2;
+
+  for (let i = 0; i < 20; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 5;
+    SHATTER_FRAGMENTS.push({
+      x: centerX + (Math.random() - 0.5) * 40,
+      y: centerY + (Math.random() - 0.5) * 40,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      rotation: Math.random() * Math.PI * 2,
+      rotationSpeed: (Math.random() - 0.5) * 0.3,
+      size: 8 + Math.random() * 15,
+      color: Math.random() > 0.5 ? COLORS.snakeHead : COLORS.gameOverRed,
+      life: 1
+    });
+  }
+}
+
 function lerpColor(color1: string, color2: string, t: number): string {
   const c1 = parseInt(color1.slice(1), 16);
   const c2 = parseInt(color2.slice(1), 16);
@@ -201,9 +308,56 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
             intensity: 0.5 - i * 0.1,
           });
         }
+        // Spawn particle explosion
+        spawnFoodParticles(lastFoodX, lastFoodY);
       }
       lastFoodX = gameState.food.x;
       lastFoodY = gameState.food.y;
+    }
+  }
+
+  // Handle game over shatter effect
+  if (gameState.gameOver && !gameOverTriggered) {
+    gameOverTriggered = true;
+    if (gameState.snake.length > 0) {
+      spawnShatterEffect(gameState.snake[0].x, gameState.snake[0].y);
+    }
+  } else if (!gameState.gameOver) {
+    gameOverTriggered = false;
+    SHATTER_FRAGMENTS.length = 0;
+  }
+
+  // Update particles
+  for (let i = PARTICLES.length - 1; i >= 0; i--) {
+    const p = PARTICLES[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.96;
+    p.vy *= 0.96;
+    p.life -= p.type === 'ring' ? 0.04 : 0.025;
+    if (p.type === 'ring') {
+      p.size += 4;
+    }
+    if (p.life <= 0) {
+      PARTICLES.splice(i, 1);
+    }
+  }
+
+  // Limit particles
+  while (PARTICLES.length > MAX_PARTICLES) {
+    PARTICLES.shift();
+  }
+
+  // Update shatter fragments
+  for (let i = SHATTER_FRAGMENTS.length - 1; i >= 0; i--) {
+    const f = SHATTER_FRAGMENTS[i];
+    f.x += f.vx;
+    f.y += f.vy;
+    f.vy += 0.15; // gravity
+    f.rotation += f.rotationSpeed;
+    f.life -= 0.012;
+    if (f.life <= 0) {
+      SHATTER_FRAGMENTS.splice(i, 1);
     }
   }
 
@@ -647,6 +801,63 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   }
   ctx.globalAlpha = 1;
 
+  // Draw particle explosions
+  for (const p of PARTICLES) {
+    const alpha = p.life;
+    if (p.type === 'ring') {
+      // Expanding ring
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 3 * alpha;
+      ctx.globalAlpha = alpha * 0.6;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (p.type === 'spark') {
+      // Fast bright sparks with trail
+      const trailLength = 8 * alpha;
+      const grad = ctx.createLinearGradient(
+        p.x, p.y,
+        p.x - p.vx * trailLength,
+        p.y - p.vy * trailLength
+      );
+      grad.addColorStop(0, p.color);
+      grad.addColorStop(1, 'transparent');
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = p.size * alpha;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - p.vx * trailLength, p.y - p.vy * trailLength);
+      ctx.stroke();
+
+      // Bright core
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = alpha * 0.9;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 0.5 * alpha, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Ember - glowing orb
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = alpha * 0.3;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalAlpha = alpha * 0.7;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = alpha * 0.9;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+
   // Draw hyper speed trails behind snake (static version for Canvas2D)
   const snake = gameState.snake;
   const segmentCount = snake.length;
@@ -973,18 +1184,23 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     } else {
       // Body gradient from bright to dark
       const baseColor = lerpColor(COLORS.snakeBody, COLORS.snakeTail, progress);
-      const size = CELL_SIZE - 2 - progress * 3;
+
+      // WAVE ANIMATION: Size pulses along the body like a flowing wave
+      const wavePhase = (now * 0.008 + i * 0.5) % (Math.PI * 2);
+      const wavePulse = Math.sin(wavePhase) * 0.15 + 1;
+      const baseSize = CELL_SIZE - 2 - progress * 3;
+      const size = baseSize * wavePulse;
       const offset = (CELL_SIZE - size) / 2;
 
       // FIRE EFFECT: Calculate fire color based on position (hot near head, cooler at tail)
       const fireIndex = Math.floor(progress * (COLORS.fireGradient.length - 1));
       const fireColor = COLORS.fireGradient[Math.min(fireIndex, COLORS.fireGradient.length - 1)];
 
-      // Outer fire glow for body segments
+      // Outer fire glow for body segments - pulses with wave
       ctx.fillStyle = fireColor;
-      ctx.globalAlpha = 0.35;
+      ctx.globalAlpha = 0.35 * wavePulse;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, size / 2 + 5, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, size / 2 + 5 + wavePulse * 2, 0, Math.PI * 2);
       ctx.fill();
 
       // Secondary glow
@@ -1009,17 +1225,18 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.fill();
       ctx.globalAlpha = 1;
 
-      // Rainbow shimmer overlay (static color based on segment index)
-      const shimmerColor = COLORS.rainbow[i % COLORS.rainbow.length];
+      // Rainbow shimmer overlay - wave-based rainbow effect
+      const shimmerIndex = Math.floor((i + now * 0.005) % COLORS.rainbow.length);
+      const shimmerColor = COLORS.rainbow[shimmerIndex];
       ctx.fillStyle = shimmerColor;
-      ctx.globalAlpha = 0.15;
+      ctx.globalAlpha = 0.15 + wavePulse * 0.1;
       ctx.beginPath();
       ctx.roundRect(x + offset, y + offset, size, size, 5);
       ctx.fill();
       ctx.globalAlpha = 1;
 
-      // Hot core highlight (brighter near head)
-      const coreIntensity = (1 - progress) * 0.4;
+      // Hot core highlight (brighter near head) - pulses
+      const coreIntensity = (1 - progress) * 0.4 * wavePulse;
       if (coreIntensity > 0.1) {
         ctx.fillStyle = COLORS.fireYellow;
         ctx.globalAlpha = coreIntensity;
@@ -1034,6 +1251,16 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.beginPath();
       ctx.roundRect(x + offset + 2, y + offset + 1, size / 2 - 2, size / 3, 2);
       ctx.fill();
+
+      // Energy spark on wave peak (when wavePulse is high)
+      if (wavePulse > 1.1 && i % 3 === 0) {
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = (wavePulse - 1) * 2;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
     }
   }
 
@@ -1321,6 +1548,61 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.fillStyle = '#ff0033';
     ctx.globalAlpha = 0.08;
     ctx.fillRect(0, 0, width, height);
+
+    // Draw shatter fragments
+    for (const f of SHATTER_FRAGMENTS) {
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.rotate(f.rotation);
+
+      // Fragment glow
+      ctx.fillStyle = f.color;
+      ctx.globalAlpha = f.life * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(0, -f.size);
+      ctx.lineTo(f.size * 0.6, f.size * 0.5);
+      ctx.lineTo(-f.size * 0.6, f.size * 0.5);
+      ctx.closePath();
+      ctx.fill();
+
+      // Fragment core
+      ctx.globalAlpha = f.life * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(0, -f.size * 0.7);
+      ctx.lineTo(f.size * 0.4, f.size * 0.35);
+      ctx.lineTo(-f.size * 0.4, f.size * 0.35);
+      ctx.closePath();
+      ctx.fill();
+
+      // White edge highlight
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = f.life * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(0, -f.size * 0.7);
+      ctx.lineTo(f.size * 0.4, f.size * 0.35);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // Glitch scanlines effect
+    ctx.fillStyle = '#000000';
+    for (let y = 0; y < height; y += 4) {
+      ctx.globalAlpha = 0.05 + Math.random() * 0.03;
+      ctx.fillRect(0, y, width, 1);
+    }
+
+    // Random glitch blocks
+    for (let i = 0; i < 5; i++) {
+      const gx = Math.random() * width;
+      const gy = Math.random() * height;
+      const gw = 20 + Math.random() * 40;
+      const gh = 2 + Math.random() * 6;
+      ctx.fillStyle = Math.random() > 0.5 ? '#ff0033' : '#00ffcc';
+      ctx.globalAlpha = 0.1 + Math.random() * 0.1;
+      ctx.fillRect(gx, gy, gw, gh);
+    }
 
     ctx.globalAlpha = 1;
   }
