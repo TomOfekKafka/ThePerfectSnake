@@ -279,6 +279,18 @@ interface GridPulse {
   intensity: number;
 }
 
+interface CosmicShockwave {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  life: number;
+  maxLife: number;
+  colorIndex: number;
+  thickness: number;
+  rotationOffset: number;
+}
+
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 
@@ -373,6 +385,8 @@ export class SnakeScene extends Phaser.Scene {
   private dimensionalRifts: DimensionalRift[] = [];
   private gridPulses: GridPulse[] = [];
   private lastGridPulseFrame = 0;
+  private cosmicShockwaves: CosmicShockwave[] = [];
+  private lastShockwaveFrame = 0;
 
   // Matrix character set (katakana-like + numbers + symbols)
   private matrixChars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
@@ -692,6 +706,11 @@ export class SnakeScene extends Phaser.Scene {
           if (this.frameCount - this.lastGridPulseFrame >= 4) {
             this.lastGridPulseFrame = this.frameCount;
             this.spawnGridPulse(head, COLORS.snakeHeadGlow, 120 + state.snake.length * 3, 0.4);
+          }
+          // Spawn cosmic shockwaves at higher power levels for dramatic effect
+          if (this.frameCount - this.lastShockwaveFrame >= 8 && this.powerLevel >= 1.5) {
+            this.lastShockwaveFrame = this.frameCount;
+            this.spawnCosmicShockwave(head);
           }
         }
       }
@@ -1386,6 +1405,25 @@ export class SnakeScene extends Phaser.Scene {
       maxRadius,
       color,
       intensity,
+    });
+  }
+
+  private spawnCosmicShockwave(pos: Position): void {
+    if (this.cosmicShockwaves.length > 6) return;
+
+    const centerX = pos.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = pos.y * CELL_SIZE + CELL_SIZE / 2;
+
+    this.cosmicShockwaves.push({
+      x: centerX,
+      y: centerY,
+      radius: 5,
+      maxRadius: 80 + this.powerLevel * 30,
+      life: 40,
+      maxLife: 40,
+      colorIndex: Math.floor(Math.random() * COLORS.rainbow.length),
+      thickness: 3 + this.powerLevel,
+      rotationOffset: Math.random() * Math.PI * 2,
     });
   }
 
