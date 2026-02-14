@@ -456,9 +456,14 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const width = canvas.width;
-  const height = canvas.height;
+  // Use logical size for all drawing coordinates (400×400)
+  const width = GRID_SIZE * CELL_SIZE;
+  const height = GRID_SIZE * CELL_SIZE;
   const now = Date.now();
+
+  // Hi-res: scale logical coordinates to actual canvas pixel resolution
+  ctx.save();
+  ctx.scale(canvas.width / width, canvas.height / height);
 
   // Detect food eaten (snake grew)
   if (gameState.snake.length > prevSnakeLength && prevSnakeLength > 0) {
@@ -2364,10 +2369,14 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
 
   // Restore from screen shake transform
   ctx.restore();
+
+  // Restore from hi-res scale transform
+  ctx.restore();
 }
 
 export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SnakeScene | null>(null);
   const phaserGameRef = useRef<Phaser.Game | null>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const phaserFailedRef = useRef(false);
@@ -2389,6 +2398,12 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
 
     let destroyed = false;
 
+    // Calculate zoom for hi-res Phaser rendering
+    const logicalSize = gridSize * CELL_SIZE;
+    const displaySize = Math.max(window.innerWidth, window.innerHeight);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const phaserZoom = Math.max(1, Math.ceil((displaySize * dpr) / logicalSize));
+
     (async () => {
       try {
         const Phaser = await import('phaser');
@@ -2403,7 +2418,10 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
           height: gridSize * CELL_SIZE,
           backgroundColor: '#ffffff',
           scene: SnakeScene,
-          pixelArt: true,
+          pixelArt: false,
+          scale: {
+            zoom: phaserZoom,
+          },
           input: {
             keyboard: false,
             mouse: false,
@@ -2423,6 +2441,10 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
           game.destroy(true);
           return;
         }
+
+        // Phaser sets inline width/height styles based on zoom — reset to CSS control
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
 
         phaserGameRef.current = game;
 
@@ -2463,13 +2485,38 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Hi-res canvas for Canvas2D fallback: match canvas resolution to display size
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    const canvas = canvasRef.current;
+    if (!wrapper || !canvas) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      if (width === 0 || height === 0) return;
+
+      // Only resize canvas for Canvas2D fallback (Phaser manages its own canvas)
+      if (phaserFailedRef.current) {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        drawCanvas2D(canvas, gameState);
+      }
+    });
+
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, [gameState]);
+
   // Push state updates to Phaser scene or Canvas 2D fallback
   useEffect(() => {
     pushState();
   }, [pushState]);
 
   return (
-    <div className="canvas-wrapper">
+    <div className="canvas-wrapper" ref={wrapperRef}>
       <canvas
         ref={canvasRef}
         width={gridSize * CELL_SIZE}
