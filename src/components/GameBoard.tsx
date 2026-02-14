@@ -160,6 +160,38 @@ interface ShatterFragment {
 const SHATTER_FRAGMENTS: ShatterFragment[] = [];
 let gameOverTriggered = false;
 
+// SUPERNOVA DEATH EFFECT - Dramatic cosmic explosion on death
+interface SupernovaState {
+  active: boolean;
+  x: number;
+  y: number;
+  time: number;
+  maxTime: number;
+  phase: 'flash' | 'expand' | 'fade';
+}
+const SUPERNOVA: SupernovaState = {
+  active: false,
+  x: 0,
+  y: 0,
+  time: 0,
+  maxTime: 90, // frames
+  phase: 'flash',
+};
+
+// Supernova debris particles
+interface SupernovaDebris {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  color: string;
+  trail: Array<{ x: number; y: number }>;
+  life: number;
+  spin: number;
+}
+const SUPERNOVA_DEBRIS: SupernovaDebris[] = [];
+
 // Screen shake effect state
 interface ScreenShake {
   intensity: number;
@@ -303,6 +335,31 @@ function spawnShatterEffect(snakeX: number, snakeY: number): void {
 
   // Spawn dramatic energy discharges across screen
   spawnEnergyDischarges(centerX, centerY, 8);
+
+  // ACTIVATE SUPERNOVA EFFECT
+  SUPERNOVA.active = true;
+  SUPERNOVA.x = centerX;
+  SUPERNOVA.y = centerY;
+  SUPERNOVA.time = 0;
+  SUPERNOVA.phase = 'flash';
+
+  // Spawn supernova debris particles - cosmic explosion debris
+  SUPERNOVA_DEBRIS.length = 0;
+  for (let i = 0; i < 24; i++) {
+    const angle = (i / 24) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+    const speed = 3 + Math.random() * 4;
+    SUPERNOVA_DEBRIS.push({
+      x: centerX,
+      y: centerY,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: 4 + Math.random() * 6,
+      color: COLORS.rainbow[i % COLORS.rainbow.length],
+      trail: [],
+      life: 1,
+      spin: (Math.random() - 0.5) * 0.2,
+    });
+  }
 }
 
 // Trigger screen shake effect
@@ -491,6 +548,8 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   } else if (!gameState.gameOver) {
     gameOverTriggered = false;
     SHATTER_FRAGMENTS.length = 0;
+    SUPERNOVA.active = false;
+    SUPERNOVA_DEBRIS.length = 0;
   }
 
   // Update particles
@@ -1753,6 +1812,171 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.arc(width - cornerSize, height - cornerSize, 8, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
+  }
+
+  // SUPERNOVA DEATH EFFECT - Render cosmic explosion
+  if (SUPERNOVA.active) {
+    SUPERNOVA.time++;
+    const progress = SUPERNOVA.time / SUPERNOVA.maxTime;
+
+    // Update phase based on progress
+    if (progress < 0.15) {
+      SUPERNOVA.phase = 'flash';
+    } else if (progress < 0.7) {
+      SUPERNOVA.phase = 'expand';
+    } else {
+      SUPERNOVA.phase = 'fade';
+    }
+
+    const cx = SUPERNOVA.x;
+    const cy = SUPERNOVA.y;
+
+    // PHASE 1: Initial bright flash (white-hot core)
+    if (SUPERNOVA.phase === 'flash') {
+      const flashIntensity = 1 - (progress / 0.15);
+
+      // Screen-wide white flash
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = flashIntensity * 0.6;
+      ctx.fillRect(0, 0, width, height);
+
+      // Intense central core
+      const coreRadius = 60 + progress * 100;
+      const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreRadius);
+      coreGrad.addColorStop(0, '#ffffff');
+      coreGrad.addColorStop(0.3, '#ffffaa');
+      coreGrad.addColorStop(0.6, '#ffaa00');
+      coreGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = coreGrad;
+      ctx.globalAlpha = flashIntensity;
+      ctx.beginPath();
+      ctx.arc(cx, cy, coreRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // PHASE 2: Expanding shockwave rings
+    if (SUPERNOVA.phase === 'expand' || SUPERNOVA.phase === 'fade') {
+      const expandProgress = Math.min((progress - 0.15) / 0.55, 1);
+      const fadeMultiplier = SUPERNOVA.phase === 'fade' ? 1 - ((progress - 0.7) / 0.3) : 1;
+
+      // Multiple expanding shockwave rings with color transitions
+      for (let ring = 0; ring < 5; ring++) {
+        const ringDelay = ring * 0.1;
+        const ringProgress = Math.max(0, expandProgress - ringDelay);
+        if (ringProgress <= 0) continue;
+
+        const maxRadius = 200 + ring * 40;
+        const ringRadius = ringProgress * maxRadius;
+        const ringAlpha = (1 - ringProgress) * fadeMultiplier * 0.5;
+
+        // Outer glow
+        const ringColors = ['#ff0033', '#ff6600', '#ffff00', '#00ffcc', '#ff00ff'];
+        ctx.strokeStyle = ringColors[ring % ringColors.length];
+        ctx.lineWidth = 8 - ring * 1.2;
+        ctx.globalAlpha = ringAlpha;
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner bright edge
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = ringAlpha * 0.8;
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringRadius - 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Central dying star (shrinking hot core)
+      const coreSize = Math.max(5, 40 * (1 - expandProgress));
+      const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreSize * 2);
+      coreGrad.addColorStop(0, '#ffffff');
+      coreGrad.addColorStop(0.4, '#ffaa00');
+      coreGrad.addColorStop(0.7, '#ff3300');
+      coreGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = coreGrad;
+      ctx.globalAlpha = fadeMultiplier * 0.9;
+      ctx.beginPath();
+      ctx.arc(cx, cy, coreSize * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Energy spokes radiating outward
+      const spokeCount = 12;
+      for (let s = 0; s < spokeCount; s++) {
+        const spokeAngle = (s / spokeCount) * Math.PI * 2 + expandProgress * 0.5;
+        const spokeLength = expandProgress * 180;
+        const endX = cx + Math.cos(spokeAngle) * spokeLength;
+        const endY = cy + Math.sin(spokeAngle) * spokeLength;
+
+        const spokeGrad = ctx.createLinearGradient(cx, cy, endX, endY);
+        spokeGrad.addColorStop(0, COLORS.rainbow[s % COLORS.rainbow.length]);
+        spokeGrad.addColorStop(1, 'transparent');
+
+        ctx.strokeStyle = spokeGrad;
+        ctx.lineWidth = 3 * (1 - expandProgress);
+        ctx.globalAlpha = fadeMultiplier * 0.4;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+      }
+    }
+
+    // Update and render supernova debris particles
+    for (let i = SUPERNOVA_DEBRIS.length - 1; i >= 0; i--) {
+      const d = SUPERNOVA_DEBRIS[i];
+
+      // Store trail position
+      d.trail.unshift({ x: d.x, y: d.y });
+      if (d.trail.length > 8) d.trail.pop();
+
+      // Update position
+      d.x += d.vx;
+      d.y += d.vy;
+      d.vx *= 0.98;
+      d.vy *= 0.98;
+      d.life -= 0.012;
+
+      if (d.life <= 0) {
+        SUPERNOVA_DEBRIS.splice(i, 1);
+        continue;
+      }
+
+      // Draw debris trail
+      if (d.trail.length > 1) {
+        for (let t = 0; t < d.trail.length - 1; t++) {
+          const trailAlpha = d.life * (1 - t / d.trail.length) * 0.5;
+          ctx.strokeStyle = d.color;
+          ctx.lineWidth = d.size * (1 - t / d.trail.length);
+          ctx.globalAlpha = trailAlpha;
+          ctx.beginPath();
+          ctx.moveTo(d.trail[t].x, d.trail[t].y);
+          ctx.lineTo(d.trail[t + 1].x, d.trail[t + 1].y);
+          ctx.stroke();
+        }
+      }
+
+      // Draw debris particle
+      ctx.fillStyle = d.color;
+      ctx.globalAlpha = d.life * 0.8;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.size * d.life, 0, Math.PI * 2);
+      ctx.fill();
+
+      // White core
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = d.life;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.size * d.life * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = 1;
+
+    // Deactivate when complete
+    if (progress >= 1) {
+      SUPERNOVA.active = false;
+    }
   }
 
   // Game over overlay with cinematic death effects
