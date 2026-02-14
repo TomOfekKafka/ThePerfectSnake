@@ -61,6 +61,10 @@ const COLORS = {
   fireGradient: ['#ffffff', '#ffffcc', '#ffff44', '#ffcc00', '#ff8800', '#ff4400', '#ff2200', '#cc1100', '#881100'],
   // Quantum entanglement colors
   quantum: ['#ff00ff', '#00ffff', '#ffff00', '#ff8800', '#00ff88', '#8888ff'],
+  // Black hole singularity colors
+  singularity: ['#8800ff', '#0044ff', '#00aaff', '#ff00aa', '#ffffff'],
+  accretionDisk: ['#ff4400', '#ff8800', '#ffcc00', '#ffffff', '#aaccff'],
+  eventHorizon: '#000011',
 };
 
 // Static stars for Canvas2D fallback (no animation)
@@ -243,6 +247,29 @@ interface DimensionalRift {
 const RIFT_NODES: DimensionalRift[] = [];
 const RIFT_NODE_COUNT = 8;
 
+// BLACK HOLE SINGULARITY - Accretion disk particles orbiting the food
+interface AccretionParticle {
+  angle: number;
+  radius: number;
+  speed: number;
+  size: number;
+  colorIndex: number;
+  trail: Array<{ x: number; y: number; alpha: number }>;
+}
+const ACCRETION_PARTICLES: AccretionParticle[] = [];
+const ACCRETION_PARTICLE_COUNT = 24;
+let accretionInitialized = false;
+
+// Gravitational lens distortion rays
+interface LensRay {
+  angle: number;
+  length: number;
+  width: number;
+  colorIndex: number;
+}
+const LENS_RAYS: LensRay[] = [];
+const LENS_RAY_COUNT = 16;
+
 // Initialize rift nodes
 for (let i = 0; i < RIFT_NODE_COUNT; i++) {
   RIFT_NODES.push({
@@ -251,6 +278,16 @@ for (let i = 0; i < RIFT_NODE_COUNT; i++) {
     rotationSpeed: 0.02 + Math.random() * 0.02,
     color: COLORS.rainbow[i % COLORS.rainbow.length],
     pulsePhase: Math.random() * Math.PI * 2,
+  });
+}
+
+// Initialize lens rays for gravitational lensing effect
+for (let i = 0; i < LENS_RAY_COUNT; i++) {
+  LENS_RAYS.push({
+    angle: (i / LENS_RAY_COUNT) * Math.PI * 2,
+    length: 30 + Math.random() * 25,
+    width: 2 + Math.random() * 3,
+    colorIndex: i % COLORS.singularity.length,
   });
 }
 
@@ -882,118 +919,216 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   }
   ctx.globalAlpha = 1;
 
-  // Draw food with enhanced glow effect
+  // BLACK HOLE SINGULARITY EFFECT for food
   const food = gameState.food;
   const foodCenterX = food.x * CELL_SIZE + CELL_SIZE / 2;
   const foodCenterY = food.y * CELL_SIZE + CELL_SIZE / 2;
 
-  // Energy rings around food (static)
-  for (let i = 0; i < 3; i++) {
-    const ringRadius = 20 + i * 12;
-    ctx.strokeStyle = COLORS.rainbow[i * 2];
-    ctx.lineWidth = 2 - i * 0.5;
-    ctx.globalAlpha = 0.15 - i * 0.04;
+  // Initialize accretion particles if not done
+  if (!accretionInitialized) {
+    accretionInitialized = true;
+    ACCRETION_PARTICLES.length = 0;
+    for (let i = 0; i < ACCRETION_PARTICLE_COUNT; i++) {
+      ACCRETION_PARTICLES.push({
+        angle: (i / ACCRETION_PARTICLE_COUNT) * Math.PI * 2 + Math.random() * 0.5,
+        radius: 18 + Math.random() * 30,
+        speed: 0.02 + Math.random() * 0.03,
+        size: 1.5 + Math.random() * 2.5,
+        colorIndex: i % COLORS.accretionDisk.length,
+        trail: [],
+      });
+    }
+  }
+
+  // Singularity intensity increases with snake length
+  const singularityPower = Math.min(1 + (gameState.snake.length - 1) * 0.08, 2.5);
+  const rotationSpeed = now * 0.001;
+
+  // GRAVITATIONAL LENSING - Warped light rays bending around the singularity
+  for (const ray of LENS_RAYS) {
+    const rayAngle = ray.angle + rotationSpeed * 0.5;
+    const bendFactor = 0.3 + Math.sin(now * 0.003 + ray.angle * 2) * 0.15;
+    const rayLength = ray.length * singularityPower;
+
+    // Calculate curved ray path (gravitational bending)
+    const startRadius = 8;
+    const startX = foodCenterX + Math.cos(rayAngle) * startRadius;
+    const startY = foodCenterY + Math.sin(rayAngle) * startRadius;
+    const endX = foodCenterX + Math.cos(rayAngle + bendFactor) * rayLength;
+    const endY = foodCenterY + Math.sin(rayAngle + bendFactor) * rayLength;
+    const ctrlX = foodCenterX + Math.cos(rayAngle + bendFactor * 0.5) * (rayLength * 0.6);
+    const ctrlY = foodCenterY + Math.sin(rayAngle + bendFactor * 0.5) * (rayLength * 0.6);
+
+    // Ray gradient
+    const rayGrad = ctx.createLinearGradient(startX, startY, endX, endY);
+    rayGrad.addColorStop(0, COLORS.singularity[ray.colorIndex]);
+    rayGrad.addColorStop(0.6, COLORS.singularity[ray.colorIndex] + '80');
+    rayGrad.addColorStop(1, 'transparent');
+
+    ctx.strokeStyle = rayGrad;
+    ctx.lineWidth = ray.width * (0.8 + Math.sin(now * 0.005 + ray.angle) * 0.2);
+    ctx.globalAlpha = 0.4 * singularityPower;
     ctx.beginPath();
-    ctx.arc(foodCenterX, foodCenterY, ringRadius, 0, Math.PI * 2);
+    ctx.moveTo(startX, startY);
+    ctx.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
 
-  // Outer corona glow (larger, more dramatic)
-  ctx.fillStyle = COLORS.food;
-  ctx.globalAlpha = 0.08;
-  ctx.beginPath();
-  ctx.arc(foodCenterX, foodCenterY, 22, 0, Math.PI * 2);
-  ctx.fill();
+  // ACCRETION DISK - Swirling particles being pulled into the singularity
+  for (const particle of ACCRETION_PARTICLES) {
+    // Update particle orbit
+    particle.angle += particle.speed * singularityPower;
 
-  ctx.globalAlpha = 0.12;
-  ctx.beginPath();
-  ctx.arc(foodCenterX, foodCenterY, 16, 0, Math.PI * 2);
-  ctx.fill();
+    // Spiral inward effect (particles getting closer over time then resetting)
+    const spiralPhase = (now * 0.0005 + particle.angle) % (Math.PI * 4);
+    const spiralRadius = particle.radius * (1 - (spiralPhase / (Math.PI * 8)));
+    const actualRadius = Math.max(12, spiralRadius);
 
-  // Orbiting energy orbs (static positions for Canvas2D)
-  for (let i = 0; i < 4; i++) {
-    const angle = (i / 4) * Math.PI * 2;
-    const orbX = foodCenterX + Math.cos(angle) * 13;
-    const orbY = foodCenterY + Math.sin(angle) * 13;
+    // Calculate particle position with wobble
+    const wobble = Math.sin(now * 0.008 + particle.angle * 3) * 2;
+    const px = foodCenterX + Math.cos(particle.angle) * (actualRadius + wobble);
+    const py = foodCenterY + Math.sin(particle.angle) * (actualRadius + wobble);
 
-    // Orb glow
-    ctx.fillStyle = COLORS.rainbow[i];
-    ctx.globalAlpha = 0.4;
+    // Update trail
+    particle.trail.unshift({ x: px, y: py, alpha: 1 });
+    if (particle.trail.length > 6) particle.trail.pop();
+
+    // Draw particle trail (motion blur effect)
+    for (let t = particle.trail.length - 1; t >= 0; t--) {
+      const tp = particle.trail[t];
+      const trailAlpha = (1 - t / particle.trail.length) * 0.5;
+      const trailSize = particle.size * (1 - t / particle.trail.length * 0.5);
+
+      ctx.fillStyle = COLORS.accretionDisk[particle.colorIndex];
+      ctx.globalAlpha = trailAlpha * singularityPower;
+      ctx.beginPath();
+      ctx.arc(tp.x, tp.y, trailSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw main particle with glow
+    ctx.fillStyle = COLORS.accretionDisk[particle.colorIndex];
+    ctx.globalAlpha = 0.3 * singularityPower;
     ctx.beginPath();
-    ctx.arc(orbX, orbY, 4, 0, Math.PI * 2);
+    ctx.arc(px, py, particle.size + 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Orb core
-    ctx.globalAlpha = 0.9;
+    ctx.globalAlpha = 0.8 * singularityPower;
     ctx.beginPath();
-    ctx.arc(orbX, orbY, 2.5, 0, Math.PI * 2);
+    ctx.arc(px, py, particle.size, 0, Math.PI * 2);
     ctx.fill();
+
+    // White-hot core for particles near singularity
+    if (actualRadius < 20) {
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.9 * (1 - actualRadius / 20);
+      ctx.beginPath();
+      ctx.arc(px, py, particle.size * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // OUTER EVENT HORIZON GLOW - Multiple layers of purple/blue distortion
+  for (let ring = 4; ring >= 0; ring--) {
+    const ringRadius = 25 + ring * 8;
+    const ringColor = COLORS.singularity[ring % COLORS.singularity.length];
+    const pulseOffset = Math.sin(now * 0.004 + ring * 0.5) * 0.2 + 0.8;
+
+    ctx.strokeStyle = ringColor;
+    ctx.lineWidth = 3 - ring * 0.4;
+    ctx.globalAlpha = 0.15 * pulseOffset * singularityPower;
+    ctx.beginPath();
+    ctx.arc(foodCenterX, foodCenterY, ringRadius * singularityPower, 0, Math.PI * 2);
+    ctx.stroke();
   }
 
-  // Rainbow ring effect (static for Canvas2D)
-  for (let i = 0; i < 6; i++) {
-    const angle = (i / 6) * Math.PI * 2;
-    const rx = foodCenterX + Math.cos(angle) * 7;
-    const ry = foodCenterY + Math.sin(angle) * 7;
-    ctx.fillStyle = COLORS.rainbow[i];
-    ctx.globalAlpha = 0.35;
+  // GRAVITATIONAL DISTORTION WAVES - Rippling spacetime
+  const waveCount = 3;
+  for (let w = 0; w < waveCount; w++) {
+    const wavePhase = (now * 0.003 + w * 2) % 6;
+    const waveRadius = 15 + wavePhase * 12;
+    const waveAlpha = Math.max(0, 1 - wavePhase / 6) * 0.25;
+
+    ctx.strokeStyle = '#8844ff';
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = waveAlpha * singularityPower;
+    ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    ctx.arc(rx, ry, 3, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.arc(foodCenterX, foodCenterY, waveRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
 
-  // Main glow layers
-  ctx.fillStyle = COLORS.food;
-  ctx.globalAlpha = 0.18;
+  // INNER ACCRETION GLOW - Hot plasma ring around event horizon
+  const accretionGrad = ctx.createRadialGradient(
+    foodCenterX, foodCenterY, 6,
+    foodCenterX, foodCenterY, 18
+  );
+  accretionGrad.addColorStop(0, 'transparent');
+  accretionGrad.addColorStop(0.3, COLORS.accretionDisk[2] + '60');
+  accretionGrad.addColorStop(0.6, COLORS.accretionDisk[1] + '40');
+  accretionGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = accretionGrad;
+  ctx.globalAlpha = singularityPower;
   ctx.beginPath();
-  ctx.arc(foodCenterX, foodCenterY, 12, 0, Math.PI * 2);
+  ctx.arc(foodCenterX, foodCenterY, 18, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = COLORS.foodGlow;
-  ctx.globalAlpha = 0.45;
+  // EVENT HORIZON - The actual black hole (pure darkness)
+  const eventHorizonGrad = ctx.createRadialGradient(
+    foodCenterX, foodCenterY, 0,
+    foodCenterX, foodCenterY, 10
+  );
+  eventHorizonGrad.addColorStop(0, COLORS.eventHorizon);
+  eventHorizonGrad.addColorStop(0.7, COLORS.eventHorizon);
+  eventHorizonGrad.addColorStop(1, '#220044');
+  ctx.fillStyle = eventHorizonGrad;
+  ctx.globalAlpha = 1;
   ctx.beginPath();
   ctx.arc(foodCenterX, foodCenterY, 9, 0, Math.PI * 2);
   ctx.fill();
+
+  // PHOTON SPHERE - Light orbiting at the edge of no return
+  const photonCount = 8;
+  for (let p = 0; p < photonCount; p++) {
+    const photonAngle = (p / photonCount) * Math.PI * 2 + rotationSpeed * 2;
+    const photonX = foodCenterX + Math.cos(photonAngle) * 11;
+    const photonY = foodCenterY + Math.sin(photonAngle) * 11;
+
+    // Photon glow
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.3 + Math.sin(now * 0.01 + p) * 0.15;
+    ctx.beginPath();
+    ctx.arc(photonX, photonY, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bright core
+    ctx.globalAlpha = 0.8;
+    ctx.beginPath();
+    ctx.arc(photonX, photonY, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // SINGULARITY CORE - Impossibly bright point at the center
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.6 + Math.sin(now * 0.008) * 0.2;
+  ctx.beginPath();
+  ctx.arc(foodCenterX, foodCenterY, 2, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.globalAlpha = 1;
 
-  // Crystalline hexagon effect
+  // Legacy crystal facet drawing removed - replaced by singularity effect
   const crystalSize = 9;
   const facets = 6;
-  const rotation = 0; // Static rotation for Canvas2D fallback
+  const rotation = rotationSpeed; // Now animated
 
-  // Crystal glow
-  ctx.fillStyle = COLORS.foodGlow;
-  ctx.globalAlpha = 0.3;
-  ctx.beginPath();
-  for (let i = 0; i < facets; i++) {
-    const angle = (i / facets) * Math.PI * 2 + rotation;
-    const fx = foodCenterX + Math.cos(angle) * (crystalSize + 3);
-    const fy = foodCenterY + Math.sin(angle) * (crystalSize + 3);
-    if (i === 0) ctx.moveTo(fx, fy);
-    else ctx.lineTo(fx, fy);
-  }
-  ctx.closePath();
-  ctx.fill();
-
-  // Crystal body
-  ctx.fillStyle = COLORS.food;
-  ctx.globalAlpha = 0.9;
-  ctx.beginPath();
-  for (let i = 0; i < facets; i++) {
-    const angle = (i / facets) * Math.PI * 2 + rotation;
-    const fx = foodCenterX + Math.cos(angle) * crystalSize;
-    const fy = foodCenterY + Math.sin(angle) * crystalSize;
-    if (i === 0) ctx.moveTo(fx, fy);
-    else ctx.lineTo(fx, fy);
-  }
-  ctx.closePath();
-  ctx.fill();
-
-  // Crystal facet lines
-  ctx.strokeStyle = COLORS.foodGlow;
+  // Keep some crystal facet lines for additional detail on the event horizon edge
+  ctx.strokeStyle = '#8844ff';
   ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.4;
+  ctx.globalAlpha = 0.3;
   for (let i = 0; i < facets; i++) {
     const angle = (i / facets) * Math.PI * 2 + rotation;
     const fx = foodCenterX + Math.cos(angle) * crystalSize;
