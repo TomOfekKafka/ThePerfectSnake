@@ -291,6 +291,20 @@ for (let i = 0; i < LENS_RAY_COUNT; i++) {
   });
 }
 
+// PLASMA WAKE SYSTEM - Flowing energy trail that follows the snake's path
+interface PlasmaWakePoint {
+  x: number;
+  y: number;
+  age: number;
+  intensity: number;
+  colorPhase: number;
+  turbulence: number;
+}
+const PLASMA_WAKE: PlasmaWakePoint[] = [];
+const MAX_WAKE_POINTS = 60;
+let lastWakeHeadX = -1;
+let lastWakeHeadY = -1;
+
 // Spawn particles at food position
 function spawnFoodParticles(x: number, y: number): void {
   const centerX = x * CELL_SIZE + CELL_SIZE / 2;
@@ -527,6 +541,52 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   for (const node of RIFT_NODES) {
     node.angle += node.rotationSpeed;
     node.pulsePhase += 0.08;
+  }
+
+  // PLASMA WAKE SYSTEM UPDATE - Add wake points as snake moves
+  if (gameState.snake.length > 0 && !gameState.gameOver) {
+    const head = gameState.snake[0];
+    const headPxX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const headPxY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Only add wake points when snake moves to new position
+    if (headPxX !== lastWakeHeadX || headPxY !== lastWakeHeadY) {
+      lastWakeHeadX = headPxX;
+      lastWakeHeadY = headPxY;
+
+      // Add multiple wake points along snake body for rich trail
+      for (let si = 0; si < Math.min(gameState.snake.length, 8); si++) {
+        const seg = gameState.snake[si];
+        PLASMA_WAKE.unshift({
+          x: seg.x * CELL_SIZE + CELL_SIZE / 2 + (Math.random() - 0.5) * 6,
+          y: seg.y * CELL_SIZE + CELL_SIZE / 2 + (Math.random() - 0.5) * 6,
+          age: 0,
+          intensity: 1 - si * 0.1,
+          colorPhase: (now * 0.002 + si * 0.5) % (Math.PI * 2),
+          turbulence: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+  } else if (gameState.gameOver) {
+    PLASMA_WAKE.length = 0;
+    lastWakeHeadX = -1;
+    lastWakeHeadY = -1;
+  }
+
+  // Update plasma wake points - age and remove old ones
+  for (let i = PLASMA_WAKE.length - 1; i >= 0; i--) {
+    const wp = PLASMA_WAKE[i];
+    wp.age += 0.025;
+    wp.turbulence += 0.08;
+    // Add slight drift
+    wp.x += Math.sin(wp.turbulence) * 0.3;
+    wp.y += Math.cos(wp.turbulence * 1.3) * 0.3;
+    if (wp.age >= 1) {
+      PLASMA_WAKE.splice(i, 1);
+    }
+  }
+  while (PLASMA_WAKE.length > MAX_WAKE_POINTS) {
+    PLASMA_WAKE.pop();
   }
 
   // Update grid pulses - spawn from snake head periodically
@@ -1325,6 +1385,97 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.stroke();
     }
   }
+
+  // PLASMA WAKE RENDERING - Draw flowing energy trail behind snake
+  if (PLASMA_WAKE.length > 1) {
+    // Draw wake points with swirling plasma effect
+    for (let i = PLASMA_WAKE.length - 1; i >= 0; i--) {
+      const wp = PLASMA_WAKE[i];
+      const lifeProgress = 1 - wp.age;
+      if (lifeProgress <= 0) continue;
+
+      // Calculate swirling plasma colors
+      const colorT = (wp.colorPhase + wp.age * 2) % 1;
+      const plasmaColors = [
+        { r: 0, g: 255, b: 204 },   // Cyan
+        { r: 136, g: 0, b: 255 },   // Purple
+        { r: 255, g: 0, b: 136 },   // Magenta
+        { r: 255, g: 136, b: 0 },   // Orange
+        { r: 0, g: 255, b: 136 },   // Green
+      ];
+      const colorIdx = Math.floor(colorT * plasmaColors.length) % plasmaColors.length;
+      const nextIdx = (colorIdx + 1) % plasmaColors.length;
+      const colorBlend = (colorT * plasmaColors.length) % 1;
+      const c1 = plasmaColors[colorIdx];
+      const c2 = plasmaColors[nextIdx];
+      const r = Math.round(c1.r + (c2.r - c1.r) * colorBlend);
+      const g = Math.round(c1.g + (c2.g - c1.g) * colorBlend);
+      const b = Math.round(c1.b + (c2.b - c1.b) * colorBlend);
+
+      // Pulsing size based on turbulence
+      const pulse = 0.8 + Math.sin(wp.turbulence * 2) * 0.4;
+      const baseSize = (8 + wp.intensity * 6) * lifeProgress * pulse;
+
+      // Outer plasma glow (largest, most transparent)
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${lifeProgress * wp.intensity * 0.15})`;
+      ctx.beginPath();
+      ctx.arc(wp.x, wp.y, baseSize * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Mid plasma layer
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${lifeProgress * wp.intensity * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(wp.x, wp.y, baseSize * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Core plasma (brightest)
+      ctx.fillStyle = `rgba(${Math.min(255, r + 80)}, ${Math.min(255, g + 80)}, ${Math.min(255, b + 80)}, ${lifeProgress * wp.intensity * 0.6})`;
+      ctx.beginPath();
+      ctx.arc(wp.x, wp.y, baseSize, 0, Math.PI * 2);
+      ctx.fill();
+
+      // White-hot center spark
+      if (wp.age < 0.3 && wp.intensity > 0.7) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${(0.3 - wp.age) * wp.intensity * 2})`;
+        ctx.beginPath();
+        ctx.arc(wp.x, wp.y, baseSize * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Draw flowing plasma connections between nearby wake points
+    ctx.lineWidth = 2;
+    for (let i = 0; i < Math.min(PLASMA_WAKE.length - 1, 30); i++) {
+      const wp1 = PLASMA_WAKE[i];
+      const wp2 = PLASMA_WAKE[i + 1];
+      const dx = wp2.x - wp1.x;
+      const dy = wp2.y - wp1.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Only connect points that are relatively close
+      if (dist < CELL_SIZE * 3) {
+        const avgLife = (1 - wp1.age + 1 - wp2.age) / 2;
+        const avgIntensity = (wp1.intensity + wp2.intensity) / 2;
+
+        // Gradient connection line
+        const grad = ctx.createLinearGradient(wp1.x, wp1.y, wp2.x, wp2.y);
+        grad.addColorStop(0, `rgba(0, 255, 204, ${avgLife * avgIntensity * 0.25})`);
+        grad.addColorStop(0.5, `rgba(136, 0, 255, ${avgLife * avgIntensity * 0.35})`);
+        grad.addColorStop(1, `rgba(255, 0, 136, ${avgLife * avgIntensity * 0.25})`);
+
+        ctx.strokeStyle = grad;
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.moveTo(wp1.x, wp1.y);
+        // Curved path with slight wave
+        const midX = (wp1.x + wp2.x) / 2 + Math.sin(now * 0.005 + i) * 4;
+        const midY = (wp1.y + wp2.y) / 2 + Math.cos(now * 0.005 + i) * 4;
+        ctx.quadraticCurveTo(midX, midY, wp2.x, wp2.y);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
 
   // TEMPORAL ECHO RENDERING - Draw ghostly afterimages of the snake
   for (let echoIdx = TEMPORAL_ECHOES.length - 1; echoIdx >= 0; echoIdx--) {
