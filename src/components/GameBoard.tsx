@@ -22,37 +22,162 @@ const CELL_SIZE = 20;
 
 const GRID_SIZE = 20;
 
+// Color palette matching SnakeScene
+const COLORS = {
+  bgDark: '#0a0a1a',
+  gridLine: '#2a2a4e',
+  snakeHead: '#00ff88',
+  snakeBody: '#00cc66',
+  snakeTail: '#009944',
+  snakeEye: '#ffffff',
+  snakePupil: '#000000',
+  food: '#ff3366',
+  foodGlow: '#ff6699',
+  gameOverOverlay: 'rgba(0, 0, 0, 0.6)',
+};
+
+function lerpColor(color1: string, color2: string, t: number): string {
+  const c1 = parseInt(color1.slice(1), 16);
+  const c2 = parseInt(color2.slice(1), 16);
+
+  const r1 = (c1 >> 16) & 0xff;
+  const g1 = (c1 >> 8) & 0xff;
+  const b1 = c1 & 0xff;
+
+  const r2 = (c2 >> 16) & 0xff;
+  const g2 = (c2 >> 8) & 0xff;
+  const b2 = c2 & 0xff;
+
+  const r = Math.round(r1 + (r2 - r1) * t);
+  const g = Math.round(g1 + (g2 - g1) * t);
+  const b = Math.round(b1 + (b2 - b1) * t);
+
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
 function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  // Use logical size for all drawing (hi-res scale handles actual pixels)
   const width = GRID_SIZE * CELL_SIZE;
   const height = GRID_SIZE * CELL_SIZE;
 
   ctx.save();
   ctx.scale(canvas.width / width, canvas.height / height);
 
-  ctx.fillStyle = '#ffffff';
+  // Dark background
+  ctx.fillStyle = COLORS.bgDark;
   ctx.fillRect(0, 0, width, height);
 
-  ctx.fillStyle = '#000000';
-  gameState.snake.forEach((segment) => {
-    ctx.fillRect(
-      segment.x * CELL_SIZE,
-      segment.y * CELL_SIZE,
-      CELL_SIZE - 1,
-      CELL_SIZE - 1
-    );
-  });
+  // Subtle grid lines
+  ctx.strokeStyle = COLORS.gridLine;
+  ctx.globalAlpha = 0.3;
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= GRID_SIZE; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * CELL_SIZE, 0);
+    ctx.lineTo(i * CELL_SIZE, height);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, i * CELL_SIZE);
+    ctx.lineTo(width, i * CELL_SIZE);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 
-  ctx.fillStyle = '#ff0000';
-  ctx.fillRect(
-    gameState.food.x * CELL_SIZE,
-    gameState.food.y * CELL_SIZE,
-    CELL_SIZE - 1,
-    CELL_SIZE - 1
-  );
+  // Food with glow effect
+  const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
+  const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
+
+  // Outer glow
+  ctx.fillStyle = COLORS.foodGlow;
+  ctx.globalAlpha = 0.3;
+  ctx.beginPath();
+  ctx.arc(foodX, foodY, CELL_SIZE / 2 + 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Food core
+  ctx.fillStyle = COLORS.food;
+  ctx.beginPath();
+  ctx.arc(foodX, foodY, CELL_SIZE / 2 - 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Snake with gradient
+  const snake = gameState.snake;
+  const snakeLen = snake.length;
+
+  for (let i = snakeLen - 1; i >= 0; i--) {
+    const segment = snake[i];
+    const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2;
+    const radius = CELL_SIZE / 2 - 1;
+
+    const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
+    const color = lerpColor(COLORS.snakeTail, COLORS.snakeHead, t);
+
+    // Glow for head
+    if (i === 0) {
+      ctx.fillStyle = COLORS.snakeHead;
+      ctx.globalAlpha = 0.3;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius + 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes on head
+    if (i === 0) {
+      const nextSegment = snake[1];
+      let dx = 1, dy = 0;
+      if (nextSegment) {
+        dx = segment.x - nextSegment.x;
+        dy = segment.y - nextSegment.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len > 0) { dx /= len; dy /= len; }
+      }
+
+      const perpX = -dy;
+      const perpY = dx;
+      const eyeOffset = 4;
+      const eyeForward = 3;
+
+      // Left eye
+      const leftEyeX = centerX + perpX * eyeOffset + dx * eyeForward;
+      const leftEyeY = centerY + perpY * eyeOffset + dy * eyeForward;
+      ctx.fillStyle = COLORS.snakeEye;
+      ctx.beginPath();
+      ctx.arc(leftEyeX, leftEyeY, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = COLORS.snakePupil;
+      ctx.beginPath();
+      ctx.arc(leftEyeX + dx, leftEyeY + dy, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right eye
+      const rightEyeX = centerX - perpX * eyeOffset + dx * eyeForward;
+      const rightEyeY = centerY - perpY * eyeOffset + dy * eyeForward;
+      ctx.fillStyle = COLORS.snakeEye;
+      ctx.beginPath();
+      ctx.arc(rightEyeX, rightEyeY, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = COLORS.snakePupil;
+      ctx.beginPath();
+      ctx.arc(rightEyeX + dx, rightEyeY + dy, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Game over overlay
+  if (gameState.gameOver) {
+    ctx.fillStyle = COLORS.gameOverOverlay;
+    ctx.fillRect(0, 0, width, height);
+  }
 
   ctx.restore();
 }
@@ -99,7 +224,7 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
           canvas: canvas,
           width: gridSize * CELL_SIZE,
           height: gridSize * CELL_SIZE,
-          backgroundColor: '#ffffff',
+          backgroundColor: '#0a0a1a',
           scene: SnakeScene,
           pixelArt: false,
           scale: {
