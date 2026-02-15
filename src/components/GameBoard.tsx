@@ -41,28 +41,37 @@ const COLORS = {
   gameOverOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
-function lerpColor(color1: string, color2: string, t: number): string {
-  const c1 = parseInt(color1.slice(1), 16);
-  const c2 = parseInt(color2.slice(1), 16);
-
-  const r1 = (c1 >> 16) & 0xff;
-  const g1 = (c1 >> 8) & 0xff;
-  const b1 = c1 & 0xff;
-
-  const r2 = (c2 >> 16) & 0xff;
-  const g2 = (c2 >> 8) & 0xff;
-  const b2 = c2 & 0xff;
-
-  const r = Math.round(r1 + (r2 - r1) * t);
-  const g = Math.round(g1 + (g2 - g1) * t);
-  const b = Math.round(b1 + (b2 - b1) * t);
-
-  return `rgb(${r}, ${g}, ${b})`;
+function hslToRgb(h: number, s: number, l: number): string {
+  let r: number, g: number, b: number;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p: number, q: number, t: number): number => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
 }
+
+// Animation frame counter for rainbow effect
+let frameCount = 0;
 
 function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
+
+  frameCount++;
+  const hueOffset = (frameCount * 0.5) % 360;
 
   const width = GRID_SIZE * CELL_SIZE;
   const height = GRID_SIZE * CELL_SIZE;
@@ -139,20 +148,21 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  // Snake with enhanced effects
+  // Snake with rainbow effects
   const snake = gameState.snake;
   const snakeLen = snake.length;
 
-  // Draw trailing glow first
+  // Draw trailing rainbow glow first
   for (let i = snakeLen - 1; i >= 0; i--) {
     const segment = snake[i];
     const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
     const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2;
     const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
-    const glowAlpha = 0.15 * t;
+    const glowAlpha = 0.2 * t;
     const glowSize = (CELL_SIZE / 2 + 4) * (0.5 + t * 0.5);
 
-    ctx.fillStyle = COLORS.snakeGlow;
+    const segmentHue = (hueOffset + (i * 15)) % 360;
+    ctx.fillStyle = hslToRgb(segmentHue / 360, 0.9, 0.6);
     ctx.globalAlpha = glowAlpha;
     ctx.beginPath();
     ctx.arc(centerX, centerY, glowSize, 0, Math.PI * 2);
@@ -160,19 +170,22 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   }
   ctx.globalAlpha = 1;
 
-  // Draw snake segments
+  // Draw snake segments with rainbow gradient
   for (let i = snakeLen - 1; i >= 0; i--) {
     const segment = snake[i];
     const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
     const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2;
 
     const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
-    const color = lerpColor(COLORS.snakeTail, COLORS.snakeBody, t);
     const radius = (CELL_SIZE / 2 - 1) * (0.85 + t * 0.15);
 
     if (i === 0) {
+      // Dynamic head color
+      const headHue = (hueOffset + 120) % 360;
+      const headColor = hslToRgb(headHue / 360, 0.9, 0.55);
+
       // Head glow
-      ctx.fillStyle = COLORS.snakeHead;
+      ctx.fillStyle = headColor;
       ctx.globalAlpha = 0.4;
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius + 5, 0, Math.PI * 2);
@@ -180,13 +193,13 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
 
       // Head base
       ctx.globalAlpha = 1;
-      ctx.fillStyle = COLORS.snakeHead;
+      ctx.fillStyle = headColor;
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius + 1, 0, Math.PI * 2);
       ctx.fill();
 
       // Head highlight
-      ctx.fillStyle = COLORS.snakeHighlight;
+      ctx.fillStyle = '#ffffff';
       ctx.globalAlpha = 0.5;
       ctx.beginPath();
       ctx.arc(centerX - 2, centerY - 2, radius * 0.4, 0, Math.PI * 2);
@@ -230,15 +243,27 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.arc(rightEyeX + dx, rightEyeY + dy, 1.5, 0, Math.PI * 2);
       ctx.fill();
     } else {
+      // Body segment with rainbow color
+      const segmentHue = (hueOffset + (i * 15)) % 360;
+      const segmentColor = hslToRgb(segmentHue / 360, 0.8, 0.5);
+
+      // Body glow
+      ctx.fillStyle = segmentColor;
+      ctx.globalAlpha = 0.3;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius + 2, 0, Math.PI * 2);
+      ctx.fill();
+
       // Body segment
-      ctx.fillStyle = color;
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = segmentColor;
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
       ctx.fill();
 
       // Highlight on segment
-      ctx.fillStyle = COLORS.snakeHighlight;
-      ctx.globalAlpha = 0.2 * t;
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.25 * t;
       ctx.beginPath();
       ctx.arc(centerX - 1, centerY - 1, radius * 0.3, 0, Math.PI * 2);
       ctx.fill();

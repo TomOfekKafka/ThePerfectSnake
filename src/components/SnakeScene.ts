@@ -29,10 +29,22 @@ interface FoodParticle {
   size: number;
 }
 
+interface SnakeTrailParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  size: number;
+  hue: number;
+}
+
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 const NUM_STARS = 30;
 const MAX_FOOD_PARTICLES = 8;
+const MAX_TRAIL_PARTICLES = 40;
 
 // Color palette - enhanced neon cyberpunk theme
 const COLORS = {
@@ -64,7 +76,10 @@ export class SnakeScene extends Phaser.Scene {
   private frameCount = 0;
   private stars: Star[] = [];
   private foodParticles: FoodParticle[] = [];
+  private trailParticles: SnakeTrailParticle[] = [];
   private gameOverAlpha = 0;
+  private lastHeadPos: Position | null = null;
+  private hueOffset = 0;
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -121,6 +136,36 @@ export class SnakeScene extends Phaser.Scene {
         this.foodParticles.splice(i, 1);
       }
     }
+    // Update trail particles
+    for (let i = this.trailParticles.length - 1; i >= 0; i--) {
+      const p = this.trailParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 1 / p.maxLife;
+      if (p.life <= 0) {
+        this.trailParticles.splice(i, 1);
+      }
+    }
+  }
+
+  private spawnTrailParticles(x: number, y: number): void {
+    if (this.trailParticles.length >= MAX_TRAIL_PARTICLES) return;
+    // Spawn 2-3 particles per movement
+    const count = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.2 + Math.random() * 0.4;
+      this.trailParticles.push({
+        x: x + (Math.random() - 0.5) * 8,
+        y: y + (Math.random() - 0.5) * 8,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        maxLife: 25 + Math.random() * 15,
+        size: 2 + Math.random() * 3,
+        hue: this.hueOffset + Math.random() * 30,
+      });
+    }
   }
 
   updateGameState(state: GameState): void {
@@ -133,7 +178,19 @@ export class SnakeScene extends Phaser.Scene {
 
   update(): void {
     this.frameCount++;
+    this.hueOffset = (this.hueOffset + 0.5) % 360;
     this.updateParticles();
+
+    // Spawn trail particles when snake moves
+    if (this.currentState && this.currentState.snake.length > 0) {
+      const head = this.currentState.snake[0];
+      const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+      const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+      if (this.lastHeadPos && (this.lastHeadPos.x !== head.x || this.lastHeadPos.y !== head.y)) {
+        this.spawnTrailParticles(headX, headY);
+      }
+      this.lastHeadPos = { x: head.x, y: head.y };
+    }
 
     // Always redraw for animations (stars, particles, pulsing)
     const g = this.graphics;
@@ -159,6 +216,9 @@ export class SnakeScene extends Phaser.Scene {
 
     if (!this.currentState) return;
 
+    // Draw trail particles (behind everything else)
+    this.drawTrailParticles(g);
+
     // Food with enhanced glow and particles
     this.drawFood(g);
 
@@ -180,6 +240,40 @@ export class SnakeScene extends Phaser.Scene {
       g.fillStyle(COLORS.star, alpha);
       g.fillCircle(star.x, star.y, star.size);
     }
+  }
+
+  private drawTrailParticles(g: Phaser.GameObjects.Graphics): void {
+    for (const p of this.trailParticles) {
+      const color = this.hslToRgb(p.hue / 360, 0.8, 0.6);
+      // Outer glow
+      g.fillStyle(color, p.life * 0.3);
+      g.fillCircle(p.x, p.y, p.size * 1.5 * p.life);
+      // Core
+      g.fillStyle(color, p.life * 0.7);
+      g.fillCircle(p.x, p.y, p.size * p.life);
+    }
+  }
+
+  private hslToRgb(h: number, s: number, l: number): number {
+    let r: number, g: number, b: number;
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const hue2rgb = (p: number, q: number, t: number): number => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1 / 3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1 / 3);
+    }
+    return (Math.round(r * 255) << 16) | (Math.round(g * 255) << 8) | Math.round(b * 255);
   }
 
   private drawGrid(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
@@ -236,57 +330,65 @@ export class SnakeScene extends Phaser.Scene {
     const snake = this.currentState.snake;
     const snakeLen = snake.length;
 
-    // Draw trailing glow first (behind snake)
+    // Draw trailing glow first (behind snake) with rainbow colors
     for (let i = snakeLen - 1; i >= 0; i--) {
       const segment = snake[i];
       const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
       const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2;
       const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
-      const glowAlpha = 0.15 * t;
+      const glowAlpha = 0.2 * t;
       const glowSize = (CELL_SIZE / 2 + 4) * (0.5 + t * 0.5);
 
-      g.fillStyle(COLORS.snakeGlow, glowAlpha);
+      // Rainbow glow matching segment color
+      const segmentHue = (this.hueOffset + (i * 15)) % 360;
+      const glowColor = this.hslToRgb(segmentHue / 360, 0.9, 0.6);
+      g.fillStyle(glowColor, glowAlpha);
       g.fillCircle(centerX, centerY, glowSize);
     }
 
-    // Draw snake segments from tail to head
+    // Draw snake segments from tail to head with rainbow gradient
     for (let i = snakeLen - 1; i >= 0; i--) {
       const segment = snake[i];
       const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
       const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2;
 
       const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
-      const baseColor = this.lerpColor(COLORS.snakeTail, COLORS.snakeBody, t);
       const radius = (CELL_SIZE / 2 - 1) * (0.85 + t * 0.15);
 
       // Head has special treatment
       if (i === 0) {
+        // Dynamic head color cycling through hues
+        const headHue = (this.hueOffset + 120) % 360;
+        const headColor = this.hslToRgb(headHue / 360, 0.9, 0.55);
+
         // Head glow
-        g.fillStyle(COLORS.snakeHead, 0.4);
+        g.fillStyle(headColor, 0.4);
         g.fillCircle(centerX, centerY, radius + 5);
 
         // Head base
-        g.fillStyle(COLORS.snakeHead, 1);
+        g.fillStyle(headColor, 1);
         g.fillCircle(centerX, centerY, radius + 1);
 
         // Head highlight
-        g.fillStyle(COLORS.snakeHighlight, 0.5);
+        g.fillStyle(0xffffff, 0.5);
         g.fillCircle(centerX - 2, centerY - 2, radius * 0.4);
 
         this.drawSnakeHead(g, segment, snake[1]);
       } else {
+        // Body segment with rainbow gradient based on position
+        const segmentHue = (this.hueOffset + (i * 15)) % 360;
+        const segmentColor = this.hslToRgb(segmentHue / 360, 0.8, 0.5);
+
+        // Body segment glow
+        g.fillStyle(segmentColor, 0.3);
+        g.fillCircle(centerX, centerY, radius + 2);
+
         // Body segment
-        g.fillStyle(baseColor, 1);
+        g.fillStyle(segmentColor, 1);
         g.fillCircle(centerX, centerY, radius);
 
-        // Scale pattern (subtle darker circles)
-        if (i % 2 === 0) {
-          g.fillStyle(COLORS.snakeScale, 0.3);
-          g.fillCircle(centerX, centerY, radius * 0.5);
-        }
-
         // Highlight on each segment
-        g.fillStyle(COLORS.snakeHighlight, 0.2 * t);
+        g.fillStyle(0xffffff, 0.25 * t);
         g.fillCircle(centerX - 1, centerY - 1, radius * 0.3);
       }
     }
