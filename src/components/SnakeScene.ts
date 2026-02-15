@@ -40,11 +40,28 @@ interface SnakeTrailParticle {
   hue: number;
 }
 
+interface ShockWave {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  life: number;
+}
+
+interface LightningBolt {
+  points: { x: number; y: number }[];
+  life: number;
+  maxLife: number;
+  hue: number;
+}
+
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 const NUM_STARS = 30;
 const MAX_FOOD_PARTICLES = 8;
 const MAX_TRAIL_PARTICLES = 40;
+const MAX_SHOCKWAVES = 3;
+const MAX_LIGHTNING_BOLTS = 5;
 
 // Color palette - enhanced neon cyberpunk theme
 const COLORS = {
@@ -77,8 +94,11 @@ export class SnakeScene extends Phaser.Scene {
   private stars: Star[] = [];
   private foodParticles: FoodParticle[] = [];
   private trailParticles: SnakeTrailParticle[] = [];
+  private shockWaves: ShockWave[] = [];
+  private lightningBolts: LightningBolt[] = [];
   private gameOverAlpha = 0;
   private lastHeadPos: Position | null = null;
+  private lastSnakeLength = 0;
   private hueOffset = 0;
 
   constructor() {
@@ -146,6 +166,23 @@ export class SnakeScene extends Phaser.Scene {
         this.trailParticles.splice(i, 1);
       }
     }
+    // Update shockwaves
+    for (let i = this.shockWaves.length - 1; i >= 0; i--) {
+      const sw = this.shockWaves[i];
+      sw.radius += 3;
+      sw.life -= 0.04;
+      if (sw.life <= 0 || sw.radius >= sw.maxRadius) {
+        this.shockWaves.splice(i, 1);
+      }
+    }
+    // Update lightning bolts
+    for (let i = this.lightningBolts.length - 1; i >= 0; i--) {
+      const bolt = this.lightningBolts[i];
+      bolt.life -= 1 / bolt.maxLife;
+      if (bolt.life <= 0) {
+        this.lightningBolts.splice(i, 1);
+      }
+    }
   }
 
   private spawnTrailParticles(x: number, y: number): void {
@@ -169,11 +206,70 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   updateGameState(state: GameState): void {
+    // Detect food eaten - snake got longer
+    if (this.currentState && state.snake.length > this.lastSnakeLength) {
+      const head = state.snake[0];
+      const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+      const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+      this.spawnShockWave(headX, headY);
+      this.spawnLightningBurst(headX, headY);
+    }
+    this.lastSnakeLength = state.snake.length;
+
     this.currentState = state;
     this.needsRedraw = true;
     if (!state.gameOver) {
       this.gameOverAlpha = 0;
     }
+  }
+
+  private spawnShockWave(x: number, y: number): void {
+    if (this.shockWaves.length >= MAX_SHOCKWAVES) {
+      this.shockWaves.shift();
+    }
+    this.shockWaves.push({
+      x,
+      y,
+      radius: 5,
+      maxRadius: CELL_SIZE * 3,
+      life: 1,
+    });
+  }
+
+  private spawnLightningBurst(x: number, y: number): void {
+    const numBolts = 3 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < numBolts; i++) {
+      if (this.lightningBolts.length >= MAX_LIGHTNING_BOLTS) {
+        this.lightningBolts.shift();
+      }
+      const angle = (Math.PI * 2 * i) / numBolts + Math.random() * 0.5;
+      const length = 30 + Math.random() * 40;
+      const endX = x + Math.cos(angle) * length;
+      const endY = y + Math.sin(angle) * length;
+      this.lightningBolts.push({
+        points: this.generateLightningPath(x, y, endX, endY),
+        life: 1,
+        maxLife: 15 + Math.random() * 10,
+        hue: this.hueOffset + Math.random() * 60,
+      });
+    }
+  }
+
+  private generateLightningPath(x1: number, y1: number, x2: number, y2: number): { x: number; y: number }[] {
+    const points: { x: number; y: number }[] = [{ x: x1, y: y1 }];
+    const segments = 4 + Math.floor(Math.random() * 3);
+    const dx = (x2 - x1) / segments;
+    const dy = (y2 - y1) / segments;
+
+    for (let i = 1; i < segments; i++) {
+      const jitter = 8;
+      points.push({
+        x: x1 + dx * i + (Math.random() - 0.5) * jitter,
+        y: y1 + dy * i + (Math.random() - 0.5) * jitter,
+      });
+    }
+    points.push({ x: x2, y: y2 });
+    return points;
   }
 
   update(): void {
@@ -219,11 +315,20 @@ export class SnakeScene extends Phaser.Scene {
     // Draw trail particles (behind everything else)
     this.drawTrailParticles(g);
 
-    // Food with enhanced glow and particles
+    // Draw shockwaves (behind food and snake)
+    this.drawShockWaves(g);
+
+    // Food with enhanced glow, particles and energy tendrils
     this.drawFood(g);
 
     // Snake with trail and scale effects
     this.drawSnake(g);
+
+    // Draw electric arcs between snake segments
+    this.drawSnakeElectricity(g);
+
+    // Draw lightning bolts (on top)
+    this.drawLightningBolts(g);
 
     // Game over overlay with animation
     if (this.currentState.gameOver) {
@@ -251,6 +356,81 @@ export class SnakeScene extends Phaser.Scene {
       // Core
       g.fillStyle(color, p.life * 0.7);
       g.fillCircle(p.x, p.y, p.size * p.life);
+    }
+  }
+
+  private drawShockWaves(g: Phaser.GameObjects.Graphics): void {
+    for (const sw of this.shockWaves) {
+      const alpha = sw.life * 0.6;
+      // Outer ring
+      g.lineStyle(3, 0xffffff, alpha * 0.3);
+      g.strokeCircle(sw.x, sw.y, sw.radius);
+      // Inner bright ring
+      g.lineStyle(2, 0x00ffff, alpha * 0.7);
+      g.strokeCircle(sw.x, sw.y, sw.radius * 0.8);
+      // Core flash
+      if (sw.life > 0.8) {
+        g.fillStyle(0xffffff, (sw.life - 0.8) * 3);
+        g.fillCircle(sw.x, sw.y, sw.radius * 0.3);
+      }
+    }
+  }
+
+  private drawLightningBolts(g: Phaser.GameObjects.Graphics): void {
+    for (const bolt of this.lightningBolts) {
+      const color = this.hslToRgb(bolt.hue / 360, 0.9, 0.7);
+      const alpha = bolt.life;
+
+      // Glow layer
+      g.lineStyle(4, color, alpha * 0.3);
+      this.drawLightningPath(g, bolt.points);
+
+      // Core layer
+      g.lineStyle(2, 0xffffff, alpha * 0.8);
+      this.drawLightningPath(g, bolt.points);
+    }
+  }
+
+  private drawLightningPath(g: Phaser.GameObjects.Graphics, points: { x: number; y: number }[]): void {
+    if (points.length < 2) return;
+    g.beginPath();
+    g.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      g.lineTo(points[i].x, points[i].y);
+    }
+    g.strokePath();
+  }
+
+  private drawSnakeElectricity(g: Phaser.GameObjects.Graphics): void {
+    if (!this.currentState) return;
+    const snake = this.currentState.snake;
+    if (snake.length < 2) return;
+
+    // Draw electric arcs between segments every few frames
+    if (this.frameCount % 3 !== 0) return;
+
+    for (let i = 0; i < snake.length - 1; i++) {
+      // Only draw arcs occasionally for visual interest
+      if (Math.random() > 0.4) continue;
+
+      const seg1 = snake[i];
+      const seg2 = snake[i + 1];
+      const x1 = seg1.x * CELL_SIZE + CELL_SIZE / 2;
+      const y1 = seg1.y * CELL_SIZE + CELL_SIZE / 2;
+      const x2 = seg2.x * CELL_SIZE + CELL_SIZE / 2;
+      const y2 = seg2.y * CELL_SIZE + CELL_SIZE / 2;
+
+      // Generate a mini lightning arc
+      const arcPoints = this.generateLightningPath(x1, y1, x2, y2);
+      const arcHue = (this.hueOffset + i * 15) % 360;
+      const arcColor = this.hslToRgb(arcHue / 360, 0.9, 0.7);
+
+      // Glow
+      g.lineStyle(3, arcColor, 0.4);
+      this.drawLightningPath(g, arcPoints);
+      // Core
+      g.lineStyle(1, 0xffffff, 0.8);
+      this.drawLightningPath(g, arcPoints);
     }
   }
 
@@ -311,6 +491,9 @@ export class SnakeScene extends Phaser.Scene {
       g.fillCircle(p.x, p.y, p.size * p.life);
     }
 
+    // Draw energy tendrils reaching toward snake head
+    this.drawEnergyTendrils(g, foodX, foodY);
+
     // Multi-layer glow
     g.fillStyle(COLORS.foodGlow, glowPulse * 0.3);
     g.fillCircle(foodX, foodY, (CELL_SIZE / 2 + 8) * pulseScale);
@@ -322,6 +505,62 @@ export class SnakeScene extends Phaser.Scene {
     // Bright core highlight
     g.fillStyle(COLORS.foodCore, 0.8);
     g.fillCircle(foodX - 2, foodY - 2, 3 * pulseScale);
+
+    // Inner plasma swirl
+    const swirlAngle = this.frameCount * 0.1;
+    for (let i = 0; i < 3; i++) {
+      const angle = swirlAngle + (i * Math.PI * 2) / 3;
+      const dist = 4 * pulseScale;
+      const swirlX = foodX + Math.cos(angle) * dist;
+      const swirlY = foodY + Math.sin(angle) * dist;
+      g.fillStyle(0xffffff, 0.6);
+      g.fillCircle(swirlX, swirlY, 1.5);
+    }
+  }
+
+  private drawEnergyTendrils(g: Phaser.GameObjects.Graphics, foodX: number, foodY: number): void {
+    if (!this.currentState || this.currentState.snake.length === 0) return;
+
+    const head = this.currentState.snake[0];
+    const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Calculate distance to snake head
+    const dx = headX - foodX;
+    const dy = headY - foodY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Only draw tendrils when snake is somewhat close
+    if (dist > CELL_SIZE * 6) return;
+
+    // Intensity increases as snake gets closer
+    const intensity = 1 - dist / (CELL_SIZE * 6);
+    const numTendrils = 2 + Math.floor(intensity * 2);
+
+    for (let i = 0; i < numTendrils; i++) {
+      // Tendril reaches partway toward the snake
+      const reach = 0.3 + intensity * 0.4;
+      const targetX = foodX + dx * reach;
+      const targetY = foodY + dy * reach;
+
+      // Add some wave offset for each tendril
+      const waveOffset = Math.sin(this.frameCount * 0.15 + i * 2) * 10;
+      const perpX = -dy / dist;
+      const perpY = dx / dist;
+      const wavyTargetX = targetX + perpX * waveOffset * (1 - reach);
+      const wavyTargetY = targetY + perpY * waveOffset * (1 - reach);
+
+      // Generate tendril path
+      const points = this.generateLightningPath(foodX, foodY, wavyTargetX, wavyTargetY);
+
+      // Draw tendril with glow
+      g.lineStyle(3, COLORS.foodGlow, intensity * 0.3);
+      this.drawLightningPath(g, points);
+      g.lineStyle(1.5, COLORS.food, intensity * 0.7);
+      this.drawLightningPath(g, points);
+      g.lineStyle(1, 0xffffff, intensity * 0.5);
+      this.drawLightningPath(g, points);
+    }
   }
 
   private drawSnake(g: Phaser.GameObjects.Graphics): void {
@@ -459,21 +698,5 @@ export class SnakeScene extends Phaser.Scene {
     g.fillCircle(rightEyeX, rightEyeY, eyeRadius);
     g.fillStyle(COLORS.snakePupil, 1);
     g.fillCircle(rightEyeX + dx * 1, rightEyeY + dy * 1, pupilRadius);
-  }
-
-  private lerpColor(color1: number, color2: number, t: number): number {
-    const r1 = (color1 >> 16) & 0xff;
-    const g1 = (color1 >> 8) & 0xff;
-    const b1 = color1 & 0xff;
-
-    const r2 = (color2 >> 16) & 0xff;
-    const g2 = (color2 >> 8) & 0xff;
-    const b2 = color2 & 0xff;
-
-    const r = Math.round(r1 + (r2 - r1) * t);
-    const g = Math.round(g1 + (g2 - g1) * t);
-    const b = Math.round(b1 + (b2 - b1) * t);
-
-    return (r << 16) | (g << 8) | b;
   }
 }
