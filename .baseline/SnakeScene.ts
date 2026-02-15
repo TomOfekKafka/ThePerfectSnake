@@ -46,8 +46,8 @@ export class SnakeScene extends Phaser.Scene {
     g.fillStyle(0xffffff, 1);
     g.fillRect(0, 0, this.scale.width, this.scale.height);
 
-    // Black snake
-    g.fillStyle(0x000000, 1);
+    // Snake
+    g.fillStyle(0x5BC2E7, 1);
     for (const segment of this.currentState.snake) {
       g.fillRect(
         segment.x * CELL_SIZE,
