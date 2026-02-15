@@ -20,6 +20,7 @@ export interface GameStateMessage {
 export interface GameReadyMessage {
   type: 'GAME_READY';
   timestamp: number;
+  embedded: boolean;
 }
 
 export interface DirectionCommand {
@@ -114,7 +115,8 @@ export function usePostMessage({
 
     const message: GameReadyMessage = {
       type: 'GAME_READY',
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      embedded: isEmbedded
     };
 
     window.parent.postMessage(message, '*');
