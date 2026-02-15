@@ -11,8 +11,20 @@ interface GameState {
   gameOver: boolean;
 }
 
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: number;
+  size: number;
+}
+
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
+const MAX_PARTICLES = 50;
 
 // Color palette - neon cyberpunk theme
 const COLORS = {
@@ -26,6 +38,7 @@ const COLORS = {
   food: 0xff3366,
   foodGlow: 0xff6699,
   gameOverTint: 0xff0000,
+  particleColors: [0xff3366, 0xff6699, 0xffcc00, 0xff9933, 0xffffff],
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -33,6 +46,9 @@ export class SnakeScene extends Phaser.Scene {
   private currentState: GameState | null = null;
   private needsRedraw = false;
   private frameCount = 0;
+  private particles: Particle[] = [];
+  private lastFoodPos: Position | null = null;
+  private lastSnakeLength = 0;
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -47,15 +63,76 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   updateGameState(state: GameState): void {
+    // Detect food eaten (snake grew)
+    if (this.currentState && state.snake.length > this.lastSnakeLength && this.lastFoodPos) {
+      this.spawnParticles(this.lastFoodPos.x, this.lastFoodPos.y);
+    }
+
+    this.lastFoodPos = { x: state.food.x, y: state.food.y };
+    this.lastSnakeLength = state.snake.length;
     this.currentState = state;
     this.needsRedraw = true;
+  }
+
+  private spawnParticles(gridX: number, gridY: number): void {
+    const centerX = gridX * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = gridY * CELL_SIZE + CELL_SIZE / 2;
+    const particleCount = 12;
+
+    for (let i = 0; i < particleCount; i++) {
+      if (this.particles.length >= MAX_PARTICLES) {
+        this.particles.shift();
+      }
+
+      const angle = (i / particleCount) * Math.PI * 2 + Math.random() * 0.5;
+      const speed = 1.5 + Math.random() * 2;
+      const color = COLORS.particleColors[Math.floor(Math.random() * COLORS.particleColors.length)];
+
+      this.particles.push({
+        x: centerX,
+        y: centerY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 30,
+        maxLife: 30,
+        color,
+        size: 2 + Math.random() * 3,
+      });
+    }
+  }
+
+  private updateParticles(): void {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.08; // gravity
+      p.vx *= 0.98; // friction
+      p.life--;
+
+      if (p.life <= 0) {
+        this.particles.splice(i, 1);
+      }
+    }
+  }
+
+  private drawParticles(g: Phaser.GameObjects.Graphics): void {
+    for (const p of this.particles) {
+      const alpha = p.life / p.maxLife;
+      const size = p.size * alpha;
+      g.fillStyle(p.color, alpha * 0.9);
+      g.fillCircle(p.x, p.y, size);
+    }
   }
 
   update(): void {
     this.frameCount++;
 
-    // Animate food pulse every frame
-    if (this.currentState) {
+    // Update particles
+    this.updateParticles();
+
+    // Animate food pulse every frame or if particles exist
+    if (this.currentState || this.particles.length > 0) {
       this.needsRedraw = true;
     }
 
@@ -157,6 +234,9 @@ export class SnakeScene extends Phaser.Scene {
         g.fillRoundedRect(x + offset, y + offset, size, size, 4);
       }
     }
+
+    // Draw particles on top
+    this.drawParticles(g);
   }
 
   private lerpColor(color1: number, color2: number, t: number): number {
