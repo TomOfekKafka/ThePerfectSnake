@@ -61,12 +61,29 @@ interface Lightning {
   color: number;
 }
 
+interface DeathEmber {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  rotation: number;
+  rotationSpeed: number;
+  size: number;
+  life: number;
+  maxLife: number;
+  color: number;
+  glowColor: number;
+  delay: number;
+}
+
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 const MAX_PARTICLES = 50;
 const NUM_STARS = 40;
 const MAX_TRAIL_SEGMENTS = 15;
 const NUM_NEBULAS = 4;
+const MAX_DEATH_EMBERS = 100;
+const DEATH_ANIMATION_DURATION = 90;
 
 // Color palette - cosmic neon theme with plasma effects
 const COLORS = {
@@ -89,6 +106,8 @@ const COLORS = {
   particleColors: [0xff3366, 0xff6699, 0xffcc00, 0x00ffcc, 0xffffff],
   nebulaColors: [0x4400aa, 0x0044aa, 0x880066, 0x006688],
   lightning: 0xaaffff,
+  deathEmberColors: [0x00ffcc, 0x00dd99, 0x00aa66, 0x88ffff, 0x00ffaa],
+  deathGlowColors: [0x00ffcc, 0x00ffff, 0x00ff88],
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -108,6 +127,9 @@ export class SnakeScene extends Phaser.Scene {
   private lightnings: Lightning[] = [];
   private screenShake = 0;
   private lastDirection: { x: number; y: number } = { x: 1, y: 0 };
+  private deathEmbers: DeathEmber[] = [];
+  private deathAnimationFrame = 0;
+  private snakeSnapshot: Position[] = [];
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -160,7 +182,7 @@ export class SnakeScene extends Phaser.Scene {
       this.spawnParticles(this.lastFoodPos.x, this.lastFoodPos.y);
     }
 
-    // Detect game over for shockwave and screen shake
+    // Detect game over for shockwave, screen shake, and death disintegration
     if (state.gameOver && !this.wasGameOver && state.snake.length > 0) {
       const head = state.snake[0];
       this.shockwave = {
@@ -171,8 +193,18 @@ export class SnakeScene extends Phaser.Scene {
         life: 40,
       };
       this.screenShake = 15;
+      this.spawnDeathEmbers(state.snake);
+      this.snakeSnapshot = state.snake.map(s => ({ x: s.x, y: s.y }));
+      this.deathAnimationFrame = 0;
     }
     this.wasGameOver = state.gameOver;
+
+    // Reset death animation when game restarts
+    if (!state.gameOver && this.deathEmbers.length > 0) {
+      this.deathEmbers = [];
+      this.snakeSnapshot = [];
+      this.deathAnimationFrame = 0;
+    }
 
     // Track movement direction for speed lines
     if (state.snake.length > 0 && this.lastHeadPos) {
@@ -502,6 +534,155 @@ export class SnakeScene extends Phaser.Scene {
     }
   }
 
+  private spawnDeathEmbers(snake: Position[]): void {
+    this.deathEmbers = [];
+    const embersPerSegment = Math.min(4, Math.ceil(MAX_DEATH_EMBERS / Math.max(snake.length, 1)));
+
+    for (let i = 0; i < snake.length; i++) {
+      const segment = snake[i];
+      const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
+      const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2;
+      const isHead = i === 0;
+      const progress = snake.length > 1 ? i / (snake.length - 1) : 0;
+
+      for (let j = 0; j < embersPerSegment; j++) {
+        if (this.deathEmbers.length >= MAX_DEATH_EMBERS) break;
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.5 + Math.random() * 1.5;
+        const colorIndex = Math.floor(Math.random() * COLORS.deathEmberColors.length);
+
+        this.deathEmbers.push({
+          x: centerX + (Math.random() - 0.5) * CELL_SIZE * 0.6,
+          y: centerY + (Math.random() - 0.5) * CELL_SIZE * 0.6,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 0.5,
+          rotation: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.2,
+          size: isHead ? 4 + Math.random() * 3 : 3 + Math.random() * 2 * (1 - progress * 0.5),
+          life: DEATH_ANIMATION_DURATION,
+          maxLife: DEATH_ANIMATION_DURATION,
+          color: COLORS.deathEmberColors[colorIndex],
+          glowColor: COLORS.deathGlowColors[colorIndex % COLORS.deathGlowColors.length],
+          delay: i * 3 + Math.random() * 5,
+        });
+      }
+    }
+  }
+
+  private updateDeathEmbers(): void {
+    for (let i = this.deathEmbers.length - 1; i >= 0; i--) {
+      const ember = this.deathEmbers[i];
+
+      if (ember.delay > 0) {
+        ember.delay--;
+        continue;
+      }
+
+      ember.x += ember.vx;
+      ember.y += ember.vy;
+      ember.vy -= 0.02;
+      ember.vx *= 0.99;
+      ember.rotation += ember.rotationSpeed;
+      ember.life--;
+
+      if (ember.life <= 0) {
+        this.deathEmbers.splice(i, 1);
+      }
+    }
+
+    if (this.deathAnimationFrame < DEATH_ANIMATION_DURATION) {
+      this.deathAnimationFrame++;
+    }
+  }
+
+  private drawDeathEmbers(g: Phaser.GameObjects.Graphics): void {
+    for (const ember of this.deathEmbers) {
+      if (ember.delay > 0) continue;
+
+      const lifeRatio = ember.life / ember.maxLife;
+      const alpha = lifeRatio * 0.9;
+      const glowAlpha = lifeRatio * 0.4;
+      const size = ember.size * (0.5 + lifeRatio * 0.5);
+
+      g.fillStyle(ember.glowColor, glowAlpha);
+      g.fillCircle(ember.x, ember.y, size + 4);
+
+      g.fillStyle(ember.color, alpha);
+      g.save();
+
+      const points = this.getEmberPoints(ember.x, ember.y, size, ember.rotation);
+      g.fillPoints(points, true);
+
+      g.fillStyle(0xffffff, alpha * 0.6);
+      g.fillCircle(ember.x, ember.y, size * 0.3);
+
+      g.restore();
+    }
+  }
+
+  private getEmberPoints(cx: number, cy: number, size: number, rotation: number): { x: number; y: number }[] {
+    const points: { x: number; y: number }[] = [];
+    const numPoints = 4;
+    for (let i = 0; i < numPoints; i++) {
+      const angle = (i / numPoints) * Math.PI * 2 + rotation;
+      const radius = i % 2 === 0 ? size : size * 0.5;
+      points.push({
+        x: cx + Math.cos(angle) * radius,
+        y: cy + Math.sin(angle) * radius,
+      });
+    }
+    return points;
+  }
+
+  private drawDisintegratingSnake(g: Phaser.GameObjects.Graphics): void {
+    if (this.snakeSnapshot.length === 0 || this.deathAnimationFrame >= DEATH_ANIMATION_DURATION) return;
+
+    const fadeProgress = this.deathAnimationFrame / DEATH_ANIMATION_DURATION;
+
+    for (let i = this.snakeSnapshot.length - 1; i >= 0; i--) {
+      const segmentDelay = i * 3;
+      const segmentProgress = Math.max(0, (this.deathAnimationFrame - segmentDelay) / (DEATH_ANIMATION_DURATION - segmentDelay));
+
+      if (segmentProgress >= 1) continue;
+
+      const segment = this.snakeSnapshot[i];
+      const isHead = i === 0;
+      const progress = this.snakeSnapshot.length > 1 ? i / (this.snakeSnapshot.length - 1) : 0;
+
+      const x = segment.x * CELL_SIZE;
+      const y = segment.y * CELL_SIZE;
+      const centerX = x + CELL_SIZE / 2;
+      const centerY = y + CELL_SIZE / 2;
+
+      const dissolveAlpha = 1 - segmentProgress;
+      const jitter = segmentProgress * 3;
+      const jitterX = (Math.random() - 0.5) * jitter;
+      const jitterY = (Math.random() - 0.5) * jitter;
+
+      const color = isHead
+        ? COLORS.snakeHead
+        : this.lerpColor(COLORS.snakeBody, COLORS.snakeTail, progress);
+
+      if (dissolveAlpha > 0.3) {
+        g.fillStyle(COLORS.snakeGlow, 0.2 * dissolveAlpha * (1 - fadeProgress));
+        g.fillCircle(centerX + jitterX, centerY + jitterY, CELL_SIZE / 2 + 6);
+      }
+
+      if (isHead) {
+        g.fillStyle(color, dissolveAlpha);
+        g.fillRoundedRect(x + 1 + jitterX, y + 1 + jitterY, CELL_SIZE - 2, CELL_SIZE - 2, 6);
+      } else {
+        const sizeFactor = 1 - progress * 0.2;
+        const size = (CELL_SIZE - 2) * sizeFactor;
+        const offset = (CELL_SIZE - size) / 2;
+
+        g.fillStyle(color, dissolveAlpha);
+        g.fillRoundedRect(x + offset + jitterX, y + offset + jitterY, size, size, 4);
+      }
+    }
+  }
+
   private drawShockwave(g: Phaser.GameObjects.Graphics): void {
     if (!this.shockwave) return;
     const sw = this.shockwave;
@@ -525,6 +706,7 @@ export class SnakeScene extends Phaser.Scene {
     this.updateTrail();
     this.updateShockwave();
     this.updateLightnings();
+    this.updateDeathEmbers();
 
     // Update screen shake
     if (this.screenShake > 0) {
@@ -532,7 +714,7 @@ export class SnakeScene extends Phaser.Scene {
     }
 
     // Animate every frame for smooth effects
-    if (this.currentState || this.particles.length > 0 || this.shockwave || this.lightnings.length > 0) {
+    if (this.currentState || this.particles.length > 0 || this.shockwave || this.lightnings.length > 0 || this.deathEmbers.length > 0) {
       this.needsRedraw = true;
     }
 
@@ -595,10 +777,15 @@ export class SnakeScene extends Phaser.Scene {
     this.drawHexagonFood(g, foodX, foodY, baseRadius);
 
     // Draw snake with gradient from head to tail
-    const snake = this.currentState.snake;
-    const snakeLen = snake.length;
+    // During death animation, draw disintegrating snake instead
+    if (this.currentState.gameOver && this.deathEmbers.length > 0) {
+      this.drawDisintegratingSnake(g);
+      this.drawDeathEmbers(g);
+    } else {
+      const snake = this.currentState.snake;
+      const snakeLen = snake.length;
 
-    for (let i = snakeLen - 1; i >= 0; i--) {
+      for (let i = snakeLen - 1; i >= 0; i--) {
       const segment = snake[i];
       const isHead = i === 0;
       const progress = snakeLen > 1 ? i / (snakeLen - 1) : 0;
@@ -672,6 +859,7 @@ export class SnakeScene extends Phaser.Scene {
         g.fillStyle(color, 1);
         g.fillRoundedRect(x + offset, y + offset, size, size, 4);
       }
+    }
     }
 
     // Draw lightning effects between snake segments
