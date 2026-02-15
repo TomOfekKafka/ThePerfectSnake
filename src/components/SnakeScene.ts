@@ -45,29 +45,50 @@ interface Shockwave {
   life: number;
 }
 
+interface Nebula {
+  x: number;
+  y: number;
+  radius: number;
+  color: number;
+  phase: number;
+  speed: number;
+}
+
+interface Lightning {
+  points: { x: number; y: number }[];
+  life: number;
+  maxLife: number;
+  color: number;
+}
+
 const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 const MAX_PARTICLES = 50;
 const NUM_STARS = 40;
 const MAX_TRAIL_SEGMENTS = 15;
+const NUM_NEBULAS = 4;
 
-// Color palette - cosmic neon theme
+// Color palette - cosmic neon theme with plasma effects
 const COLORS = {
-  bgDark: 0x050510,
+  bgDark: 0x030308,
   bgLight: 0x0a0a20,
   gridLine: 0x1a1a3a,
   snakeHead: 0x00ffcc,
   snakeBody: 0x00dd99,
   snakeTail: 0x00aa66,
   snakeGlow: 0x00ffcc,
+  snakeElectric: 0x88ffff,
   trailColors: [0x00ffcc, 0x00ddff, 0x8866ff, 0xff00ff],
   food: 0xff2266,
   foodGlow: 0xff66aa,
   foodRing: 0xffaa00,
+  foodPlasma: 0xff88cc,
   star: 0xffffff,
   gameOverTint: 0xff0000,
   shockwave: 0xff4444,
   particleColors: [0xff3366, 0xff6699, 0xffcc00, 0x00ffcc, 0xffffff],
+  nebulaColors: [0x4400aa, 0x0044aa, 0x880066, 0x006688],
+  lightning: 0xaaffff,
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -83,6 +104,10 @@ export class SnakeScene extends Phaser.Scene {
   private lastHeadPos: Position | null = null;
   private shockwave: Shockwave | null = null;
   private wasGameOver = false;
+  private nebulas: Nebula[] = [];
+  private lightnings: Lightning[] = [];
+  private screenShake = 0;
+  private lastDirection: { x: number; y: number } = { x: 1, y: 0 };
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -91,6 +116,7 @@ export class SnakeScene extends Phaser.Scene {
   create(): void {
     this.graphics = this.add.graphics();
     this.initStars();
+    this.initNebulas();
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -112,13 +138,29 @@ export class SnakeScene extends Phaser.Scene {
     }
   }
 
+  private initNebulas(): void {
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+    this.nebulas = [];
+    for (let i = 0; i < NUM_NEBULAS; i++) {
+      this.nebulas.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: 40 + Math.random() * 60,
+        color: COLORS.nebulaColors[i % COLORS.nebulaColors.length],
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.005 + Math.random() * 0.01,
+      });
+    }
+  }
+
   updateGameState(state: GameState): void {
     // Detect food eaten (snake grew)
     if (this.currentState && state.snake.length > this.lastSnakeLength && this.lastFoodPos) {
       this.spawnParticles(this.lastFoodPos.x, this.lastFoodPos.y);
     }
 
-    // Detect game over for shockwave
+    // Detect game over for shockwave and screen shake
     if (state.gameOver && !this.wasGameOver && state.snake.length > 0) {
       const head = state.snake[0];
       this.shockwave = {
@@ -128,8 +170,19 @@ export class SnakeScene extends Phaser.Scene {
         maxRadius: GRID_SIZE * CELL_SIZE * 0.7,
         life: 40,
       };
+      this.screenShake = 15;
     }
     this.wasGameOver = state.gameOver;
+
+    // Track movement direction for speed lines
+    if (state.snake.length > 0 && this.lastHeadPos) {
+      const head = state.snake[0];
+      const dx = head.x - this.lastHeadPos.x;
+      const dy = head.y - this.lastHeadPos.y;
+      if (dx !== 0 || dy !== 0) {
+        this.lastDirection = { x: dx, y: dy };
+      }
+    }
 
     // Update trail with head position
     if (state.snake.length > 0) {
@@ -218,6 +271,124 @@ export class SnakeScene extends Phaser.Scene {
     }
   }
 
+  private drawNebulas(g: Phaser.GameObjects.Graphics): void {
+    for (const nebula of this.nebulas) {
+      const breathe = Math.sin(this.frameCount * nebula.speed + nebula.phase) * 0.2 + 0.8;
+      const radius = nebula.radius * breathe;
+
+      // Draw multiple soft layers for nebula cloud effect
+      for (let layer = 3; layer >= 1; layer--) {
+        const layerRadius = radius * (layer / 3);
+        const alpha = 0.03 / layer;
+        g.fillStyle(nebula.color, alpha);
+        g.fillCircle(nebula.x, nebula.y, layerRadius);
+      }
+    }
+  }
+
+  private generateLightning(startX: number, startY: number, endX: number, endY: number): Lightning {
+    const points: { x: number; y: number }[] = [{ x: startX, y: startY }];
+    const segments = 4;
+    const dx = (endX - startX) / segments;
+    const dy = (endY - startY) / segments;
+
+    for (let i = 1; i < segments; i++) {
+      const jitter = 4;
+      points.push({
+        x: startX + dx * i + (Math.random() - 0.5) * jitter,
+        y: startY + dy * i + (Math.random() - 0.5) * jitter,
+      });
+    }
+    points.push({ x: endX, y: endY });
+
+    return {
+      points,
+      life: 8,
+      maxLife: 8,
+      color: COLORS.lightning,
+    };
+  }
+
+  private updateLightnings(): void {
+    for (let i = this.lightnings.length - 1; i >= 0; i--) {
+      this.lightnings[i].life--;
+      if (this.lightnings[i].life <= 0) {
+        this.lightnings.splice(i, 1);
+      }
+    }
+
+    // Spawn new lightning between snake segments occasionally
+    if (this.currentState && !this.currentState.gameOver && this.currentState.snake.length > 2) {
+      if (this.frameCount % 6 === 0) {
+        const snake = this.currentState.snake;
+        const idx = Math.floor(Math.random() * (snake.length - 1));
+        const seg1 = snake[idx];
+        const seg2 = snake[idx + 1];
+        const x1 = seg1.x * CELL_SIZE + CELL_SIZE / 2;
+        const y1 = seg1.y * CELL_SIZE + CELL_SIZE / 2;
+        const x2 = seg2.x * CELL_SIZE + CELL_SIZE / 2;
+        const y2 = seg2.y * CELL_SIZE + CELL_SIZE / 2;
+        this.lightnings.push(this.generateLightning(x1, y1, x2, y2));
+      }
+    }
+  }
+
+  private drawLightnings(g: Phaser.GameObjects.Graphics): void {
+    for (const lightning of this.lightnings) {
+      const alpha = (lightning.life / lightning.maxLife) * 0.8;
+
+      // Outer glow
+      g.lineStyle(3, lightning.color, alpha * 0.3);
+      g.beginPath();
+      g.moveTo(lightning.points[0].x, lightning.points[0].y);
+      for (let i = 1; i < lightning.points.length; i++) {
+        g.lineTo(lightning.points[i].x, lightning.points[i].y);
+      }
+      g.strokePath();
+
+      // Inner bright line
+      g.lineStyle(1, 0xffffff, alpha);
+      g.beginPath();
+      g.moveTo(lightning.points[0].x, lightning.points[0].y);
+      for (let i = 1; i < lightning.points.length; i++) {
+        g.lineTo(lightning.points[i].x, lightning.points[i].y);
+      }
+      g.strokePath();
+    }
+  }
+
+  private drawSpeedLines(g: Phaser.GameObjects.Graphics): void {
+    if (!this.currentState || this.currentState.gameOver || this.currentState.snake.length === 0) return;
+
+    const head = this.currentState.snake[0];
+    const centerX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Direction opposite to movement
+    const dirX = -this.lastDirection.x;
+    const dirY = -this.lastDirection.y;
+
+    // Draw speed lines behind the head
+    const numLines = 3;
+    for (let i = 0; i < numLines; i++) {
+      const offset = (i - (numLines - 1) / 2) * 5;
+      const perpX = -dirY;
+      const perpY = dirX;
+
+      const startX = centerX + dirX * 12 + perpX * offset;
+      const startY = centerY + dirY * 12 + perpY * offset;
+      const endX = startX + dirX * (8 + i * 2);
+      const endY = startY + dirY * (8 + i * 2);
+
+      const alpha = 0.3 - i * 0.08;
+      g.lineStyle(2 - i * 0.5, COLORS.snakeGlow, alpha);
+      g.beginPath();
+      g.moveTo(startX, startY);
+      g.lineTo(endX, endY);
+      g.strokePath();
+    }
+  }
+
   private drawTrail(g: Phaser.GameObjects.Graphics): void {
     if (this.trail.length < 2) return;
 
@@ -246,6 +417,28 @@ export class SnakeScene extends Phaser.Scene {
     const pulse = Math.sin(this.frameCount * 0.12) * 0.25 + 0.75;
     const rotation = this.frameCount * 0.03;
 
+    // Plasma tendrils extending outward
+    const numTendrils = 6;
+    for (let i = 0; i < numTendrils; i++) {
+      const angle = (i / numTendrils) * Math.PI * 2 + this.frameCount * 0.02;
+      const tendrilLength = baseRadius + 8 + Math.sin(this.frameCount * 0.15 + i) * 4;
+      const endX = foodX + Math.cos(angle) * tendrilLength;
+      const endY = foodY + Math.sin(angle) * tendrilLength;
+
+      const midX = foodX + Math.cos(angle) * (baseRadius + 2);
+      const midY = foodY + Math.sin(angle) * (baseRadius + 2);
+
+      g.lineStyle(2, COLORS.foodPlasma, 0.4 * pulse);
+      g.beginPath();
+      g.moveTo(midX, midY);
+      g.lineTo(endX, endY);
+      g.strokePath();
+
+      // Tendril tip glow
+      g.fillStyle(COLORS.foodGlow, 0.5 * pulse);
+      g.fillCircle(endX, endY, 2);
+    }
+
     // Outer energy rings
     for (let ring = 3; ring >= 1; ring--) {
       const ringRadius = baseRadius + ring * 4 + Math.sin(this.frameCount * 0.1 + ring) * 2;
@@ -254,7 +447,9 @@ export class SnakeScene extends Phaser.Scene {
       this.drawHexagon(g, foodX, foodY, ringRadius, rotation + ring * 0.3, true);
     }
 
-    // Glow layers
+    // Glow layers with extra outer bloom
+    g.fillStyle(COLORS.foodGlow, 0.08 * pulse);
+    g.fillCircle(foodX, foodY, baseRadius + 12);
     g.fillStyle(COLORS.foodGlow, 0.15 * pulse);
     g.fillCircle(foodX, foodY, baseRadius + 6);
     g.fillStyle(COLORS.foodGlow, 0.3 * pulse);
@@ -268,8 +463,10 @@ export class SnakeScene extends Phaser.Scene {
     g.fillStyle(0xffffff, 0.3);
     this.drawHexagon(g, foodX - 1, foodY - 1, baseRadius * 0.4, rotation, false);
 
-    // Center bright spot
-    g.fillStyle(0xffffff, 0.6 * pulse);
+    // Center bright plasma core
+    g.fillStyle(0xffffff, 0.8 * pulse);
+    g.fillCircle(foodX, foodY, 3);
+    g.fillStyle(COLORS.foodPlasma, 0.6);
     g.fillCircle(foodX, foodY, 2);
   }
 
@@ -327,9 +524,15 @@ export class SnakeScene extends Phaser.Scene {
     this.updateParticles();
     this.updateTrail();
     this.updateShockwave();
+    this.updateLightnings();
+
+    // Update screen shake
+    if (this.screenShake > 0) {
+      this.screenShake--;
+    }
 
     // Animate every frame for smooth effects
-    if (this.currentState || this.particles.length > 0 || this.shockwave) {
+    if (this.currentState || this.particles.length > 0 || this.shockwave || this.lightnings.length > 0) {
       this.needsRedraw = true;
     }
 
@@ -342,9 +545,25 @@ export class SnakeScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
 
+    // Apply screen shake offset
+    let shakeX = 0;
+    let shakeY = 0;
+    if (this.screenShake > 0) {
+      const intensity = this.screenShake * 0.5;
+      shakeX = (Math.random() - 0.5) * intensity;
+      shakeY = (Math.random() - 0.5) * intensity;
+    }
+
+    // Save and translate for screen shake
+    g.save();
+    g.translateCanvas(shakeX, shakeY);
+
     // Deep space background
     g.fillStyle(COLORS.bgDark, 1);
-    g.fillRect(0, 0, width, height);
+    g.fillRect(-10, -10, width + 20, height + 20);
+
+    // Animated nebula clouds (behind everything)
+    this.drawNebulas(g);
 
     // Animated starfield
     this.drawStars(g);
@@ -405,20 +624,39 @@ export class SnakeScene extends Phaser.Scene {
 
       // Draw segment with rounded corners
       if (isHead) {
+        // Chromatic aberration effect - offset colored layers
+        if (!this.currentState.gameOver) {
+          const aberrationOffset = 1.5;
+          // Red channel offset
+          g.fillStyle(0xff0066, 0.15);
+          g.fillRoundedRect(x + 1 - aberrationOffset, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 6);
+          // Blue channel offset
+          g.fillStyle(0x0066ff, 0.15);
+          g.fillRoundedRect(x + 1 + aberrationOffset, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 6);
+        }
+
         // Head is a rounded square with eyes
         g.fillStyle(color, 1);
         g.fillRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 6);
 
-        // Eyes with subtle animation
+        // Eyes with subtle animation - position based on movement direction
         const eyeBlink = Math.sin(this.frameCount * 0.02) > 0.95 ? 0.3 : 1;
         const eyeSize = 3;
-        const eyeOffset = 4;
+        const eyeSpacing = 4;
+        // Calculate eye position based on movement direction
+        const eyeDirX = this.lastDirection.x * 2;
+        const eyeDirY = this.lastDirection.y * 2;
+        const eyeCenterX = centerX + eyeDirX;
+        const eyeCenterY = centerY + eyeDirY;
+
         g.fillStyle(0xffffff, eyeBlink);
-        g.fillCircle(centerX - eyeOffset, centerY - 2, eyeSize);
-        g.fillCircle(centerX + eyeOffset, centerY - 2, eyeSize);
+        g.fillCircle(eyeCenterX - eyeSpacing, eyeCenterY, eyeSize);
+        g.fillCircle(eyeCenterX + eyeSpacing, eyeCenterY, eyeSize);
         g.fillStyle(0x000000, eyeBlink);
-        g.fillCircle(centerX - eyeOffset, centerY - 2, eyeSize / 2);
-        g.fillCircle(centerX + eyeOffset, centerY - 2, eyeSize / 2);
+        // Pupils look in movement direction
+        const pupilOffset = 0.8;
+        g.fillCircle(eyeCenterX - eyeSpacing + this.lastDirection.x * pupilOffset, eyeCenterY + this.lastDirection.y * pupilOffset, eyeSize / 2);
+        g.fillCircle(eyeCenterX + eyeSpacing + this.lastDirection.x * pupilOffset, eyeCenterY + this.lastDirection.y * pupilOffset, eyeSize / 2);
       } else {
         // Body segments with decreasing size toward tail and subtle glow
         const sizeFactor = 1 - progress * 0.2;
@@ -436,11 +674,20 @@ export class SnakeScene extends Phaser.Scene {
       }
     }
 
+    // Draw lightning effects between snake segments
+    this.drawLightnings(g);
+
+    // Draw speed lines behind the head
+    this.drawSpeedLines(g);
+
     // Draw shockwave effect on game over
     this.drawShockwave(g);
 
     // Draw particles on top
     this.drawParticles(g);
+
+    // Restore from screen shake transform
+    g.restore();
   }
 
   private lerpColor(color1: number, color2: number, t: number): number {
