@@ -183,6 +183,20 @@ interface DeathDebris2D {
 let deathDebris: DeathDebris2D[] = [];
 let deathExplosionPhase = 0;
 
+// Food orb particle system - dramatic attraction effect
+interface FoodOrbitParticle2D {
+  angle: number;
+  radius: number;
+  speed: number;
+  size: number;
+  hue: number;
+  alpha: number;
+  layer: number;
+}
+let foodOrbitParticles: FoodOrbitParticle2D[] = [];
+let foodOrbPhase = 0;
+let foodOrbInitialized = false;
+
 function initCanvas2DEffects(): void {
   if (effectsInitialized) return;
   effectsInitialized = true;
@@ -254,6 +268,32 @@ function initCanvas2DEffects(): void {
 
   // Initialize meteors
   initMeteors(width, height);
+
+  // Initialize food orb particles
+  initFoodOrbParticles();
+}
+
+function initFoodOrbParticles(): void {
+  if (foodOrbInitialized) return;
+  foodOrbInitialized = true;
+
+  foodOrbitParticles = [];
+  // Create 3 layers of orbiting particles
+  for (let layer = 0; layer < 3; layer++) {
+    const baseRadius = 12 + layer * 8;
+    const numParticles = 6 + layer * 2;
+    for (let i = 0; i < numParticles; i++) {
+      foodOrbitParticles.push({
+        angle: (i / numParticles) * Math.PI * 2 + layer * 0.5,
+        radius: baseRadius + Math.random() * 4,
+        speed: (0.04 + Math.random() * 0.02) * (layer % 2 === 0 ? 1 : -1),
+        size: 1.5 + Math.random() * 1.5,
+        hue: 340 + Math.random() * 40, // Pink to red range
+        alpha: 0.6 + Math.random() * 0.4,
+        layer,
+      });
+    }
+  }
 }
 
 function initMeteors(width: number, height: number): void {
@@ -814,31 +854,162 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   }
   ctx.globalAlpha = 1;
 
-  // Food with enhanced glow
+  // Dramatic pulsing orb food effect
   const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
   const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
 
-  // Multi-layer glow
+  // Update food orb phase
+  foodOrbPhase += 0.05;
+  const orbPulse = 0.8 + Math.sin(foodOrbPhase * 2) * 0.2;
+  const orbPulse2 = 0.9 + Math.sin(foodOrbPhase * 3 + 1) * 0.1;
+
+  // Outer gravitational field - concentric rings expanding outward
+  for (let ring = 4; ring >= 0; ring--) {
+    const ringRadius = 25 + ring * 6 + Math.sin(foodOrbPhase - ring * 0.3) * 3;
+    const ringAlpha = 0.03 + (4 - ring) * 0.015;
+    const ringHue = (350 + ring * 8 + frameCount * 0.5) % 360;
+    ctx.strokeStyle = hslToRgb(ringHue / 360, 0.8, 0.5);
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = ringAlpha * orbPulse;
+    ctx.beginPath();
+    ctx.arc(foodX, foodY, ringRadius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Draw orbiting particles in layers
+  for (const particle of foodOrbitParticles) {
+    particle.angle += particle.speed;
+    const wobble = Math.sin(foodOrbPhase * 2 + particle.angle * 3) * 2;
+    const px = foodX + Math.cos(particle.angle) * (particle.radius + wobble);
+    const py = foodY + Math.sin(particle.angle) * (particle.radius + wobble);
+    const particleColor = hslToRgb(particle.hue / 360, 0.9, 0.6);
+
+    // Particle trail
+    const trailAngle = particle.angle - particle.speed * 8;
+    const trailX = foodX + Math.cos(trailAngle) * particle.radius;
+    const trailY = foodY + Math.sin(trailAngle) * particle.radius;
+    ctx.strokeStyle = particleColor;
+    ctx.lineWidth = particle.size * 0.6;
+    ctx.globalAlpha = particle.alpha * 0.3 * orbPulse;
+    ctx.beginPath();
+    ctx.moveTo(trailX, trailY);
+    ctx.lineTo(px, py);
+    ctx.stroke();
+
+    // Particle glow
+    ctx.fillStyle = particleColor;
+    ctx.globalAlpha = particle.alpha * 0.4 * orbPulse;
+    ctx.beginPath();
+    ctx.arc(px, py, particle.size * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Particle core
+    ctx.globalAlpha = particle.alpha * orbPulse;
+    ctx.beginPath();
+    ctx.arc(px, py, particle.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bright center
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = particle.alpha * 0.6 * orbPulse;
+    ctx.beginPath();
+    ctx.arc(px, py, particle.size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Rotating energy rings around the orb
+  for (let i = 0; i < 3; i++) {
+    const ringRotation = foodOrbPhase * (1.5 - i * 0.3) + i * Math.PI / 3;
+    const ringRadius = CELL_SIZE / 2 + 6 + i * 3;
+    const ringHue = (350 + i * 20 + frameCount * 0.8) % 360;
+    const arcLength = Math.PI * 0.6 + Math.sin(foodOrbPhase + i) * 0.2;
+
+    ctx.strokeStyle = hslToRgb(ringHue / 360, 1, 0.6);
+    ctx.lineWidth = 2 - i * 0.3;
+    ctx.globalAlpha = (0.5 - i * 0.1) * orbPulse2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(foodX, foodY, ringRadius, ringRotation, ringRotation + arcLength);
+    ctx.stroke();
+    // Opposite arc
+    ctx.beginPath();
+    ctx.arc(foodX, foodY, ringRadius, ringRotation + Math.PI, ringRotation + Math.PI + arcLength);
+    ctx.stroke();
+  }
+
+  // Outer mystical aura - large pulsing glow
+  const auraRadius = CELL_SIZE / 2 + 14 + Math.sin(foodOrbPhase) * 4;
+  const auraGradient = ctx.createRadialGradient(foodX, foodY, CELL_SIZE / 4, foodX, foodY, auraRadius);
+  auraGradient.addColorStop(0, 'rgba(255, 34, 102, 0)');
+  auraGradient.addColorStop(0.5, 'rgba(255, 68, 136, 0.15)');
+  auraGradient.addColorStop(0.8, 'rgba(255, 34, 102, 0.08)');
+  auraGradient.addColorStop(1, 'rgba(255, 34, 102, 0)');
+  ctx.fillStyle = auraGradient;
+  ctx.globalAlpha = orbPulse;
+  ctx.beginPath();
+  ctx.arc(foodX, foodY, auraRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Middle glow layer
   ctx.fillStyle = COLORS.foodGlow;
-  ctx.globalAlpha = 0.2;
+  ctx.globalAlpha = 0.35 * orbPulse2;
   ctx.beginPath();
-  ctx.arc(foodX, foodY, CELL_SIZE / 2 + 8, 0, Math.PI * 2);
+  ctx.arc(foodX, foodY, CELL_SIZE / 2 + 6, 0, Math.PI * 2);
   ctx.fill();
-  ctx.globalAlpha = 0.4;
+
+  // Inner glow
+  ctx.globalAlpha = 0.5 * orbPulse;
   ctx.beginPath();
-  ctx.arc(foodX, foodY, CELL_SIZE / 2 + 4, 0, Math.PI * 2);
+  ctx.arc(foodX, foodY, CELL_SIZE / 2 + 3, 0, Math.PI * 2);
   ctx.fill();
-  ctx.globalAlpha = 0.9;
-  ctx.fillStyle = COLORS.food;
+
+  // Main orb body with gradient
+  const orbGradient = ctx.createRadialGradient(foodX - 2, foodY - 2, 0, foodX, foodY, CELL_SIZE / 2);
+  orbGradient.addColorStop(0, '#ffccdd');
+  orbGradient.addColorStop(0.3, '#ff6699');
+  orbGradient.addColorStop(0.7, COLORS.food);
+  orbGradient.addColorStop(1, '#cc1144');
+  ctx.fillStyle = orbGradient;
+  ctx.globalAlpha = 1;
   ctx.beginPath();
   ctx.arc(foodX, foodY, CELL_SIZE / 2, 0, Math.PI * 2);
   ctx.fill();
 
+  // Pulsing inner plasma effect
+  const plasmaCount = 4;
+  for (let p = 0; p < plasmaCount; p++) {
+    const plasmaAngle = foodOrbPhase * 2 + (p * Math.PI * 2) / plasmaCount;
+    const plasmaRadius = CELL_SIZE * 0.2;
+    const plasmaDist = CELL_SIZE * 0.15;
+    const plasmaX = foodX + Math.cos(plasmaAngle) * plasmaDist;
+    const plasmaY = foodY + Math.sin(plasmaAngle) * plasmaDist;
+    const plasmaHue = (350 + p * 15 + frameCount) % 360;
+
+    ctx.fillStyle = hslToRgb(plasmaHue / 360, 0.8, 0.7);
+    ctx.globalAlpha = 0.4 + Math.sin(foodOrbPhase * 3 + p) * 0.2;
+    ctx.beginPath();
+    ctx.arc(plasmaX, plasmaY, plasmaRadius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   // Bright core highlight
   ctx.fillStyle = COLORS.foodCore;
-  ctx.globalAlpha = 0.8;
+  ctx.globalAlpha = 0.9;
   ctx.beginPath();
-  ctx.arc(foodX - 2, foodY - 2, 3, 0, Math.PI * 2);
+  ctx.arc(foodX - 3, foodY - 3, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sparkle highlight
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.8 + Math.sin(foodOrbPhase * 4) * 0.2;
+  ctx.beginPath();
+  ctx.arc(foodX - 4, foodY - 4, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Secondary sparkle
+  ctx.globalAlpha = 0.5 + Math.sin(foodOrbPhase * 5 + 1) * 0.3;
+  ctx.beginPath();
+  ctx.arc(foodX + 2, foodY - 3, 1.5, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
 
