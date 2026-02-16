@@ -27,6 +27,27 @@ interface PlasmaWave {
   hue: number;
 }
 
+interface AuroraWave {
+  y: number;
+  phase: number;
+  speed: number;
+  hue: number;
+  thickness: number;
+  amplitude: number;
+}
+
+interface NebulaCloud {
+  x: number;
+  y: number;
+  radius: number;
+  hue: number;
+  alpha: number;
+  driftX: number;
+  driftY: number;
+  pulsePhase: number;
+  pulseSpeed: number;
+}
+
 interface SnakeAfterimage {
   segments: Position[];
   life: number;
@@ -79,6 +100,8 @@ const MAX_SHOCKWAVES = 3;
 const MAX_LIGHTNING_BOLTS = 5;
 const NUM_PLASMA_WAVES = 3;
 const MAX_AFTERIMAGES = 4;
+const NUM_AURORA_WAVES = 5;
+const NUM_NEBULA_CLOUDS = 6;
 
 // Color palette - enhanced neon cyberpunk theme with plasma colors
 const COLORS = {
@@ -119,6 +142,8 @@ export class SnakeScene extends Phaser.Scene {
   private lightningBolts: LightningBolt[] = [];
   private plasmaWaves: PlasmaWave[] = [];
   private snakeAfterimages: SnakeAfterimage[] = [];
+  private auroraWaves: AuroraWave[] = [];
+  private nebulaClouds: NebulaCloud[] = [];
   private gameOverAlpha = 0;
   private lastHeadPos: Position | null = null;
   private lastSnakeLength = 0;
@@ -134,6 +159,8 @@ export class SnakeScene extends Phaser.Scene {
     this.graphics = this.add.graphics();
     this.initStars();
     this.initPlasmaWaves();
+    this.initAuroraWaves();
+    this.initNebulaClouds();
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -165,6 +192,44 @@ export class SnakeScene extends Phaser.Scene {
         amplitude: 30 + Math.random() * 20,
         wavelength: 80 + Math.random() * 40,
         hue: hues[i % hues.length],
+      });
+    }
+  }
+
+  private initAuroraWaves(): void {
+    this.auroraWaves = [];
+    const height = GRID_SIZE * CELL_SIZE;
+    // Aurora hues: greens, cyans, magentas, purples
+    const auroraHues = [120, 160, 180, 280, 320];
+    for (let i = 0; i < NUM_AURORA_WAVES; i++) {
+      this.auroraWaves.push({
+        y: height * 0.2 + (height * 0.6 * i) / NUM_AURORA_WAVES,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.008 + Math.random() * 0.006,
+        hue: auroraHues[i % auroraHues.length],
+        thickness: 25 + Math.random() * 20,
+        amplitude: 15 + Math.random() * 25,
+      });
+    }
+  }
+
+  private initNebulaClouds(): void {
+    this.nebulaClouds = [];
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+    // Deep space nebula colors: purples, blues, magentas
+    const nebulaHues = [260, 220, 300, 180, 340, 240];
+    for (let i = 0; i < NUM_NEBULA_CLOUDS; i++) {
+      this.nebulaClouds.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: 40 + Math.random() * 60,
+        hue: nebulaHues[i % nebulaHues.length],
+        alpha: 0.04 + Math.random() * 0.04,
+        driftX: (Math.random() - 0.5) * 0.15,
+        driftY: (Math.random() - 0.5) * 0.15,
+        pulsePhase: Math.random() * Math.PI * 2,
+        pulseSpeed: 0.01 + Math.random() * 0.01,
       });
     }
   }
@@ -375,8 +440,14 @@ export class SnakeScene extends Phaser.Scene {
     g.fillStyle(COLORS.bgDark, 1);
     g.fillRect(0, 0, width, height);
 
+    // Nebula clouds (deepest layer)
+    this.drawNebulaClouds(g, width, height);
+
     // Animated plasma waves in background
     this.drawPlasmaWaves(g, width, height);
+
+    // Aurora borealis waves
+    this.drawAuroraWaves(g, width);
 
     // Radial gradient effect in center (lighter area)
     const centerGradientAlpha = 0.12 + Math.sin(this.frameCount * 0.02) * 0.04;
@@ -432,6 +503,89 @@ export class SnakeScene extends Phaser.Scene {
       const alpha = star.brightness * twinkle * 0.6;
       g.fillStyle(COLORS.star, alpha);
       g.fillCircle(star.x, star.y, star.size);
+    }
+  }
+
+  private drawNebulaClouds(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+    for (const cloud of this.nebulaClouds) {
+      // Update cloud position (slow drift)
+      cloud.x += cloud.driftX;
+      cloud.y += cloud.driftY;
+      cloud.pulsePhase += cloud.pulseSpeed;
+
+      // Wrap around edges
+      if (cloud.x < -cloud.radius) cloud.x = width + cloud.radius;
+      if (cloud.x > width + cloud.radius) cloud.x = -cloud.radius;
+      if (cloud.y < -cloud.radius) cloud.y = height + cloud.radius;
+      if (cloud.y > height + cloud.radius) cloud.y = -cloud.radius;
+
+      // Pulsing alpha
+      const pulseAlpha = cloud.alpha * (0.7 + Math.sin(cloud.pulsePhase) * 0.3);
+      const color = this.hslToRgb(cloud.hue / 360, 0.6, 0.3);
+
+      // Draw multiple concentric layers for soft cloud effect
+      const layers = 4;
+      for (let i = layers; i > 0; i--) {
+        const layerRadius = cloud.radius * (i / layers);
+        const layerAlpha = pulseAlpha * (1 - i / (layers + 1)) * 0.6;
+        g.fillStyle(color, layerAlpha);
+        g.fillCircle(cloud.x, cloud.y, layerRadius);
+      }
+
+      // Core glow
+      const coreColor = this.hslToRgb(cloud.hue / 360, 0.8, 0.5);
+      g.fillStyle(coreColor, pulseAlpha * 0.4);
+      g.fillCircle(cloud.x, cloud.y, cloud.radius * 0.3);
+    }
+  }
+
+  private drawAuroraWaves(g: Phaser.GameObjects.Graphics, width: number): void {
+    for (const aurora of this.auroraWaves) {
+      aurora.phase += aurora.speed;
+
+      // Draw multiple ribbon layers for each aurora
+      const ribbonLayers = 3;
+      for (let layer = 0; layer < ribbonLayers; layer++) {
+        const layerOffset = layer * 5;
+        const layerAlpha = 0.06 - layer * 0.015;
+
+        // Calculate shifting hue for color variation
+        const shiftedHue = (aurora.hue + Math.sin(aurora.phase * 0.5) * 20) % 360;
+        const color = this.hslToRgb(shiftedHue / 360, 0.7, 0.5);
+
+        // Draw aurora as a series of connected curves
+        g.fillStyle(color, layerAlpha);
+        const step = 4;
+        for (let x = 0; x < width; x += step) {
+          // Multiple sine waves combined for organic movement
+          const wave1 = Math.sin(x * 0.02 + aurora.phase) * aurora.amplitude;
+          const wave2 = Math.sin(x * 0.035 + aurora.phase * 1.3) * aurora.amplitude * 0.5;
+          const wave3 = Math.sin(x * 0.01 + aurora.phase * 0.7) * aurora.amplitude * 0.3;
+          const yOffset = wave1 + wave2 + wave3;
+
+          const segmentY = aurora.y + yOffset + layerOffset;
+          const thickness = aurora.thickness * (0.7 + Math.sin(x * 0.05 + aurora.phase) * 0.3);
+
+          g.fillRect(x, segmentY - thickness / 2, step + 1, thickness);
+        }
+      }
+
+      // Add bright core line
+      const coreHue = (aurora.hue + 40) % 360;
+      const coreColor = this.hslToRgb(coreHue / 360, 0.9, 0.7);
+      g.lineStyle(1.5, coreColor, 0.15);
+      g.beginPath();
+      for (let x = 0; x < width; x += 3) {
+        const wave1 = Math.sin(x * 0.02 + aurora.phase) * aurora.amplitude;
+        const wave2 = Math.sin(x * 0.035 + aurora.phase * 1.3) * aurora.amplitude * 0.5;
+        const y = aurora.y + wave1 + wave2;
+        if (x === 0) {
+          g.moveTo(x, y);
+        } else {
+          g.lineTo(x, y);
+        }
+      }
+      g.strokePath();
     }
   }
 

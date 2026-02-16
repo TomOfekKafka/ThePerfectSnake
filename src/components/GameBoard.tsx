@@ -66,10 +66,76 @@ function hslToRgb(h: number, s: number, l: number): string {
 // Animation frame counter for rainbow effect
 let frameCount = 0;
 
+// Aurora wave state for Canvas 2D
+interface Aurora2D {
+  y: number;
+  phase: number;
+  speed: number;
+  hue: number;
+  thickness: number;
+  amplitude: number;
+}
+
+interface Nebula2D {
+  x: number;
+  y: number;
+  radius: number;
+  hue: number;
+  alpha: number;
+  driftX: number;
+  driftY: number;
+  pulsePhase: number;
+  pulseSpeed: number;
+}
+
+let auroraWaves: Aurora2D[] = [];
+let nebulaClouds: Nebula2D[] = [];
+let effectsInitialized = false;
+
+function initCanvas2DEffects(): void {
+  if (effectsInitialized) return;
+  effectsInitialized = true;
+
+  const width = GRID_SIZE * CELL_SIZE;
+  const height = GRID_SIZE * CELL_SIZE;
+
+  // Initialize aurora waves
+  const auroraHues = [120, 160, 180, 280, 320];
+  auroraWaves = [];
+  for (let i = 0; i < 5; i++) {
+    auroraWaves.push({
+      y: height * 0.2 + (height * 0.6 * i) / 5,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.008 + Math.random() * 0.006,
+      hue: auroraHues[i % auroraHues.length],
+      thickness: 25 + Math.random() * 20,
+      amplitude: 15 + Math.random() * 25,
+    });
+  }
+
+  // Initialize nebula clouds
+  const nebulaHues = [260, 220, 300, 180, 340, 240];
+  nebulaClouds = [];
+  for (let i = 0; i < 6; i++) {
+    nebulaClouds.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      radius: 40 + Math.random() * 60,
+      hue: nebulaHues[i % nebulaHues.length],
+      alpha: 0.04 + Math.random() * 0.04,
+      driftX: (Math.random() - 0.5) * 0.15,
+      driftY: (Math.random() - 0.5) * 0.15,
+      pulsePhase: Math.random() * Math.PI * 2,
+      pulseSpeed: 0.01 + Math.random() * 0.01,
+    });
+  }
+}
+
 function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
+  initCanvas2DEffects();
   frameCount++;
   const hueOffset = (frameCount * 0.5) % 360;
 
@@ -82,6 +148,62 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   // Deep space background
   ctx.fillStyle = COLORS.bgDark;
   ctx.fillRect(0, 0, width, height);
+
+  // Draw nebula clouds
+  for (const cloud of nebulaClouds) {
+    cloud.x += cloud.driftX;
+    cloud.y += cloud.driftY;
+    cloud.pulsePhase += cloud.pulseSpeed;
+
+    if (cloud.x < -cloud.radius) cloud.x = width + cloud.radius;
+    if (cloud.x > width + cloud.radius) cloud.x = -cloud.radius;
+    if (cloud.y < -cloud.radius) cloud.y = height + cloud.radius;
+    if (cloud.y > height + cloud.radius) cloud.y = -cloud.radius;
+
+    const pulseAlpha = cloud.alpha * (0.7 + Math.sin(cloud.pulsePhase) * 0.3);
+    const nebulaColor = hslToRgb(cloud.hue / 360, 0.6, 0.3);
+
+    const layers = 4;
+    for (let i = layers; i > 0; i--) {
+      const layerRadius = cloud.radius * (i / layers);
+      const layerAlpha = pulseAlpha * (1 - i / (layers + 1)) * 0.6;
+      ctx.fillStyle = nebulaColor;
+      ctx.globalAlpha = layerAlpha;
+      ctx.beginPath();
+      ctx.arc(cloud.x, cloud.y, layerRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const coreColor = hslToRgb(cloud.hue / 360, 0.8, 0.5);
+    ctx.fillStyle = coreColor;
+    ctx.globalAlpha = pulseAlpha * 0.4;
+    ctx.beginPath();
+    ctx.arc(cloud.x, cloud.y, cloud.radius * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw aurora waves
+  for (const aurora of auroraWaves) {
+    aurora.phase += aurora.speed;
+
+    const shiftedHue = (aurora.hue + Math.sin(aurora.phase * 0.5) * 20) % 360;
+    const auroraColor = hslToRgb(shiftedHue / 360, 0.7, 0.5);
+
+    ctx.fillStyle = auroraColor;
+    ctx.globalAlpha = 0.06;
+    const step = 4;
+    for (let x = 0; x < width; x += step) {
+      const wave1 = Math.sin(x * 0.02 + aurora.phase) * aurora.amplitude;
+      const wave2 = Math.sin(x * 0.035 + aurora.phase * 1.3) * aurora.amplitude * 0.5;
+      const wave3 = Math.sin(x * 0.01 + aurora.phase * 0.7) * aurora.amplitude * 0.3;
+      const yOffset = wave1 + wave2 + wave3;
+      const segmentY = aurora.y + yOffset;
+      const thickness = aurora.thickness * (0.7 + Math.sin(x * 0.05 + aurora.phase) * 0.3);
+      ctx.fillRect(x, segmentY - thickness / 2, step + 1, thickness);
+    }
+  }
+  ctx.globalAlpha = 1;
 
   // Radial gradient effect in center
   const gradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.6);
