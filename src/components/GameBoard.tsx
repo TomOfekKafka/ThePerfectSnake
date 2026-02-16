@@ -135,6 +135,24 @@ let screenShakeIntensity = 0;
 let lastSnakeLength = 0;
 let wasGameOver = false;
 
+// Lightning arc state for dramatic snake connections
+interface LightningBolt2D {
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  segments: { x: number; y: number }[];
+  life: number;
+  hue: number;
+  intensity: number;
+}
+let lightningBolts: LightningBolt2D[] = [];
+let lightningTimer = 0;
+
+// Scanline effect state
+let scanlineY = 0;
+let scanlineSpeed = 2;
+
 function initCanvas2DEffects(): void {
   if (effectsInitialized) return;
   effectsInitialized = true;
@@ -224,6 +242,56 @@ function spawnBurstParticles(x: number, y: number, hueOffset: number): void {
   }
 }
 
+function generateLightningPath(x1: number, y1: number, x2: number, y2: number, jitter: number): { x: number; y: number }[] {
+  const segments: { x: number; y: number }[] = [];
+  const numSegments = 4;
+  segments.push({ x: x1, y: y1 });
+
+  for (let i = 1; i < numSegments; i++) {
+    const t = i / numSegments;
+    const baseX = x1 + (x2 - x1) * t;
+    const baseY = y1 + (y2 - y1) * t;
+    const perpX = -(y2 - y1);
+    const perpY = x2 - x1;
+    const len = Math.sqrt(perpX * perpX + perpY * perpY);
+    const offset = (Math.random() - 0.5) * jitter;
+    segments.push({
+      x: baseX + (perpX / len) * offset,
+      y: baseY + (perpY / len) * offset,
+    });
+  }
+  segments.push({ x: x2, y: y2 });
+  return segments;
+}
+
+function spawnLightningBetweenSegments(snake: { x: number; y: number }[], hueOffset: number): void {
+  if (snake.length < 2) return;
+
+  // Spawn lightning between random consecutive segments
+  const maxBolts = Math.min(3, snake.length - 1);
+  for (let b = 0; b < maxBolts; b++) {
+    const idx = Math.floor(Math.random() * (snake.length - 1));
+    const seg1 = snake[idx];
+    const seg2 = snake[idx + 1];
+
+    const x1 = seg1.x * CELL_SIZE + CELL_SIZE / 2;
+    const y1 = seg1.y * CELL_SIZE + CELL_SIZE / 2;
+    const x2 = seg2.x * CELL_SIZE + CELL_SIZE / 2;
+    const y2 = seg2.y * CELL_SIZE + CELL_SIZE / 2;
+
+    lightningBolts.push({
+      startX: x1,
+      startY: y1,
+      endX: x2,
+      endY: y2,
+      segments: generateLightningPath(x1, y1, x2, y2, 8),
+      life: 1,
+      hue: (hueOffset + idx * 15 + Math.random() * 30) % 360,
+      intensity: 0.6 + Math.random() * 0.4,
+    });
+  }
+}
+
 function updateCanvas2DEffects(): void {
   // Update screen shake
   if (screenShakeIntensity > 0) {
@@ -247,6 +315,25 @@ function updateCanvas2DEffects(): void {
   if (energyFieldPulse > 0) {
     energyFieldPulse *= 0.95;
     if (energyFieldPulse < 0.05) energyFieldPulse = 0;
+  }
+
+  // Update lightning bolts
+  for (let i = lightningBolts.length - 1; i >= 0; i--) {
+    const bolt = lightningBolts[i];
+    bolt.life -= 0.15;
+    // Re-jitter the path for flickering effect
+    if (bolt.life > 0.3) {
+      bolt.segments = generateLightningPath(bolt.startX, bolt.startY, bolt.endX, bolt.endY, 8 * bolt.life);
+    }
+    if (bolt.life <= 0) {
+      lightningBolts.splice(i, 1);
+    }
+  }
+
+  // Update scanline
+  scanlineY += scanlineSpeed;
+  if (scanlineY > GRID_SIZE * CELL_SIZE + 20) {
+    scanlineY = -20;
   }
 
   // Update burst particles
@@ -284,8 +371,17 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     spawnBurstParticles(headX, headY, hueOffset);
     chromaticIntensity = 1.0;
     energyFieldPulse = 1.0;
+    // Spawn extra lightning on food eat
+    spawnLightningBetweenSegments(gameState.snake, hueOffset);
   }
   lastSnakeLength = gameState.snake.length;
+
+  // Spawn periodic lightning between segments
+  lightningTimer++;
+  if (lightningTimer >= 8 && gameState.snake.length > 1 && !gameState.gameOver) {
+    lightningTimer = 0;
+    spawnLightningBetweenSegments(gameState.snake, hueOffset);
+  }
 
   // Detect game over transition
   if (gameState.gameOver && !wasGameOver) {
@@ -610,6 +706,15 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       const headHue = (hueOffset + 120) % 360;
       const headColor = hslToRgb(headHue / 360, 0.9, 0.55);
 
+      // Outer plasma corona
+      const coronaHue = (hueOffset + 90) % 360;
+      const coronaColor = hslToRgb(coronaHue / 360, 1, 0.6);
+      ctx.fillStyle = coronaColor;
+      ctx.globalAlpha = 0.15 + Math.sin(frameCount * 0.2) * 0.05;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius + 10, 0, Math.PI * 2);
+      ctx.fill();
+
       // Head glow
       ctx.fillStyle = headColor;
       ctx.globalAlpha = 0.4;
@@ -623,6 +728,21 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius + 1, 0, Math.PI * 2);
       ctx.fill();
+
+      // Plasma core effect - swirling inner energy
+      const coreRadius = radius * 0.6;
+      const plasmaPhase = frameCount * 0.15;
+      for (let p = 0; p < 3; p++) {
+        const plasmaAngle = plasmaPhase + (p * Math.PI * 2) / 3;
+        const plasmaX = centerX + Math.cos(plasmaAngle) * coreRadius * 0.4;
+        const plasmaY = centerY + Math.sin(plasmaAngle) * coreRadius * 0.4;
+        const plasmaHue = (headHue + 40 + p * 20) % 360;
+        ctx.fillStyle = hslToRgb(plasmaHue / 360, 1, 0.7);
+        ctx.globalAlpha = 0.5 + Math.sin(plasmaPhase + p) * 0.2;
+        ctx.beginPath();
+        ctx.arc(plasmaX, plasmaY, coreRadius * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       // Head highlight
       ctx.fillStyle = '#ffffff';
@@ -724,6 +844,58 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     }
     ctx.globalAlpha = 1;
   }
+
+  // Draw lightning bolts between segments
+  for (const bolt of lightningBolts) {
+    const boltColor = hslToRgb(bolt.hue / 360, 1, 0.7);
+    const coreColor = '#ffffff';
+
+    // Outer glow
+    ctx.strokeStyle = boltColor;
+    ctx.lineWidth = 6;
+    ctx.globalAlpha = bolt.life * bolt.intensity * 0.3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(bolt.segments[0].x, bolt.segments[0].y);
+    for (let i = 1; i < bolt.segments.length; i++) {
+      ctx.lineTo(bolt.segments[i].x, bolt.segments[i].y);
+    }
+    ctx.stroke();
+
+    // Main bolt
+    ctx.strokeStyle = boltColor;
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = bolt.life * bolt.intensity * 0.7;
+    ctx.beginPath();
+    ctx.moveTo(bolt.segments[0].x, bolt.segments[0].y);
+    for (let i = 1; i < bolt.segments.length; i++) {
+      ctx.lineTo(bolt.segments[i].x, bolt.segments[i].y);
+    }
+    ctx.stroke();
+
+    // White-hot core
+    ctx.strokeStyle = coreColor;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = bolt.life * bolt.intensity * 0.9;
+    ctx.beginPath();
+    ctx.moveTo(bolt.segments[0].x, bolt.segments[0].y);
+    for (let i = 1; i < bolt.segments.length; i++) {
+      ctx.lineTo(bolt.segments[i].x, bolt.segments[i].y);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw scanline effect (subtle CRT aesthetic)
+  const scanGradient = ctx.createLinearGradient(0, scanlineY - 15, 0, scanlineY + 15);
+  scanGradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
+  scanGradient.addColorStop(0.4, 'rgba(200, 255, 255, 0.04)');
+  scanGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
+  scanGradient.addColorStop(0.6, 'rgba(200, 255, 255, 0.04)');
+  scanGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = scanGradient;
+  ctx.fillRect(0, scanlineY - 15, width, 30);
 
   // Draw burst particles
   for (const p of burstParticles) {
