@@ -125,6 +125,35 @@ const NUM_AURORA_WAVES = 5;
 const NUM_NEBULA_CLOUDS = 6;
 const NUM_VORTEX_RINGS = 5;
 const NUM_VORTEX_PARTICLES = 20;
+const NUM_METEORS = 8;
+const MAX_DEATH_DEBRIS = 24;
+
+// Meteor shower types
+interface Meteor {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  hue: number;
+  alpha: number;
+  trail: { x: number; y: number; alpha: number }[];
+  life: number;
+}
+
+// Death debris particle
+interface DeathDebris {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  hue: number;
+  rotation: number;
+  rotationSpeed: number;
+  life: number;
+  type: 'shard' | 'spark' | 'ember';
+}
 
 // Color palette - enhanced neon cyberpunk theme with plasma colors
 const COLORS = {
@@ -170,6 +199,9 @@ export class SnakeScene extends Phaser.Scene {
   private vortexRings: VortexRing[] = [];
   private vortexParticles: VortexParticle[] = [];
   private vortexPulse = 0;
+  private meteors: Meteor[] = [];
+  private deathDebris: DeathDebris[] = [];
+  private deathExplosionPhase = 0;
   private gameOverAlpha = 0;
   private lastHeadPos: Position | null = null;
   private lastSnakeLength = 0;
@@ -194,6 +226,7 @@ export class SnakeScene extends Phaser.Scene {
     this.initAuroraWaves();
     this.initNebulaClouds();
     this.initVortex();
+    this.initMeteors();
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -298,6 +331,126 @@ export class SnakeScene extends Phaser.Scene {
         hue: Math.random() * 360,
         alpha: 0.3 + Math.random() * 0.5,
       });
+    }
+  }
+
+  private initMeteors(): void {
+    this.meteors = [];
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+    for (let i = 0; i < NUM_METEORS; i++) {
+      this.spawnMeteor(width, height, true);
+    }
+  }
+
+  private spawnMeteor(width: number, height: number, initial = false): void {
+    if (this.meteors.length >= NUM_METEORS) return;
+
+    // Meteors come from top-right and travel to bottom-left
+    const startX = initial ? Math.random() * width * 1.5 : width + 20 + Math.random() * 40;
+    const startY = initial ? Math.random() * height * 0.5 - height * 0.25 : -20 - Math.random() * 40;
+
+    // Random angle variation (mostly diagonal)
+    const angle = Math.PI * 0.65 + (Math.random() - 0.5) * 0.4;
+    const speed = 1.5 + Math.random() * 2;
+
+    this.meteors.push({
+      x: startX,
+      y: startY,
+      vx: -Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: 2 + Math.random() * 3,
+      hue: Math.random() < 0.3 ? 30 + Math.random() * 30 : 180 + Math.random() * 60, // Orange or cyan
+      alpha: 0.6 + Math.random() * 0.4,
+      trail: [],
+      life: 1,
+    });
+  }
+
+  private updateMeteors(width: number, height: number): void {
+    for (let i = this.meteors.length - 1; i >= 0; i--) {
+      const m = this.meteors[i];
+
+      // Store trail position
+      m.trail.unshift({ x: m.x, y: m.y, alpha: m.alpha });
+      if (m.trail.length > 12) m.trail.pop();
+
+      // Update position
+      m.x += m.vx;
+      m.y += m.vy;
+
+      // Check if meteor is out of bounds
+      if (m.x < -50 || m.y > height + 50) {
+        this.meteors.splice(i, 1);
+        // Spawn a new one
+        this.spawnMeteor(width, height, false);
+      }
+    }
+  }
+
+  private spawnDeathExplosion(): void {
+    if (!this.currentState) return;
+
+    this.deathDebris = [];
+    this.deathExplosionPhase = 1;
+
+    // Spawn debris from each snake segment
+    for (let i = 0; i < this.currentState.snake.length; i++) {
+      const seg = this.currentState.snake[i];
+      const cx = seg.x * CELL_SIZE + CELL_SIZE / 2;
+      const cy = seg.y * CELL_SIZE + CELL_SIZE / 2;
+      const segHue = (this.hueOffset + i * 15) % 360;
+
+      // Create debris particles per segment (limit total)
+      const debrisPerSeg = Math.min(3, Math.floor(MAX_DEATH_DEBRIS / this.currentState.snake.length));
+      for (let j = 0; j < debrisPerSeg; j++) {
+        if (this.deathDebris.length >= MAX_DEATH_DEBRIS) break;
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 4;
+        const types: ('shard' | 'spark' | 'ember')[] = ['shard', 'spark', 'ember'];
+
+        this.deathDebris.push({
+          x: cx + (Math.random() - 0.5) * 8,
+          y: cy + (Math.random() - 0.5) * 8,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 1,
+          size: 3 + Math.random() * 5,
+          hue: segHue + (Math.random() - 0.5) * 40,
+          rotation: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.4,
+          life: 1,
+          type: types[Math.floor(Math.random() * types.length)],
+        });
+      }
+    }
+  }
+
+  private updateDeathDebris(): void {
+    // Decay explosion phase
+    if (this.deathExplosionPhase > 0) {
+      this.deathExplosionPhase *= 0.95;
+      if (this.deathExplosionPhase < 0.01) this.deathExplosionPhase = 0;
+    }
+
+    for (let i = this.deathDebris.length - 1; i >= 0; i--) {
+      const d = this.deathDebris[i];
+
+      // Update position with gravity
+      d.x += d.vx;
+      d.y += d.vy;
+      d.vy += 0.08; // gravity
+      d.vx *= 0.99; // air resistance
+
+      // Update rotation
+      d.rotation += d.rotationSpeed;
+
+      // Decay life
+      d.life -= 0.015;
+
+      if (d.life <= 0) {
+        this.deathDebris.splice(i, 1);
+      }
     }
   }
 
@@ -459,6 +612,7 @@ export class SnakeScene extends Phaser.Scene {
     if (state.gameOver && this.currentState && !this.currentState.gameOver) {
       this.screenShakeIntensity = 15; // Trigger screen shake on death
       this.chromaticIntensity = 2.0; // Strong chromatic aberration on death
+      this.spawnDeathExplosion(); // Dramatic death explosion
     }
 
     this.currentState = state;
@@ -594,6 +748,10 @@ export class SnakeScene extends Phaser.Scene {
     // Animated plasma waves in background
     this.drawPlasmaWaves(g, width, height);
 
+    // Meteor shower
+    this.updateMeteors(width, height);
+    this.drawMeteors(g);
+
     // Aurora borealis waves
     this.drawAuroraWaves(g, width);
 
@@ -648,6 +806,10 @@ export class SnakeScene extends Phaser.Scene {
       g.fillRect(0, 0, width, height);
     }
 
+    // Death debris particles
+    this.updateDeathDebris();
+    this.drawDeathDebris(g);
+
     // Game over overlay with animation
     if (this.currentState.gameOver) {
       this.drawGameOver(g, width, height);
@@ -662,6 +824,126 @@ export class SnakeScene extends Phaser.Scene {
       const alpha = star.brightness * twinkle * 0.6;
       g.fillStyle(COLORS.star, alpha);
       g.fillCircle(star.x, star.y, star.size);
+    }
+  }
+
+  private drawMeteors(g: Phaser.GameObjects.Graphics): void {
+    for (const m of this.meteors) {
+      const meteorColor = this.hslToRgb(m.hue / 360, 0.9, 0.6);
+      const coreColor = this.hslToRgb(m.hue / 360, 0.6, 0.9);
+
+      // Draw trail (oldest to newest for proper layering)
+      for (let i = m.trail.length - 1; i >= 0; i--) {
+        const t = m.trail[i];
+        const trailProgress = 1 - i / m.trail.length;
+        const trailAlpha = t.alpha * trailProgress * 0.4;
+        const trailSize = m.size * trailProgress * 0.6;
+
+        g.fillStyle(meteorColor, trailAlpha);
+        g.fillCircle(t.x, t.y, trailSize);
+      }
+
+      // Outer glow
+      g.fillStyle(meteorColor, m.alpha * 0.3);
+      g.fillCircle(m.x, m.y, m.size * 2);
+
+      // Main meteor body
+      g.fillStyle(meteorColor, m.alpha * 0.8);
+      g.fillCircle(m.x, m.y, m.size);
+
+      // Bright core
+      g.fillStyle(coreColor, m.alpha);
+      g.fillCircle(m.x, m.y, m.size * 0.5);
+    }
+  }
+
+  private drawDeathDebris(g: Phaser.GameObjects.Graphics): void {
+    // Draw explosion flash at the beginning
+    if (this.deathExplosionPhase > 0.7) {
+      const flashAlpha = (this.deathExplosionPhase - 0.7) * 2;
+      g.fillStyle(0xffffff, flashAlpha * 0.4);
+      g.fillRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+    }
+
+    for (const d of this.deathDebris) {
+      const color = this.hslToRgb(d.hue / 360, 0.9, 0.6);
+      const alpha = d.life * 0.9;
+
+      g.save();
+
+      if (d.type === 'shard') {
+        // Draw triangular shards
+        const cx = d.x;
+        const cy = d.y;
+        const size = d.size * d.life;
+
+        // Calculate rotated triangle points
+        const cos = Math.cos(d.rotation);
+        const sin = Math.sin(d.rotation);
+
+        const p1x = cx + cos * size;
+        const p1y = cy + sin * size;
+        const p2x = cx + cos * (-size * 0.5) - sin * (size * 0.7);
+        const p2y = cy + sin * (-size * 0.5) + cos * (size * 0.7);
+        const p3x = cx + cos * (-size * 0.5) - sin * (-size * 0.7);
+        const p3y = cy + sin * (-size * 0.5) + cos * (-size * 0.7);
+
+        // Glow
+        g.fillStyle(color, alpha * 0.4);
+        g.fillCircle(cx, cy, size * 1.5);
+
+        // Shard body
+        g.fillStyle(color, alpha);
+        g.fillTriangle(p1x, p1y, p2x, p2y, p3x, p3y);
+
+        // Highlight edge
+        g.lineStyle(1, 0xffffff, alpha * 0.6);
+        g.lineBetween(p1x, p1y, p2x, p2y);
+
+      } else if (d.type === 'spark') {
+        // Draw elongated spark
+        const sparkLength = d.size * 2 * d.life;
+        const sparkWidth = d.size * 0.3 * d.life;
+
+        // Direction based on velocity
+        const vLen = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
+        const nx = vLen > 0 ? d.vx / vLen : 1;
+        const ny = vLen > 0 ? d.vy / vLen : 0;
+
+        // Glow
+        g.fillStyle(color, alpha * 0.3);
+        g.fillCircle(d.x, d.y, sparkLength * 0.8);
+
+        // Spark line
+        g.lineStyle(sparkWidth * 2, color, alpha * 0.6);
+        g.lineBetween(d.x - nx * sparkLength, d.y - ny * sparkLength, d.x, d.y);
+
+        // Bright tip
+        g.lineStyle(sparkWidth, 0xffffff, alpha);
+        g.lineBetween(d.x - nx * sparkLength * 0.3, d.y - ny * sparkLength * 0.3, d.x, d.y);
+
+      } else {
+        // Ember - glowing circle
+        const emberSize = d.size * d.life;
+
+        // Outer glow
+        g.fillStyle(color, alpha * 0.2);
+        g.fillCircle(d.x, d.y, emberSize * 2);
+
+        // Mid glow
+        g.fillStyle(color, alpha * 0.5);
+        g.fillCircle(d.x, d.y, emberSize * 1.3);
+
+        // Core
+        g.fillStyle(color, alpha);
+        g.fillCircle(d.x, d.y, emberSize);
+
+        // Hot center
+        g.fillStyle(0xffffff, alpha * 0.7);
+        g.fillCircle(d.x, d.y, emberSize * 0.4);
+      }
+
+      g.restore();
     }
   }
 

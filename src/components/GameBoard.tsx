@@ -153,6 +153,36 @@ let lightningTimer = 0;
 let scanlineY = 0;
 let scanlineSpeed = 2;
 
+// Meteor shower state
+interface Meteor2D {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  hue: number;
+  alpha: number;
+  trail: { x: number; y: number }[];
+}
+let meteors: Meteor2D[] = [];
+const NUM_METEORS = 8;
+
+// Death debris state
+interface DeathDebris2D {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  hue: number;
+  rotation: number;
+  rotationSpeed: number;
+  life: number;
+  type: 'shard' | 'spark' | 'ember';
+}
+let deathDebris: DeathDebris2D[] = [];
+let deathExplosionPhase = 0;
+
 function initCanvas2DEffects(): void {
   if (effectsInitialized) return;
   effectsInitialized = true;
@@ -220,6 +250,73 @@ function initCanvas2DEffects(): void {
       hue: Math.random() * 360,
       alpha: 0.3 + Math.random() * 0.5,
     });
+  }
+
+  // Initialize meteors
+  initMeteors(width, height);
+}
+
+function initMeteors(width: number, height: number): void {
+  meteors = [];
+  for (let i = 0; i < NUM_METEORS; i++) {
+    spawnMeteor(width, height, true);
+  }
+}
+
+function spawnMeteor(width: number, height: number, initial: boolean): void {
+  if (meteors.length >= NUM_METEORS) return;
+
+  const startX = initial ? Math.random() * width * 1.5 : width + 20 + Math.random() * 40;
+  const startY = initial ? Math.random() * height * 0.5 - height * 0.25 : -20 - Math.random() * 40;
+
+  const angle = Math.PI * 0.65 + (Math.random() - 0.5) * 0.4;
+  const speed = 1.5 + Math.random() * 2;
+
+  meteors.push({
+    x: startX,
+    y: startY,
+    vx: -Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
+    size: 2 + Math.random() * 3,
+    hue: Math.random() < 0.3 ? 30 + Math.random() * 30 : 180 + Math.random() * 60,
+    alpha: 0.6 + Math.random() * 0.4,
+    trail: [],
+  });
+}
+
+function spawnDeathExplosion2D(snake: Position[], hueOffset: number): void {
+  deathDebris = [];
+  deathExplosionPhase = 1;
+
+  const maxDebris = 24;
+  const debrisPerSeg = Math.min(3, Math.floor(maxDebris / snake.length));
+
+  for (let i = 0; i < snake.length; i++) {
+    const seg = snake[i];
+    const cx = seg.x * CELL_SIZE + CELL_SIZE / 2;
+    const cy = seg.y * CELL_SIZE + CELL_SIZE / 2;
+    const segHue = (hueOffset + i * 15) % 360;
+
+    for (let j = 0; j < debrisPerSeg; j++) {
+      if (deathDebris.length >= maxDebris) break;
+
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 4;
+      const types: ('shard' | 'spark' | 'ember')[] = ['shard', 'spark', 'ember'];
+
+      deathDebris.push({
+        x: cx + (Math.random() - 0.5) * 8,
+        y: cy + (Math.random() - 0.5) * 8,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1,
+        size: 3 + Math.random() * 5,
+        hue: segHue + (Math.random() - 0.5) * 40,
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: (Math.random() - 0.5) * 0.4,
+        life: 1,
+        type: types[Math.floor(Math.random() * types.length)],
+      });
+    }
   }
 }
 
@@ -336,6 +433,39 @@ function updateCanvas2DEffects(): void {
     scanlineY = -20;
   }
 
+  // Update meteors
+  const width = GRID_SIZE * CELL_SIZE;
+  const height = GRID_SIZE * CELL_SIZE;
+  for (let i = meteors.length - 1; i >= 0; i--) {
+    const m = meteors[i];
+    m.trail.unshift({ x: m.x, y: m.y });
+    if (m.trail.length > 12) m.trail.pop();
+    m.x += m.vx;
+    m.y += m.vy;
+    if (m.x < -50 || m.y > height + 50) {
+      meteors.splice(i, 1);
+      spawnMeteor(width, height, false);
+    }
+  }
+
+  // Update death debris
+  if (deathExplosionPhase > 0) {
+    deathExplosionPhase *= 0.95;
+    if (deathExplosionPhase < 0.01) deathExplosionPhase = 0;
+  }
+  for (let i = deathDebris.length - 1; i >= 0; i--) {
+    const d = deathDebris[i];
+    d.x += d.vx;
+    d.y += d.vy;
+    d.vy += 0.08;
+    d.vx *= 0.99;
+    d.rotation += d.rotationSpeed;
+    d.life -= 0.015;
+    if (d.life <= 0) {
+      deathDebris.splice(i, 1);
+    }
+  }
+
   // Update burst particles
   for (let i = burstParticles.length - 1; i >= 0; i--) {
     const p = burstParticles[i];
@@ -387,6 +517,7 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   if (gameState.gameOver && !wasGameOver) {
     screenShakeIntensity = 15;
     chromaticIntensity = 2.0;
+    spawnDeathExplosion2D(gameState.snake, hueOffset);
   }
   wasGameOver = gameState.gameOver;
 
@@ -602,6 +733,47 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       const thickness = aurora.thickness * (0.7 + Math.sin(x * 0.05 + aurora.phase) * 0.3);
       ctx.fillRect(x, segmentY - thickness / 2, step + 1, thickness);
     }
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw meteor shower
+  for (const m of meteors) {
+    const meteorColor = hslToRgb(m.hue / 360, 0.9, 0.6);
+    const coreColor = hslToRgb(m.hue / 360, 0.6, 0.9);
+
+    // Draw trail
+    for (let i = m.trail.length - 1; i >= 0; i--) {
+      const t = m.trail[i];
+      const trailProgress = 1 - i / m.trail.length;
+      const trailAlpha = m.alpha * trailProgress * 0.4;
+      const trailSize = m.size * trailProgress * 0.6;
+
+      ctx.fillStyle = meteorColor;
+      ctx.globalAlpha = trailAlpha;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, trailSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Outer glow
+    ctx.fillStyle = meteorColor;
+    ctx.globalAlpha = m.alpha * 0.3;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.size * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Main body
+    ctx.globalAlpha = m.alpha * 0.8;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bright core
+    ctx.fillStyle = coreColor;
+    ctx.globalAlpha = m.alpha;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.size * 0.5, 0, Math.PI * 2);
+    ctx.fill();
   }
   ctx.globalAlpha = 1;
 
@@ -961,6 +1133,120 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     }
     ctx.globalAlpha = 1;
   }
+
+  // Draw death debris
+  if (deathExplosionPhase > 0.7) {
+    const flashAlpha = (deathExplosionPhase - 0.7) * 2;
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = flashAlpha * 0.4;
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalAlpha = 1;
+  }
+
+  for (const d of deathDebris) {
+    const debrisColor = hslToRgb(d.hue / 360, 0.9, 0.6);
+    const alpha = d.life * 0.9;
+
+    if (d.type === 'shard') {
+      const size = d.size * d.life;
+      const cos = Math.cos(d.rotation);
+      const sin = Math.sin(d.rotation);
+
+      const p1x = d.x + cos * size;
+      const p1y = d.y + sin * size;
+      const p2x = d.x + cos * (-size * 0.5) - sin * (size * 0.7);
+      const p2y = d.y + sin * (-size * 0.5) + cos * (size * 0.7);
+      const p3x = d.x + cos * (-size * 0.5) - sin * (-size * 0.7);
+      const p3y = d.y + sin * (-size * 0.5) + cos * (-size * 0.7);
+
+      // Glow
+      ctx.fillStyle = debrisColor;
+      ctx.globalAlpha = alpha * 0.4;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, size * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Shard
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.moveTo(p1x, p1y);
+      ctx.lineTo(p2x, p2y);
+      ctx.lineTo(p3x, p3y);
+      ctx.closePath();
+      ctx.fill();
+
+      // Highlight
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = alpha * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(p1x, p1y);
+      ctx.lineTo(p2x, p2y);
+      ctx.stroke();
+
+    } else if (d.type === 'spark') {
+      const sparkLength = d.size * 2 * d.life;
+
+      const vLen = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
+      const nx = vLen > 0 ? d.vx / vLen : 1;
+      const ny = vLen > 0 ? d.vy / vLen : 0;
+
+      // Glow
+      ctx.fillStyle = debrisColor;
+      ctx.globalAlpha = alpha * 0.3;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, sparkLength * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Spark line
+      ctx.strokeStyle = debrisColor;
+      ctx.lineWidth = d.size * 0.6;
+      ctx.globalAlpha = alpha * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(d.x - nx * sparkLength, d.y - ny * sparkLength);
+      ctx.lineTo(d.x, d.y);
+      ctx.stroke();
+
+      // Bright tip
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = d.size * 0.3;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.moveTo(d.x - nx * sparkLength * 0.3, d.y - ny * sparkLength * 0.3);
+      ctx.lineTo(d.x, d.y);
+      ctx.stroke();
+
+    } else {
+      const emberSize = d.size * d.life;
+
+      // Outer glow
+      ctx.fillStyle = debrisColor;
+      ctx.globalAlpha = alpha * 0.2;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, emberSize * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Mid glow
+      ctx.globalAlpha = alpha * 0.5;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, emberSize * 1.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Core
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, emberSize, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Hot center
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = alpha * 0.7;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, emberSize * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
 
   // Game over overlay
   if (gameState.gameOver) {
