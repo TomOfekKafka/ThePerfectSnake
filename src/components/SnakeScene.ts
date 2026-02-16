@@ -48,6 +48,26 @@ interface NebulaCloud {
   pulseSpeed: number;
 }
 
+interface VortexRing {
+  radius: number;
+  baseRadius: number;
+  rotationOffset: number;
+  rotationSpeed: number;
+  thickness: number;
+  hue: number;
+  pulsePhase: number;
+}
+
+interface VortexParticle {
+  angle: number;
+  radius: number;
+  baseRadius: number;
+  speed: number;
+  size: number;
+  hue: number;
+  alpha: number;
+}
+
 interface SnakeAfterimage {
   segments: Position[];
   life: number;
@@ -102,6 +122,8 @@ const NUM_PLASMA_WAVES = 3;
 const MAX_AFTERIMAGES = 4;
 const NUM_AURORA_WAVES = 5;
 const NUM_NEBULA_CLOUDS = 6;
+const NUM_VORTEX_RINGS = 5;
+const NUM_VORTEX_PARTICLES = 20;
 
 // Color palette - enhanced neon cyberpunk theme with plasma colors
 const COLORS = {
@@ -144,6 +166,9 @@ export class SnakeScene extends Phaser.Scene {
   private snakeAfterimages: SnakeAfterimage[] = [];
   private auroraWaves: AuroraWave[] = [];
   private nebulaClouds: NebulaCloud[] = [];
+  private vortexRings: VortexRing[] = [];
+  private vortexParticles: VortexParticle[] = [];
+  private vortexPulse = 0;
   private gameOverAlpha = 0;
   private lastHeadPos: Position | null = null;
   private lastSnakeLength = 0;
@@ -161,6 +186,7 @@ export class SnakeScene extends Phaser.Scene {
     this.initPlasmaWaves();
     this.initAuroraWaves();
     this.initNebulaClouds();
+    this.initVortex();
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -230,6 +256,40 @@ export class SnakeScene extends Phaser.Scene {
         driftY: (Math.random() - 0.5) * 0.15,
         pulsePhase: Math.random() * Math.PI * 2,
         pulseSpeed: 0.01 + Math.random() * 0.01,
+      });
+    }
+  }
+
+  private initVortex(): void {
+    this.vortexRings = [];
+    this.vortexParticles = [];
+
+    // Create concentric rings with different properties
+    const ringHues = [280, 200, 320, 180, 260];
+    for (let i = 0; i < NUM_VORTEX_RINGS; i++) {
+      const baseRadius = 25 + i * 18;
+      this.vortexRings.push({
+        radius: baseRadius,
+        baseRadius,
+        rotationOffset: (i * Math.PI * 2) / NUM_VORTEX_RINGS,
+        rotationSpeed: 0.02 - i * 0.003,
+        thickness: 2 + (NUM_VORTEX_RINGS - i) * 0.5,
+        hue: ringHues[i % ringHues.length],
+        pulsePhase: i * 0.5,
+      });
+    }
+
+    // Create orbiting particles
+    for (let i = 0; i < NUM_VORTEX_PARTICLES; i++) {
+      const baseRadius = 20 + Math.random() * 80;
+      this.vortexParticles.push({
+        angle: Math.random() * Math.PI * 2,
+        radius: baseRadius,
+        baseRadius,
+        speed: 0.02 + Math.random() * 0.03,
+        size: 1 + Math.random() * 2,
+        hue: Math.random() * 360,
+        alpha: 0.3 + Math.random() * 0.5,
       });
     }
   }
@@ -443,6 +503,9 @@ export class SnakeScene extends Phaser.Scene {
     // Nebula clouds (deepest layer)
     this.drawNebulaClouds(g, width, height);
 
+    // Cosmic vortex in center
+    this.drawVortex(g, width, height);
+
     // Animated plasma waves in background
     this.drawPlasmaWaves(g, width, height);
 
@@ -536,6 +599,122 @@ export class SnakeScene extends Phaser.Scene {
       const coreColor = this.hslToRgb(cloud.hue / 360, 0.8, 0.5);
       g.fillStyle(coreColor, pulseAlpha * 0.4);
       g.fillCircle(cloud.x, cloud.y, cloud.radius * 0.3);
+    }
+  }
+
+  private drawVortex(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    // Update vortex pulse
+    this.vortexPulse += 0.03;
+    const globalPulse = 0.8 + Math.sin(this.vortexPulse) * 0.2;
+
+    // Draw outer glow/halo
+    const outerGlowColor = this.hslToRgb(280 / 360, 0.7, 0.3);
+    g.fillStyle(outerGlowColor, 0.08 * globalPulse);
+    g.fillCircle(centerX, centerY, 120);
+    g.fillStyle(outerGlowColor, 0.05 * globalPulse);
+    g.fillCircle(centerX, centerY, 140);
+
+    // Draw orbiting particles (behind rings)
+    for (const particle of this.vortexParticles) {
+      // Update particle position - spiral inward slightly then reset
+      particle.angle += particle.speed;
+      particle.radius = particle.baseRadius + Math.sin(particle.angle * 3) * 8;
+
+      const px = centerX + Math.cos(particle.angle) * particle.radius;
+      const py = centerY + Math.sin(particle.angle) * particle.radius;
+
+      // Particle hue shifts over time
+      particle.hue = (particle.hue + 0.5) % 360;
+      const particleColor = this.hslToRgb(particle.hue / 360, 0.8, 0.6);
+
+      // Draw particle with trail
+      const trailAngle = particle.angle - 0.3;
+      const trailX = centerX + Math.cos(trailAngle) * particle.radius;
+      const trailY = centerY + Math.sin(trailAngle) * particle.radius;
+
+      g.lineStyle(particle.size * 0.8, particleColor, particle.alpha * 0.3 * globalPulse);
+      g.lineBetween(trailX, trailY, px, py);
+
+      g.fillStyle(particleColor, particle.alpha * globalPulse);
+      g.fillCircle(px, py, particle.size);
+
+      // Bright core
+      g.fillStyle(0xffffff, particle.alpha * 0.5 * globalPulse);
+      g.fillCircle(px, py, particle.size * 0.4);
+    }
+
+    // Draw rotating rings
+    for (const ring of this.vortexRings) {
+      ring.rotationOffset += ring.rotationSpeed;
+      ring.pulsePhase += 0.02;
+
+      const ringPulse = 0.7 + Math.sin(ring.pulsePhase) * 0.3;
+      const adjustedRadius = ring.baseRadius * (0.95 + ringPulse * 0.1);
+
+      const ringColor = this.hslToRgb(ring.hue / 360, 0.8, 0.5);
+
+      // Draw ring as series of arc segments with gaps
+      const segments = 6;
+      const arcLength = (Math.PI * 2) / segments * 0.7;
+
+      for (let i = 0; i < segments; i++) {
+        const startAngle = ring.rotationOffset + (i * Math.PI * 2) / segments;
+        const endAngle = startAngle + arcLength;
+
+        // Calculate alpha based on segment position for 3D effect
+        const segmentAlpha = 0.15 + Math.sin(startAngle + this.frameCount * 0.02) * 0.1;
+
+        g.lineStyle(ring.thickness, ringColor, segmentAlpha * ringPulse * globalPulse);
+        g.beginPath();
+        g.arc(centerX, centerY, adjustedRadius, startAngle, endAngle, false);
+        g.strokePath();
+      }
+
+      // Inner glow line
+      g.lineStyle(ring.thickness * 0.5, 0xffffff, 0.1 * ringPulse * globalPulse);
+      g.beginPath();
+      g.arc(centerX, centerY, adjustedRadius - 1, ring.rotationOffset, ring.rotationOffset + Math.PI, false);
+      g.strokePath();
+    }
+
+    // Central dark core (event horizon)
+    g.fillStyle(0x000000, 0.9);
+    g.fillCircle(centerX, centerY, 12);
+    g.fillStyle(0x000000, 0.7);
+    g.fillCircle(centerX, centerY, 18);
+    g.fillStyle(0x000000, 0.4);
+    g.fillCircle(centerX, centerY, 25);
+
+    // Bright accretion ring at edge of event horizon
+    const accretionHue = (this.frameCount * 2) % 360;
+    const accretionColor = this.hslToRgb(accretionHue / 360, 1, 0.6);
+    g.lineStyle(2, accretionColor, 0.4 * globalPulse);
+    g.strokeCircle(centerX, centerY, 14);
+    g.lineStyle(1, 0xffffff, 0.3 * globalPulse);
+    g.strokeCircle(centerX, centerY, 13);
+
+    // Gravitational lensing effect - distorted light streaks
+    const numStreaks = 4;
+    for (let i = 0; i < numStreaks; i++) {
+      const streakAngle = (i * Math.PI * 2) / numStreaks + this.frameCount * 0.01;
+      const streakHue = (accretionHue + i * 60) % 360;
+      const streakColor = this.hslToRgb(streakHue / 360, 0.9, 0.7);
+
+      const innerRadius = 20;
+      const outerRadius = 35 + Math.sin(this.frameCount * 0.05 + i) * 10;
+
+      const x1 = centerX + Math.cos(streakAngle) * innerRadius;
+      const y1 = centerY + Math.sin(streakAngle) * innerRadius;
+      const x2 = centerX + Math.cos(streakAngle + 0.2) * outerRadius;
+      const y2 = centerY + Math.sin(streakAngle + 0.2) * outerRadius;
+
+      g.lineStyle(3, streakColor, 0.15 * globalPulse);
+      g.lineBetween(x1, y1, x2, y2);
+      g.lineStyle(1.5, 0xffffff, 0.2 * globalPulse);
+      g.lineBetween(x1, y1, x2, y2);
     }
   }
 

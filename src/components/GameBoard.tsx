@@ -88,8 +88,31 @@ interface Nebula2D {
   pulseSpeed: number;
 }
 
+interface VortexRing2D {
+  radius: number;
+  baseRadius: number;
+  rotationOffset: number;
+  rotationSpeed: number;
+  thickness: number;
+  hue: number;
+  pulsePhase: number;
+}
+
+interface VortexParticle2D {
+  angle: number;
+  radius: number;
+  baseRadius: number;
+  speed: number;
+  size: number;
+  hue: number;
+  alpha: number;
+}
+
 let auroraWaves: Aurora2D[] = [];
 let nebulaClouds: Nebula2D[] = [];
+let vortexRings: VortexRing2D[] = [];
+let vortexParticles: VortexParticle2D[] = [];
+let vortexPulse = 0;
 let effectsInitialized = false;
 
 function initCanvas2DEffects(): void {
@@ -127,6 +150,37 @@ function initCanvas2DEffects(): void {
       driftY: (Math.random() - 0.5) * 0.15,
       pulsePhase: Math.random() * Math.PI * 2,
       pulseSpeed: 0.01 + Math.random() * 0.01,
+    });
+  }
+
+  // Initialize vortex rings
+  const ringHues = [280, 200, 320, 180, 260];
+  vortexRings = [];
+  for (let i = 0; i < 5; i++) {
+    const baseRadius = 25 + i * 18;
+    vortexRings.push({
+      radius: baseRadius,
+      baseRadius,
+      rotationOffset: (i * Math.PI * 2) / 5,
+      rotationSpeed: 0.02 - i * 0.003,
+      thickness: 2 + (5 - i) * 0.5,
+      hue: ringHues[i % ringHues.length],
+      pulsePhase: i * 0.5,
+    });
+  }
+
+  // Initialize vortex particles
+  vortexParticles = [];
+  for (let i = 0; i < 20; i++) {
+    const baseRadius = 20 + Math.random() * 80;
+    vortexParticles.push({
+      angle: Math.random() * Math.PI * 2,
+      radius: baseRadius,
+      baseRadius,
+      speed: 0.02 + Math.random() * 0.03,
+      size: 1 + Math.random() * 2,
+      hue: Math.random() * 360,
+      alpha: 0.3 + Math.random() * 0.5,
     });
   }
 }
@@ -180,6 +234,150 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.beginPath();
     ctx.arc(cloud.x, cloud.y, cloud.radius * 0.3, 0, Math.PI * 2);
     ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw cosmic vortex
+  const centerX = width / 2;
+  const centerY = height / 2;
+  vortexPulse += 0.03;
+  const globalPulse = 0.8 + Math.sin(vortexPulse) * 0.2;
+
+  // Outer glow
+  const outerGlowColor = hslToRgb(280 / 360, 0.7, 0.3);
+  ctx.fillStyle = outerGlowColor;
+  ctx.globalAlpha = 0.08 * globalPulse;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 120, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 0.05 * globalPulse;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 140, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Draw orbiting particles
+  for (const particle of vortexParticles) {
+    particle.angle += particle.speed;
+    particle.radius = particle.baseRadius + Math.sin(particle.angle * 3) * 8;
+    particle.hue = (particle.hue + 0.5) % 360;
+
+    const px = centerX + Math.cos(particle.angle) * particle.radius;
+    const py = centerY + Math.sin(particle.angle) * particle.radius;
+    const particleColor = hslToRgb(particle.hue / 360, 0.8, 0.6);
+
+    // Trail
+    const trailAngle = particle.angle - 0.3;
+    const trailX = centerX + Math.cos(trailAngle) * particle.radius;
+    const trailY = centerY + Math.sin(trailAngle) * particle.radius;
+    ctx.strokeStyle = particleColor;
+    ctx.lineWidth = particle.size * 0.8;
+    ctx.globalAlpha = particle.alpha * 0.3 * globalPulse;
+    ctx.beginPath();
+    ctx.moveTo(trailX, trailY);
+    ctx.lineTo(px, py);
+    ctx.stroke();
+
+    // Particle
+    ctx.fillStyle = particleColor;
+    ctx.globalAlpha = particle.alpha * globalPulse;
+    ctx.beginPath();
+    ctx.arc(px, py, particle.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bright core
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = particle.alpha * 0.5 * globalPulse;
+    ctx.beginPath();
+    ctx.arc(px, py, particle.size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw rotating rings
+  for (const ring of vortexRings) {
+    ring.rotationOffset += ring.rotationSpeed;
+    ring.pulsePhase += 0.02;
+
+    const ringPulse = 0.7 + Math.sin(ring.pulsePhase) * 0.3;
+    const adjustedRadius = ring.baseRadius * (0.95 + ringPulse * 0.1);
+    const ringColor = hslToRgb(ring.hue / 360, 0.8, 0.5);
+
+    const segments = 6;
+    const arcLength = (Math.PI * 2) / segments * 0.7;
+
+    for (let i = 0; i < segments; i++) {
+      const startAngle = ring.rotationOffset + (i * Math.PI * 2) / segments;
+      const endAngle = startAngle + arcLength;
+      const segmentAlpha = 0.15 + Math.sin(startAngle + frameCount * 0.02) * 0.1;
+
+      ctx.strokeStyle = ringColor;
+      ctx.lineWidth = ring.thickness;
+      ctx.globalAlpha = segmentAlpha * ringPulse * globalPulse;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, adjustedRadius, startAngle, endAngle);
+      ctx.stroke();
+    }
+  }
+
+  // Central dark core
+  ctx.fillStyle = '#000000';
+  ctx.globalAlpha = 0.9;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 0.4;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 25, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Accretion ring
+  const accretionHue = (frameCount * 2) % 360;
+  const accretionColor = hslToRgb(accretionHue / 360, 1, 0.6);
+  ctx.strokeStyle = accretionColor;
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.4 * globalPulse;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 14, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.3 * globalPulse;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 13, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Gravitational lensing streaks
+  for (let i = 0; i < 4; i++) {
+    const streakAngle = (i * Math.PI * 2) / 4 + frameCount * 0.01;
+    const streakHue = (accretionHue + i * 60) % 360;
+    const streakColor = hslToRgb(streakHue / 360, 0.9, 0.7);
+
+    const innerRadius = 20;
+    const outerRadius = 35 + Math.sin(frameCount * 0.05 + i) * 10;
+
+    const x1 = centerX + Math.cos(streakAngle) * innerRadius;
+    const y1 = centerY + Math.sin(streakAngle) * innerRadius;
+    const x2 = centerX + Math.cos(streakAngle + 0.2) * outerRadius;
+    const y2 = centerY + Math.sin(streakAngle + 0.2) * outerRadius;
+
+    ctx.strokeStyle = streakColor;
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.15 * globalPulse;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.2 * globalPulse;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
   }
   ctx.globalAlpha = 1;
 
