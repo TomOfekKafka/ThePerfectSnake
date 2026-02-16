@@ -19,6 +19,21 @@ interface Star {
   brightness: number;
 }
 
+interface PlasmaWave {
+  phase: number;
+  speed: number;
+  amplitude: number;
+  wavelength: number;
+  hue: number;
+}
+
+interface SnakeAfterimage {
+  segments: Position[];
+  life: number;
+  maxLife: number;
+  hueOffset: number;
+}
+
 interface FoodParticle {
   x: number;
   y: number;
@@ -62,13 +77,15 @@ const MAX_FOOD_PARTICLES = 8;
 const MAX_TRAIL_PARTICLES = 40;
 const MAX_SHOCKWAVES = 3;
 const MAX_LIGHTNING_BOLTS = 5;
+const NUM_PLASMA_WAVES = 3;
+const MAX_AFTERIMAGES = 4;
 
-// Color palette - enhanced neon cyberpunk theme
+// Color palette - enhanced neon cyberpunk theme with plasma colors
 const COLORS = {
-  bgDark: 0x050510,
-  bgMid: 0x0a0a1a,
+  bgDark: 0x020208,
+  bgMid: 0x080816,
   gridLine: 0x1a1a3e,
-  gridAccent: 0x2a2a6e,
+  gridAccent: 0x3a3a8e,
   snakeHead: 0x00ffaa,
   snakeBody: 0x00dd88,
   snakeTail: 0x00aa66,
@@ -84,6 +101,10 @@ const COLORS = {
   star: 0xffffff,
   gameOverOverlay: 0x000000,
   gameOverText: 0xff3366,
+  plasma1: 0x8800ff,
+  plasma2: 0x00aaff,
+  plasma3: 0xff0088,
+  screenFlash: 0xffffff,
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -96,10 +117,14 @@ export class SnakeScene extends Phaser.Scene {
   private trailParticles: SnakeTrailParticle[] = [];
   private shockWaves: ShockWave[] = [];
   private lightningBolts: LightningBolt[] = [];
+  private plasmaWaves: PlasmaWave[] = [];
+  private snakeAfterimages: SnakeAfterimage[] = [];
   private gameOverAlpha = 0;
   private lastHeadPos: Position | null = null;
   private lastSnakeLength = 0;
   private hueOffset = 0;
+  private screenFlashAlpha = 0;
+  private gameOverGlitchOffset = 0;
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -108,6 +133,7 @@ export class SnakeScene extends Phaser.Scene {
   create(): void {
     this.graphics = this.add.graphics();
     this.initStars();
+    this.initPlasmaWaves();
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -125,6 +151,20 @@ export class SnakeScene extends Phaser.Scene {
         size: 0.5 + Math.random() * 1.5,
         speed: 0.02 + Math.random() * 0.03,
         brightness: 0.3 + Math.random() * 0.7,
+      });
+    }
+  }
+
+  private initPlasmaWaves(): void {
+    this.plasmaWaves = [];
+    const hues = [280, 200, 320]; // Purple, cyan, magenta
+    for (let i = 0; i < NUM_PLASMA_WAVES; i++) {
+      this.plasmaWaves.push({
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.015 + Math.random() * 0.01,
+        amplitude: 30 + Math.random() * 20,
+        wavelength: 80 + Math.random() * 40,
+        hue: hues[i % hues.length],
       });
     }
   }
@@ -183,6 +223,19 @@ export class SnakeScene extends Phaser.Scene {
         this.lightningBolts.splice(i, 1);
       }
     }
+    // Update afterimages
+    for (let i = this.snakeAfterimages.length - 1; i >= 0; i--) {
+      const ai = this.snakeAfterimages[i];
+      ai.life -= 1 / ai.maxLife;
+      if (ai.life <= 0) {
+        this.snakeAfterimages.splice(i, 1);
+      }
+    }
+    // Decay screen flash
+    if (this.screenFlashAlpha > 0) {
+      this.screenFlashAlpha -= 0.08;
+      if (this.screenFlashAlpha < 0) this.screenFlashAlpha = 0;
+    }
   }
 
   private spawnTrailParticles(x: number, y: number): void {
@@ -213,13 +266,24 @@ export class SnakeScene extends Phaser.Scene {
       const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
       this.spawnShockWave(headX, headY);
       this.spawnLightningBurst(headX, headY);
+      this.screenFlashAlpha = 0.6; // Trigger screen flash
     }
     this.lastSnakeLength = state.snake.length;
+
+    // Create afterimage when snake moves
+    if (this.currentState && state.snake.length > 0) {
+      const oldHead = this.currentState.snake[0];
+      const newHead = state.snake[0];
+      if (oldHead && newHead && (oldHead.x !== newHead.x || oldHead.y !== newHead.y)) {
+        this.spawnAfterimage(this.currentState.snake);
+      }
+    }
 
     this.currentState = state;
     this.needsRedraw = true;
     if (!state.gameOver) {
       this.gameOverAlpha = 0;
+      this.gameOverGlitchOffset = 0;
     }
   }
 
@@ -233,6 +297,18 @@ export class SnakeScene extends Phaser.Scene {
       radius: 5,
       maxRadius: CELL_SIZE * 3,
       life: 1,
+    });
+  }
+
+  private spawnAfterimage(snake: Position[]): void {
+    if (this.snakeAfterimages.length >= MAX_AFTERIMAGES) {
+      this.snakeAfterimages.shift();
+    }
+    this.snakeAfterimages.push({
+      segments: snake.map(s => ({ x: s.x, y: s.y })),
+      life: 1,
+      maxLife: 12,
+      hueOffset: this.hueOffset,
     });
   }
 
@@ -299,8 +375,11 @@ export class SnakeScene extends Phaser.Scene {
     g.fillStyle(COLORS.bgDark, 1);
     g.fillRect(0, 0, width, height);
 
+    // Animated plasma waves in background
+    this.drawPlasmaWaves(g, width, height);
+
     // Radial gradient effect in center (lighter area)
-    const centerGradientAlpha = 0.15 + Math.sin(this.frameCount * 0.02) * 0.05;
+    const centerGradientAlpha = 0.12 + Math.sin(this.frameCount * 0.02) * 0.04;
     g.fillStyle(COLORS.bgMid, centerGradientAlpha);
     g.fillCircle(width / 2, height / 2, width * 0.6);
 
@@ -318,6 +397,9 @@ export class SnakeScene extends Phaser.Scene {
     // Draw shockwaves (behind food and snake)
     this.drawShockWaves(g);
 
+    // Draw snake afterimages (ghost trail)
+    this.drawSnakeAfterimages(g);
+
     // Food with enhanced glow, particles and energy tendrils
     this.drawFood(g);
 
@@ -329,6 +411,12 @@ export class SnakeScene extends Phaser.Scene {
 
     // Draw lightning bolts (on top)
     this.drawLightningBolts(g);
+
+    // Screen flash effect (on eating food)
+    if (this.screenFlashAlpha > 0) {
+      g.fillStyle(COLORS.screenFlash, this.screenFlashAlpha * 0.3);
+      g.fillRect(0, 0, width, height);
+    }
 
     // Game over overlay with animation
     if (this.currentState.gameOver) {
@@ -344,6 +432,43 @@ export class SnakeScene extends Phaser.Scene {
       const alpha = star.brightness * twinkle * 0.6;
       g.fillStyle(COLORS.star, alpha);
       g.fillCircle(star.x, star.y, star.size);
+    }
+  }
+
+  private drawPlasmaWaves(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+    for (const wave of this.plasmaWaves) {
+      wave.phase += wave.speed;
+      const color = this.hslToRgb(wave.hue / 360, 0.7, 0.4);
+
+      // Draw flowing plasma lines
+      for (let y = 0; y < height; y += 8) {
+        const waveOffset = Math.sin(y / wave.wavelength + wave.phase) * wave.amplitude;
+        const intensity = 0.03 + Math.sin(wave.phase + y * 0.01) * 0.02;
+
+        g.fillStyle(color, intensity);
+        const x1 = width / 2 + waveOffset - 40;
+        const x2 = width / 2 + waveOffset + 40;
+        g.fillRect(x1, y, x2 - x1, 2);
+      }
+    }
+  }
+
+  private drawSnakeAfterimages(g: Phaser.GameObjects.Graphics): void {
+    for (const ai of this.snakeAfterimages) {
+      const alpha = ai.life * 0.25;
+      for (let i = 0; i < ai.segments.length; i++) {
+        const seg = ai.segments[i];
+        const centerX = seg.x * CELL_SIZE + CELL_SIZE / 2;
+        const centerY = seg.y * CELL_SIZE + CELL_SIZE / 2;
+        const t = ai.segments.length > 1 ? i / (ai.segments.length - 1) : 1;
+        const radius = (CELL_SIZE / 2 - 2) * (0.7 + t * 0.2);
+
+        const segmentHue = (ai.hueOffset + i * 15) % 360;
+        const color = this.hslToRgb(segmentHue / 360, 0.6, 0.4);
+
+        g.fillStyle(color, alpha * t);
+        g.fillCircle(centerX, centerY, radius);
+      }
     }
   }
 
@@ -457,20 +582,38 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   private drawGrid(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
-    // Main grid lines
-    g.lineStyle(1, COLORS.gridLine, 0.2);
+    // Main grid lines with subtle glow
+    g.lineStyle(1, COLORS.gridLine, 0.15);
     for (let i = 0; i <= GRID_SIZE; i++) {
       g.lineBetween(i * CELL_SIZE, 0, i * CELL_SIZE, height);
       g.lineBetween(0, i * CELL_SIZE, width, i * CELL_SIZE);
     }
 
     // Pulsing accent lines every 5 cells
-    const accentPulse = 0.2 + Math.sin(this.frameCount * 0.05) * 0.1;
-    g.lineStyle(1, COLORS.gridAccent, accentPulse);
+    const accentPulse = 0.25 + Math.sin(this.frameCount * 0.05) * 0.12;
+    g.lineStyle(1.5, COLORS.gridAccent, accentPulse);
     for (let i = 0; i <= GRID_SIZE; i += 5) {
       g.lineBetween(i * CELL_SIZE, 0, i * CELL_SIZE, height);
       g.lineBetween(0, i * CELL_SIZE, width, i * CELL_SIZE);
     }
+
+    // Diagonal accent lines for cyberpunk feel
+    const diagPulse = 0.08 + Math.sin(this.frameCount * 0.03 + 1) * 0.04;
+    g.lineStyle(1, COLORS.gridAccent, diagPulse);
+    // Draw from corners
+    g.lineBetween(0, 0, width * 0.15, height * 0.15);
+    g.lineBetween(width, 0, width * 0.85, height * 0.15);
+    g.lineBetween(0, height, width * 0.15, height * 0.85);
+    g.lineBetween(width, height, width * 0.85, height * 0.85);
+
+    // Animated scanning line
+    const scanY = (this.frameCount * 2) % (height + 40) - 20;
+    const scanAlpha = 0.15 + Math.sin(this.frameCount * 0.1) * 0.05;
+    g.lineStyle(2, 0x00ffff, scanAlpha);
+    g.lineBetween(0, scanY, width, scanY);
+    // Glow around scan line
+    g.fillStyle(0x00ffff, scanAlpha * 0.3);
+    g.fillRect(0, scanY - 3, width, 6);
   }
 
   private drawFood(g: Phaser.GameObjects.Graphics): void {
@@ -636,21 +779,48 @@ export class SnakeScene extends Phaser.Scene {
 
   private drawGameOver(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
     // Animate fade in
-    if (this.gameOverAlpha < 0.7) {
-      this.gameOverAlpha += 0.03;
+    if (this.gameOverAlpha < 0.75) {
+      this.gameOverAlpha += 0.04;
     }
+
+    // Glitch effect offset
+    this.gameOverGlitchOffset = Math.random() < 0.1 ? (Math.random() - 0.5) * 8 : this.gameOverGlitchOffset * 0.9;
 
     // Dark overlay
     g.fillStyle(COLORS.gameOverOverlay, this.gameOverAlpha);
     g.fillRect(0, 0, width, height);
 
-    // Pulsing vignette effect
-    const vignetteAlpha = 0.3 + Math.sin(this.frameCount * 0.08) * 0.1;
-    g.fillStyle(COLORS.gameOverText, vignetteAlpha * 0.2);
-    g.fillRect(0, 0, width, 4);
-    g.fillRect(0, height - 4, width, 4);
-    g.fillRect(0, 0, 4, height);
-    g.fillRect(width - 4, 0, 4, height);
+    // Scanline effect
+    for (let y = 0; y < height; y += 4) {
+      g.fillStyle(0x000000, 0.15);
+      g.fillRect(0, y, width, 2);
+    }
+
+    // Glitch color bars (random horizontal strips)
+    if (Math.random() < 0.2) {
+      const glitchY = Math.random() * height;
+      const glitchHeight = 2 + Math.random() * 6;
+      const glitchColor = Math.random() < 0.5 ? 0xff0066 : 0x00ffff;
+      g.fillStyle(glitchColor, 0.3);
+      g.fillRect(this.gameOverGlitchOffset, glitchY, width, glitchHeight);
+    }
+
+    // Pulsing vignette border with glitch
+    const vignetteAlpha = 0.4 + Math.sin(this.frameCount * 0.1) * 0.15;
+    const borderSize = 5 + Math.sin(this.frameCount * 0.15) * 2;
+    g.fillStyle(COLORS.gameOverText, vignetteAlpha * 0.4);
+    g.fillRect(this.gameOverGlitchOffset, 0, width, borderSize);
+    g.fillRect(this.gameOverGlitchOffset, height - borderSize, width, borderSize);
+    g.fillRect(0, 0, borderSize, height);
+    g.fillRect(width - borderSize, 0, borderSize, height);
+
+    // Corner flares
+    const flareSize = 20 + Math.sin(this.frameCount * 0.08) * 5;
+    g.fillStyle(COLORS.gameOverText, vignetteAlpha * 0.6);
+    g.fillTriangle(0, 0, flareSize, 0, 0, flareSize);
+    g.fillTriangle(width, 0, width - flareSize, 0, width, flareSize);
+    g.fillTriangle(0, height, flareSize, height, 0, height - flareSize);
+    g.fillTriangle(width, height, width - flareSize, height, width, height - flareSize);
   }
 
   private drawSnakeHead(
