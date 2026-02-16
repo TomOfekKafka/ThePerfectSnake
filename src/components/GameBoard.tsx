@@ -115,6 +115,26 @@ let vortexParticles: VortexParticle2D[] = [];
 let vortexPulse = 0;
 let effectsInitialized = false;
 
+// New dramatic effect state
+interface BurstParticle2D {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  size: number;
+  hue: number;
+  trail: { x: number; y: number }[];
+}
+let burstParticles: BurstParticle2D[] = [];
+let chromaticIntensity = 0;
+let energyFieldPulse = 0;
+let screenShakeX = 0;
+let screenShakeY = 0;
+let screenShakeIntensity = 0;
+let lastSnakeLength = 0;
+let wasGameOver = false;
+
 function initCanvas2DEffects(): void {
   if (effectsInitialized) return;
   effectsInitialized = true;
@@ -185,6 +205,66 @@ function initCanvas2DEffects(): void {
   }
 }
 
+function spawnBurstParticles(x: number, y: number, hueOffset: number): void {
+  burstParticles = [];
+  const numParticles = 12;
+  for (let i = 0; i < numParticles; i++) {
+    const angle = (i / numParticles) * Math.PI * 2 + Math.random() * 0.3;
+    const speed = 3 + Math.random() * 4;
+    burstParticles.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      size: 3 + Math.random() * 4,
+      hue: hueOffset + Math.random() * 60,
+      trail: [],
+    });
+  }
+}
+
+function updateCanvas2DEffects(): void {
+  // Update screen shake
+  if (screenShakeIntensity > 0) {
+    screenShakeX = (Math.random() - 0.5) * screenShakeIntensity;
+    screenShakeY = (Math.random() - 0.5) * screenShakeIntensity;
+    screenShakeIntensity *= 0.9;
+    if (screenShakeIntensity < 0.5) {
+      screenShakeIntensity = 0;
+      screenShakeX = 0;
+      screenShakeY = 0;
+    }
+  }
+
+  // Decay chromatic aberration
+  if (chromaticIntensity > 0) {
+    chromaticIntensity *= 0.92;
+    if (chromaticIntensity < 0.05) chromaticIntensity = 0;
+  }
+
+  // Decay energy field pulse
+  if (energyFieldPulse > 0) {
+    energyFieldPulse *= 0.95;
+    if (energyFieldPulse < 0.05) energyFieldPulse = 0;
+  }
+
+  // Update burst particles
+  for (let i = burstParticles.length - 1; i >= 0; i--) {
+    const p = burstParticles[i];
+    p.trail.unshift({ x: p.x, y: p.y });
+    if (p.trail.length > 6) p.trail.pop();
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.96;
+    p.vy *= 0.96;
+    p.life -= 0.025;
+    if (p.life <= 0) {
+      burstParticles.splice(i, 1);
+    }
+  }
+}
+
 function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -196,8 +276,34 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   const width = GRID_SIZE * CELL_SIZE;
   const height = GRID_SIZE * CELL_SIZE;
 
+  // Detect food eaten (snake got longer)
+  if (gameState.snake.length > lastSnakeLength && lastSnakeLength > 0) {
+    const head = gameState.snake[0];
+    const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+    spawnBurstParticles(headX, headY, hueOffset);
+    chromaticIntensity = 1.0;
+    energyFieldPulse = 1.0;
+  }
+  lastSnakeLength = gameState.snake.length;
+
+  // Detect game over transition
+  if (gameState.gameOver && !wasGameOver) {
+    screenShakeIntensity = 15;
+    chromaticIntensity = 2.0;
+  }
+  wasGameOver = gameState.gameOver;
+
+  // Update effects
+  updateCanvas2DEffects();
+
   ctx.save();
   ctx.scale(canvas.width / width, canvas.height / height);
+
+  // Apply screen shake
+  if (screenShakeIntensity > 0) {
+    ctx.translate(screenShakeX, screenShakeY);
+  }
 
   // Deep space background
   ctx.fillStyle = COLORS.bgDark;
@@ -589,6 +695,99 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.fill();
       ctx.globalAlpha = 1;
     }
+  }
+
+  // Draw energy field around snake
+  if (energyFieldPulse > 0 || true) {
+    const baseIntensity = 0.08 + energyFieldPulse * 0.3;
+    const pulseOffset = Math.sin(frameCount * 0.1) * 0.03;
+    const fieldAlpha = Math.min(0.4, baseIntensity + pulseOffset);
+
+    for (let i = 0; i < snake.length; i++) {
+      const seg = snake[i];
+      const cx = seg.x * CELL_SIZE + CELL_SIZE / 2;
+      const cy = seg.y * CELL_SIZE + CELL_SIZE / 2;
+      const fieldRadius = CELL_SIZE * (0.8 + energyFieldPulse * 0.6) + Math.sin(frameCount * 0.15 + i * 0.5) * 3;
+      const segmentHue = (hueOffset + i * 15) % 360;
+      const fieldColor = hslToRgb(segmentHue / 360, 0.7, 0.5);
+
+      ctx.fillStyle = fieldColor;
+      ctx.globalAlpha = fieldAlpha * 0.3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, fieldRadius + 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalAlpha = fieldAlpha * 0.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, fieldRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw burst particles
+  for (const p of burstParticles) {
+    const burstColor = hslToRgb(p.hue / 360, 1, 0.6);
+
+    // Draw trail
+    for (let i = 0; i < p.trail.length; i++) {
+      const t = p.trail[i];
+      const trailAlpha = p.life * 0.5 * (1 - i / p.trail.length);
+      const trailSize = p.size * p.life * (1 - i / p.trail.length);
+      ctx.fillStyle = burstColor;
+      ctx.globalAlpha = trailAlpha;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, trailSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw particle
+    ctx.fillStyle = burstColor;
+    ctx.globalAlpha = p.life * 0.8;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = p.life * 0.9;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw chromatic aberration effect
+  if (chromaticIntensity > 0) {
+    const offset = chromaticIntensity * 3;
+    for (let i = 0; i < snake.length; i++) {
+      const seg = snake[i];
+      const cx = seg.x * CELL_SIZE + CELL_SIZE / 2;
+      const cy = seg.y * CELL_SIZE + CELL_SIZE / 2;
+      const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
+      const radius = (CELL_SIZE / 2 - 1) * (0.85 + t * 0.15);
+      const alpha = chromaticIntensity * 0.4 * (i === 0 ? 1 : 0.6);
+
+      // Red channel - offset left
+      ctx.fillStyle = '#ff0000';
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(cx - offset, cy, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Blue channel - offset right
+      ctx.fillStyle = '#0000ff';
+      ctx.beginPath();
+      ctx.arc(cx + offset, cy, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cyan channel - offset up
+      ctx.fillStyle = '#00ffff';
+      ctx.globalAlpha = alpha * 0.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy - offset * 0.7, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
 
   // Game over overlay

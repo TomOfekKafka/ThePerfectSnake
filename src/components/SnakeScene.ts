@@ -118,6 +118,7 @@ const MAX_FOOD_PARTICLES = 8;
 const MAX_TRAIL_PARTICLES = 40;
 const MAX_SHOCKWAVES = 3;
 const MAX_LIGHTNING_BOLTS = 5;
+const MAX_BURST_PARTICLES = 12;
 const NUM_PLASMA_WAVES = 3;
 const MAX_AFTERIMAGES = 4;
 const NUM_AURORA_WAVES = 5;
@@ -175,6 +176,12 @@ export class SnakeScene extends Phaser.Scene {
   private hueOffset = 0;
   private screenFlashAlpha = 0;
   private gameOverGlitchOffset = 0;
+  private screenShakeX = 0;
+  private screenShakeY = 0;
+  private screenShakeIntensity = 0;
+  private energyFieldPulse = 0;
+  private foodBurstParticles: { x: number; y: number; vx: number; vy: number; life: number; size: number; hue: number; trail: { x: number; y: number }[] }[] = [];
+  private chromaticIntensity = 0;
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -361,6 +368,47 @@ export class SnakeScene extends Phaser.Scene {
       this.screenFlashAlpha -= 0.08;
       if (this.screenFlashAlpha < 0) this.screenFlashAlpha = 0;
     }
+
+    // Update screen shake
+    if (this.screenShakeIntensity > 0) {
+      this.screenShakeX = (Math.random() - 0.5) * this.screenShakeIntensity;
+      this.screenShakeY = (Math.random() - 0.5) * this.screenShakeIntensity;
+      this.screenShakeIntensity *= 0.9;
+      if (this.screenShakeIntensity < 0.5) {
+        this.screenShakeIntensity = 0;
+        this.screenShakeX = 0;
+        this.screenShakeY = 0;
+      }
+    }
+
+    // Decay chromatic aberration
+    if (this.chromaticIntensity > 0) {
+      this.chromaticIntensity *= 0.92;
+      if (this.chromaticIntensity < 0.05) this.chromaticIntensity = 0;
+    }
+
+    // Decay energy field pulse
+    if (this.energyFieldPulse > 0) {
+      this.energyFieldPulse *= 0.95;
+      if (this.energyFieldPulse < 0.05) this.energyFieldPulse = 0;
+    }
+
+    // Update food burst particles
+    for (let i = this.foodBurstParticles.length - 1; i >= 0; i--) {
+      const p = this.foodBurstParticles[i];
+      // Store trail position
+      p.trail.unshift({ x: p.x, y: p.y });
+      if (p.trail.length > 6) p.trail.pop();
+      // Update position
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+      p.life -= 0.025;
+      if (p.life <= 0) {
+        this.foodBurstParticles.splice(i, 1);
+      }
+    }
   }
 
   private spawnTrailParticles(x: number, y: number): void {
@@ -391,7 +439,10 @@ export class SnakeScene extends Phaser.Scene {
       const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
       this.spawnShockWave(headX, headY);
       this.spawnLightningBurst(headX, headY);
+      this.spawnFoodBurst(headX, headY);
       this.screenFlashAlpha = 0.6; // Trigger screen flash
+      this.chromaticIntensity = 1.0; // Trigger chromatic aberration pulse
+      this.energyFieldPulse = 1.0; // Trigger energy field expansion
     }
     this.lastSnakeLength = state.snake.length;
 
@@ -404,11 +455,18 @@ export class SnakeScene extends Phaser.Scene {
       }
     }
 
+    // Detect game over transition
+    if (state.gameOver && this.currentState && !this.currentState.gameOver) {
+      this.screenShakeIntensity = 15; // Trigger screen shake on death
+      this.chromaticIntensity = 2.0; // Strong chromatic aberration on death
+    }
+
     this.currentState = state;
     this.needsRedraw = true;
     if (!state.gameOver) {
       this.gameOverAlpha = 0;
       this.gameOverGlitchOffset = 0;
+      this.screenShakeIntensity = 0;
     }
   }
 
@@ -473,6 +531,26 @@ export class SnakeScene extends Phaser.Scene {
     return points;
   }
 
+  private spawnFoodBurst(x: number, y: number): void {
+    // Clear old particles and spawn new dramatic burst
+    this.foodBurstParticles = [];
+    const numParticles = MAX_BURST_PARTICLES;
+    for (let i = 0; i < numParticles; i++) {
+      const angle = (i / numParticles) * Math.PI * 2 + Math.random() * 0.3;
+      const speed = 3 + Math.random() * 4;
+      this.foodBurstParticles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        size: 3 + Math.random() * 4,
+        hue: this.hueOffset + Math.random() * 60,
+        trail: [],
+      });
+    }
+  }
+
   update(): void {
     this.frameCount++;
     this.hueOffset = (this.hueOffset + 0.5) % 360;
@@ -492,6 +570,13 @@ export class SnakeScene extends Phaser.Scene {
     // Always redraw for animations (stars, particles, pulsing)
     const g = this.graphics;
     g.clear();
+
+    // Apply screen shake offset
+    if (this.screenShakeIntensity > 0) {
+      g.setPosition(this.screenShakeX, this.screenShakeY);
+    } else {
+      g.setPosition(0, 0);
+    }
 
     const width = this.scale.width;
     const height = this.scale.height;
@@ -540,11 +625,22 @@ export class SnakeScene extends Phaser.Scene {
     // Snake with trail and scale effects
     this.drawSnake(g);
 
+    // Draw energy field around snake (pulsing aura)
+    this.drawEnergyField(g);
+
     // Draw electric arcs between snake segments
     this.drawSnakeElectricity(g);
 
     // Draw lightning bolts (on top)
     this.drawLightningBolts(g);
+
+    // Draw food burst particles (dramatic on-eat effect)
+    this.drawFoodBurst(g);
+
+    // Draw chromatic aberration overlay on snake
+    if (this.chromaticIntensity > 0) {
+      this.drawChromaticAberration(g);
+    }
 
     // Screen flash effect (on eating food)
     if (this.screenFlashAlpha > 0) {
@@ -1108,6 +1204,105 @@ export class SnakeScene extends Phaser.Scene {
       }
     }
 
+  }
+
+  private drawFoodBurst(g: Phaser.GameObjects.Graphics): void {
+    for (const p of this.foodBurstParticles) {
+      const color = this.hslToRgb(p.hue / 360, 1, 0.6);
+
+      // Draw trail
+      for (let i = 0; i < p.trail.length; i++) {
+        const t = p.trail[i];
+        const trailAlpha = p.life * 0.5 * (1 - i / p.trail.length);
+        const trailSize = p.size * p.life * (1 - i / p.trail.length);
+        g.fillStyle(color, trailAlpha);
+        g.fillCircle(t.x, t.y, trailSize);
+      }
+
+      // Draw particle core with bright center
+      g.fillStyle(color, p.life * 0.8);
+      g.fillCircle(p.x, p.y, p.size * p.life);
+      g.fillStyle(0xffffff, p.life * 0.9);
+      g.fillCircle(p.x, p.y, p.size * p.life * 0.4);
+    }
+  }
+
+  private drawEnergyField(g: Phaser.GameObjects.Graphics): void {
+    if (!this.currentState || this.currentState.snake.length === 0) return;
+
+    const snake = this.currentState.snake;
+    const baseIntensity = 0.08 + this.energyFieldPulse * 0.3;
+    const pulseOffset = Math.sin(this.frameCount * 0.1) * 0.03;
+    const alpha = Math.min(0.4, baseIntensity + pulseOffset);
+
+    // Draw energy field around entire snake
+    for (let i = 0; i < snake.length; i++) {
+      const seg = snake[i];
+      const cx = seg.x * CELL_SIZE + CELL_SIZE / 2;
+      const cy = seg.y * CELL_SIZE + CELL_SIZE / 2;
+
+      // Larger pulsing field around each segment
+      const fieldRadius = CELL_SIZE * (0.8 + this.energyFieldPulse * 0.6) + Math.sin(this.frameCount * 0.15 + i * 0.5) * 3;
+      const segmentHue = (this.hueOffset + i * 15) % 360;
+      const fieldColor = this.hslToRgb(segmentHue / 360, 0.7, 0.5);
+
+      // Outer glow
+      g.fillStyle(fieldColor, alpha * 0.3);
+      g.fillCircle(cx, cy, fieldRadius + 4);
+
+      // Inner field
+      g.fillStyle(fieldColor, alpha * 0.5);
+      g.fillCircle(cx, cy, fieldRadius);
+    }
+
+    // Additional connecting energy arcs when pulse is active
+    if (this.energyFieldPulse > 0.3 && snake.length > 1) {
+      for (let i = 0; i < snake.length - 1; i++) {
+        const seg1 = snake[i];
+        const seg2 = snake[i + 1];
+        const x1 = seg1.x * CELL_SIZE + CELL_SIZE / 2;
+        const y1 = seg1.y * CELL_SIZE + CELL_SIZE / 2;
+        const x2 = seg2.x * CELL_SIZE + CELL_SIZE / 2;
+        const y2 = seg2.y * CELL_SIZE + CELL_SIZE / 2;
+
+        const arcHue = (this.hueOffset + i * 15 + 30) % 360;
+        const arcColor = this.hslToRgb(arcHue / 360, 0.9, 0.7);
+
+        g.lineStyle(3, arcColor, this.energyFieldPulse * 0.4);
+        g.lineBetween(x1, y1, x2, y2);
+        g.lineStyle(1.5, 0xffffff, this.energyFieldPulse * 0.6);
+        g.lineBetween(x1, y1, x2, y2);
+      }
+    }
+  }
+
+  private drawChromaticAberration(g: Phaser.GameObjects.Graphics): void {
+    if (!this.currentState) return;
+
+    const snake = this.currentState.snake;
+    const offset = this.chromaticIntensity * 3;
+
+    // Draw offset colored versions of the snake for RGB split effect
+    for (let i = 0; i < snake.length; i++) {
+      const seg = snake[i];
+      const cx = seg.x * CELL_SIZE + CELL_SIZE / 2;
+      const cy = seg.y * CELL_SIZE + CELL_SIZE / 2;
+      const t = snake.length > 1 ? i / (snake.length - 1) : 1;
+      const radius = (CELL_SIZE / 2 - 1) * (0.85 + t * 0.15);
+      const alpha = this.chromaticIntensity * 0.4 * (i === 0 ? 1 : 0.6);
+
+      // Red channel - offset left
+      g.fillStyle(0xff0000, alpha);
+      g.fillCircle(cx - offset, cy, radius);
+
+      // Blue channel - offset right
+      g.fillStyle(0x0000ff, alpha);
+      g.fillCircle(cx + offset, cy, radius);
+
+      // Cyan channel - offset up
+      g.fillStyle(0x00ffff, alpha * 0.5);
+      g.fillCircle(cx, cy - offset * 0.7, radius);
+    }
   }
 
   private drawGameOver(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
