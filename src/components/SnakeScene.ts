@@ -250,6 +250,23 @@ interface MysticalBee {
   sparkleTimer: number;
 }
 
+// Ghost snake - spectral AI companion snake that roams the board
+interface GhostSnake {
+  segments: { x: number; y: number }[];
+  direction: { dx: number; dy: number };
+  targetX: number;
+  targetY: number;
+  moveTimer: number;
+  moveInterval: number;
+  pulsePhase: number;
+  glowIntensity: number;
+  hue: number;
+  trail: { x: number; y: number; alpha: number }[];
+}
+
+const GHOST_SNAKE_LENGTH = 8;
+const GHOST_MOVE_INTERVAL = 12;
+
 // Color palette - ICE CRYSTAL DRAGON theme: frozen arctic, crystalline beauty
 const COLORS = {
   bgDark: 0x030818,
@@ -333,6 +350,8 @@ export class SnakeScene extends Phaser.Scene {
   private lastFoodPos: Position | null = null;
   // Mystical bees swarming around
   private bees: MysticalBee[] = [];
+  // Ghost snake - spectral AI companion
+  private ghostSnake: GhostSnake | null = null;
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -349,6 +368,7 @@ export class SnakeScene extends Phaser.Scene {
     this.initSmokeParticles();
     this.initMonsterShadows();
     this.initBees();
+    this.initGhostSnake();
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -422,6 +442,205 @@ export class SnakeScene extends Phaser.Scene {
 
   private initBees(): void {
     this.bees = [];
+  }
+
+  private initGhostSnake(): void {
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+
+    const startX = 50 + Math.random() * (width - 100);
+    const startY = 50 + Math.random() * (height - 100);
+
+    const segments: { x: number; y: number }[] = [];
+    for (let i = 0; i < GHOST_SNAKE_LENGTH; i++) {
+      segments.push({
+        x: startX - i * CELL_SIZE * 0.6,
+        y: startY,
+      });
+    }
+
+    this.ghostSnake = {
+      segments,
+      direction: { dx: 1, dy: 0 },
+      targetX: width / 2,
+      targetY: height / 2,
+      moveTimer: 0,
+      moveInterval: GHOST_MOVE_INTERVAL,
+      pulsePhase: 0,
+      glowIntensity: 0.6,
+      hue: 260,
+      trail: [],
+    };
+  }
+
+  private updateGhostSnake(): void {
+    if (!this.ghostSnake || !this.currentState) return;
+
+    const gs = this.ghostSnake;
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+
+    gs.pulsePhase += 0.08;
+    gs.glowIntensity = 0.5 + Math.sin(gs.pulsePhase) * 0.2;
+
+    if (gs.segments.length > 0) {
+      gs.trail.unshift({ x: gs.segments[0].x, y: gs.segments[0].y, alpha: 0.5 });
+      if (gs.trail.length > 15) gs.trail.pop();
+    }
+
+    for (const t of gs.trail) {
+      t.alpha *= 0.9;
+    }
+    gs.trail = gs.trail.filter(t => t.alpha > 0.02);
+
+    gs.moveTimer++;
+    if (gs.moveTimer >= gs.moveInterval) {
+      gs.moveTimer = 0;
+
+      if (Math.random() < 0.15) {
+        if (Math.random() < 0.3) {
+          const foodX = this.currentState.food.x * CELL_SIZE + CELL_SIZE / 2;
+          const foodY = this.currentState.food.y * CELL_SIZE + CELL_SIZE / 2;
+          const angle = Math.random() * Math.PI * 2;
+          gs.targetX = foodX + Math.cos(angle) * 60;
+          gs.targetY = foodY + Math.sin(angle) * 60;
+        } else {
+          gs.targetX = 40 + Math.random() * (width - 80);
+          gs.targetY = 40 + Math.random() * (height - 80);
+        }
+      }
+
+      const head = gs.segments[0];
+      const dx = gs.targetX - head.x;
+      const dy = gs.targetY - head.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist > 5) {
+        const targetDx = dx / dist;
+        const targetDy = dy / dist;
+
+        gs.direction.dx = gs.direction.dx * 0.7 + targetDx * 0.3;
+        gs.direction.dy = gs.direction.dy * 0.7 + targetDy * 0.3;
+
+        const len = Math.sqrt(gs.direction.dx * gs.direction.dx + gs.direction.dy * gs.direction.dy);
+        if (len > 0) {
+          gs.direction.dx /= len;
+          gs.direction.dy /= len;
+        }
+      }
+
+      const moveSpeed = CELL_SIZE * 0.5;
+      const newHead = {
+        x: head.x + gs.direction.dx * moveSpeed,
+        y: head.y + gs.direction.dy * moveSpeed,
+      };
+
+      if (newHead.x < -20) newHead.x = width + 20;
+      if (newHead.x > width + 20) newHead.x = -20;
+      if (newHead.y < -20) newHead.y = height + 20;
+      if (newHead.y > height + 20) newHead.y = -20;
+
+      gs.segments.unshift(newHead);
+      gs.segments.pop();
+    } else {
+      const head = gs.segments[0];
+      const moveSpeed = CELL_SIZE * 0.5;
+
+      head.x += gs.direction.dx * moveSpeed * 0.05;
+      head.y += gs.direction.dy * moveSpeed * 0.05;
+
+      for (let i = 1; i < gs.segments.length; i++) {
+        const seg = gs.segments[i];
+        const prev = gs.segments[i - 1];
+        const pullStrength = 0.15;
+        seg.x += (prev.x - seg.x) * pullStrength;
+        seg.y += (prev.y - seg.y) * pullStrength;
+      }
+    }
+
+    if (this.currentState.gameOver) {
+      gs.hue = 0;
+      gs.glowIntensity *= 0.95;
+    } else {
+      gs.hue = 260 + Math.sin(gs.pulsePhase * 0.5) * 20;
+    }
+  }
+
+  private drawGhostSnake(g: Phaser.GameObjects.Graphics): void {
+    if (!this.ghostSnake || this.ghostSnake.segments.length === 0) return;
+
+    const gs = this.ghostSnake;
+    const pulse = gs.glowIntensity;
+
+    // Draw trail
+    for (let i = 0; i < gs.trail.length; i++) {
+      const t = gs.trail[i];
+      const trailSize = 4 * (1 - i / gs.trail.length);
+      g.fillStyle(this.hslToHex(gs.hue, 70, 60), t.alpha * 0.3);
+      g.fillCircle(t.x, t.y, trailSize * 1.5);
+    }
+
+    // Draw connecting ribbon
+    g.lineStyle(12, this.hslToHex(gs.hue, 60, 50), 0.15 * pulse);
+    g.beginPath();
+    g.moveTo(gs.segments[0].x, gs.segments[0].y);
+    for (let i = 1; i < gs.segments.length; i++) {
+      g.lineTo(gs.segments[i].x, gs.segments[i].y);
+    }
+    g.strokePath();
+
+    g.lineStyle(6, this.hslToHex(gs.hue, 70, 65), 0.25 * pulse);
+    g.beginPath();
+    g.moveTo(gs.segments[0].x, gs.segments[0].y);
+    for (let i = 1; i < gs.segments.length; i++) {
+      g.lineTo(gs.segments[i].x, gs.segments[i].y);
+    }
+    g.strokePath();
+
+    // Draw segments
+    for (let i = gs.segments.length - 1; i >= 0; i--) {
+      const seg = gs.segments[i];
+      const t = gs.segments.length > 1 ? i / (gs.segments.length - 1) : 1;
+      const segmentPulse = pulse * (0.7 + Math.sin(gs.pulsePhase + i * 0.5) * 0.3);
+
+      const baseSize = 6 + t * 4;
+      const size = baseSize * (0.9 + segmentPulse * 0.2);
+
+      g.fillStyle(this.hslToHex(gs.hue, 50, 40), 0.1 * segmentPulse);
+      g.fillCircle(seg.x, seg.y, size * 2.5);
+
+      g.fillStyle(this.hslToHex(gs.hue, 60, 55), 0.2 * segmentPulse);
+      g.fillCircle(seg.x, seg.y, size * 1.5);
+
+      g.fillStyle(this.hslToHex(gs.hue, 70, 70), 0.5 * segmentPulse);
+      g.fillCircle(seg.x, seg.y, size);
+
+      g.fillStyle(this.hslToHex(gs.hue + 30, 50, 85), 0.4 * segmentPulse);
+      g.fillCircle(seg.x, seg.y, size * 0.4);
+
+      // Head features
+      if (i === 0) {
+        const dx = gs.direction.dx;
+        const dy = gs.direction.dy;
+        const perpX = -dy;
+        const perpY = dx;
+
+        const eyeOffset = 3;
+        const eyeForward = 4;
+        const leftEyeX = seg.x + perpX * eyeOffset + dx * eyeForward;
+        const leftEyeY = seg.y + perpY * eyeOffset + dy * eyeForward;
+        const rightEyeX = seg.x - perpX * eyeOffset + dx * eyeForward;
+        const rightEyeY = seg.y - perpY * eyeOffset + dy * eyeForward;
+
+        g.fillStyle(this.hslToHex(gs.hue + 60, 80, 80), 0.7 * segmentPulse);
+        g.fillCircle(leftEyeX, leftEyeY, 2.5);
+        g.fillCircle(rightEyeX, rightEyeY, 2.5);
+
+        g.fillStyle(0xffffff, 0.8 * segmentPulse);
+        g.fillCircle(leftEyeX, leftEyeY, 1);
+        g.fillCircle(rightEyeX, rightEyeY, 1);
+      }
+    }
   }
 
   private spawnBee(): void {

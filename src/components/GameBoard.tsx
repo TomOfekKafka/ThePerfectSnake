@@ -349,6 +349,23 @@ let bees2D: Bee2D[] = [];
 const MAX_BEES_2D = 8;
 const BEE_SPAWN_CHANCE_2D = 0.02;
 
+// Ghost snake - spectral AI companion snake that roams the board
+interface GhostSnake2D {
+  segments: { x: number; y: number }[];
+  direction: { dx: number; dy: number };
+  targetX: number;
+  targetY: number;
+  moveTimer: number;
+  moveInterval: number;
+  pulsePhase: number;
+  glowIntensity: number;
+  hue: number;
+  trail: { x: number; y: number; alpha: number }[];
+}
+let ghostSnake: GhostSnake2D | null = null;
+const GHOST_SNAKE_LENGTH = 8;
+const GHOST_MOVE_INTERVAL = 12;
+
 function spawnBee2D(): void {
   if (bees2D.length >= MAX_BEES_2D) return;
 
@@ -398,6 +415,262 @@ function spawnBee2D(): void {
     state: 'flying',
     sparkleTimer: 0,
   });
+}
+
+function initGhostSnake(): void {
+  if (ghostSnake) return;
+
+  const width = GRID_SIZE * CELL_SIZE;
+  const height = GRID_SIZE * CELL_SIZE;
+
+  // Start from a random position
+  const startX = 50 + Math.random() * (width - 100);
+  const startY = 50 + Math.random() * (height - 100);
+
+  const segments: { x: number; y: number }[] = [];
+  for (let i = 0; i < GHOST_SNAKE_LENGTH; i++) {
+    segments.push({
+      x: startX - i * CELL_SIZE * 0.6,
+      y: startY,
+    });
+  }
+
+  ghostSnake = {
+    segments,
+    direction: { dx: 1, dy: 0 },
+    targetX: width / 2,
+    targetY: height / 2,
+    moveTimer: 0,
+    moveInterval: GHOST_MOVE_INTERVAL,
+    pulsePhase: 0,
+    glowIntensity: 0.6,
+    hue: 260, // Purple/violet spectral color
+    trail: [],
+  };
+}
+
+function updateGhostSnake(gameState: GameState): void {
+  if (!ghostSnake) {
+    initGhostSnake();
+    return;
+  }
+
+  const gs = ghostSnake;
+  const width = GRID_SIZE * CELL_SIZE;
+  const height = GRID_SIZE * CELL_SIZE;
+
+  // Update visual effects
+  gs.pulsePhase += 0.08;
+  gs.glowIntensity = 0.5 + Math.sin(gs.pulsePhase) * 0.2;
+
+  // Add to trail
+  if (gs.segments.length > 0) {
+    gs.trail.unshift({ x: gs.segments[0].x, y: gs.segments[0].y, alpha: 0.5 });
+    if (gs.trail.length > 15) gs.trail.pop();
+  }
+
+  // Fade trail
+  for (const t of gs.trail) {
+    t.alpha *= 0.9;
+  }
+  gs.trail = gs.trail.filter(t => t.alpha > 0.02);
+
+  // Movement logic
+  gs.moveTimer++;
+  if (gs.moveTimer >= gs.moveInterval) {
+    gs.moveTimer = 0;
+
+    // Pick a new target occasionally
+    if (Math.random() < 0.15) {
+      // Sometimes target the food area (but offset so we don't overlap)
+      if (Math.random() < 0.3) {
+        const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
+        const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
+        const angle = Math.random() * Math.PI * 2;
+        gs.targetX = foodX + Math.cos(angle) * 60;
+        gs.targetY = foodY + Math.sin(angle) * 60;
+      } else {
+        gs.targetX = 40 + Math.random() * (width - 80);
+        gs.targetY = 40 + Math.random() * (height - 80);
+      }
+    }
+
+    // Calculate direction toward target
+    const head = gs.segments[0];
+    const dx = gs.targetX - head.x;
+    const dy = gs.targetY - head.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist > 5) {
+      // Smooth direction change
+      const targetDx = dx / dist;
+      const targetDy = dy / dist;
+
+      // Interpolate toward target direction
+      gs.direction.dx = gs.direction.dx * 0.7 + targetDx * 0.3;
+      gs.direction.dy = gs.direction.dy * 0.7 + targetDy * 0.3;
+
+      // Normalize
+      const len = Math.sqrt(gs.direction.dx * gs.direction.dx + gs.direction.dy * gs.direction.dy);
+      if (len > 0) {
+        gs.direction.dx /= len;
+        gs.direction.dy /= len;
+      }
+    }
+
+    // Move head
+    const moveSpeed = CELL_SIZE * 0.5;
+    const newHead = {
+      x: head.x + gs.direction.dx * moveSpeed,
+      y: head.y + gs.direction.dy * moveSpeed,
+    };
+
+    // Wrap around screen edges
+    if (newHead.x < -20) newHead.x = width + 20;
+    if (newHead.x > width + 20) newHead.x = -20;
+    if (newHead.y < -20) newHead.y = height + 20;
+    if (newHead.y > height + 20) newHead.y = -20;
+
+    // Shift segments
+    gs.segments.unshift(newHead);
+    gs.segments.pop();
+  } else {
+    // Smooth interpolation between moves
+    const t = gs.moveTimer / gs.moveInterval;
+    const head = gs.segments[0];
+    const moveSpeed = CELL_SIZE * 0.5;
+
+    // Slight continuous movement for smoothness
+    head.x += gs.direction.dx * moveSpeed * 0.05;
+    head.y += gs.direction.dy * moveSpeed * 0.05;
+
+    // Pull body segments toward their predecessor
+    for (let i = 1; i < gs.segments.length; i++) {
+      const seg = gs.segments[i];
+      const prev = gs.segments[i - 1];
+      const pullStrength = 0.15;
+      seg.x += (prev.x - seg.x) * pullStrength;
+      seg.y += (prev.y - seg.y) * pullStrength;
+    }
+  }
+
+  // Color shift based on game state
+  if (gameState.gameOver) {
+    gs.hue = 0; // Turn red on game over
+    gs.glowIntensity *= 0.95;
+  } else {
+    gs.hue = 260 + Math.sin(gs.pulsePhase * 0.5) * 20; // Purple to blue shift
+  }
+}
+
+function drawGhostSnake(ctx: CanvasRenderingContext2D): void {
+  if (!ghostSnake || ghostSnake.segments.length === 0) return;
+
+  const gs = ghostSnake;
+  const pulse = gs.glowIntensity;
+
+  // Draw trail first (behind everything)
+  for (let i = 0; i < gs.trail.length; i++) {
+    const t = gs.trail[i];
+    const trailSize = 4 * (1 - i / gs.trail.length);
+
+    ctx.fillStyle = `hsla(${gs.hue}, 70%, 60%, ${t.alpha * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, trailSize * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw connecting ethereal ribbon between segments
+  ctx.strokeStyle = `hsla(${gs.hue}, 60%, 50%, ${0.15 * pulse})`;
+  ctx.lineWidth = 12;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(gs.segments[0].x, gs.segments[0].y);
+  for (let i = 1; i < gs.segments.length; i++) {
+    ctx.lineTo(gs.segments[i].x, gs.segments[i].y);
+  }
+  ctx.stroke();
+
+  // Inner ribbon
+  ctx.strokeStyle = `hsla(${gs.hue}, 70%, 65%, ${0.25 * pulse})`;
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  // Draw segments from tail to head
+  for (let i = gs.segments.length - 1; i >= 0; i--) {
+    const seg = gs.segments[i];
+    const t = gs.segments.length > 1 ? i / (gs.segments.length - 1) : 1;
+    const segmentPulse = pulse * (0.7 + Math.sin(gs.pulsePhase + i * 0.5) * 0.3);
+
+    // Size varies from tail to head
+    const baseSize = 6 + t * 4;
+    const size = baseSize * (0.9 + segmentPulse * 0.2);
+
+    // Outer spectral glow
+    ctx.fillStyle = `hsla(${gs.hue}, 50%, 40%, ${0.1 * segmentPulse})`;
+    ctx.beginPath();
+    ctx.arc(seg.x, seg.y, size * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Mid glow
+    ctx.fillStyle = `hsla(${gs.hue}, 60%, 55%, ${0.2 * segmentPulse})`;
+    ctx.beginPath();
+    ctx.arc(seg.x, seg.y, size * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core
+    ctx.fillStyle = `hsla(${gs.hue}, 70%, 70%, ${0.5 * segmentPulse})`;
+    ctx.beginPath();
+    ctx.arc(seg.x, seg.y, size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bright inner core
+    ctx.fillStyle = `hsla(${gs.hue + 30}, 50%, 85%, ${0.4 * segmentPulse})`;
+    ctx.beginPath();
+    ctx.arc(seg.x, seg.y, size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head has special features
+    if (i === 0) {
+      // Direction for eyes
+      const dx = gs.direction.dx;
+      const dy = gs.direction.dy;
+      const perpX = -dy;
+      const perpY = dx;
+
+      // Ghostly eyes
+      const eyeOffset = 3;
+      const eyeForward = 4;
+      const leftEyeX = seg.x + perpX * eyeOffset + dx * eyeForward;
+      const leftEyeY = seg.y + perpY * eyeOffset + dy * eyeForward;
+      const rightEyeX = seg.x - perpX * eyeOffset + dx * eyeForward;
+      const rightEyeY = seg.y - perpY * eyeOffset + dy * eyeForward;
+
+      // Eye glow
+      ctx.fillStyle = `hsla(${gs.hue + 60}, 80%, 80%, ${0.7 * segmentPulse})`;
+      ctx.shadowColor = `hsl(${gs.hue + 60}, 100%, 70%)`;
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.arc(leftEyeX, leftEyeY, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(rightEyeX, rightEyeY, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Bright eye centers
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.8 * segmentPulse;
+      ctx.beginPath();
+      ctx.arc(leftEyeX, leftEyeY, 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(rightEyeX, rightEyeY, 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
 }
 
 function updateBees2D(gameState: GameState, frame: number): void {
@@ -1307,6 +1580,7 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   updateArmageddonEffects();
   updateCometTrail(gameState);
   updateEtherealParticles();
+  updateGhostSnake(gameState);
 
   ctx.save();
   ctx.scale(canvas.width / width, canvas.height / height);
@@ -1432,6 +1706,9 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
 
   // Draw ethereal particles (frost crystals drifting)
   drawEtherealParticles(ctx);
+
+  // Draw ghost snake (spectral companion)
+  drawGhostSnake(ctx);
 
   // Draw frost particles
   for (const p of flameParticles) {
