@@ -22,36 +22,36 @@ const CELL_SIZE = 20;
 
 const GRID_SIZE = 20;
 
-// Color palette - Alice in Wonderland theme: magical, whimsical, dreamlike
+// Color palette - ARMAGEDDON theme: apocalyptic, fiery, volcanic destruction
 const COLORS = {
-  bgLight: '#1a1525',
-  bgPaper: '#231d30',
-  gridLine: '#3d2d50',
-  gridAccent: '#5a3d70',
-  // Cheshire Cat colors (purple/pink)
-  snakeHead: '#9b59b6',
-  snakeBody: '#8e44ad',
-  snakeTail: '#7d3c98',
-  snakeHighlight: '#d8a8e8',
-  snakeEye: '#f0e68c',
-  snakePupil: '#2d2d2d',
-  snakeCheek: '#ff69b4',
-  // Teacup/food colors
-  food: '#f4d03f',
-  foodCore: '#ffeaa7',
-  foodGlow: '#fff5cc',
-  gameOverOverlay: 'rgba(26, 21, 37, 0.95)',
-  // Wonderland accent colors
-  cardRed: '#e74c3c',
-  cardBlack: '#2c3e50',
-  roseRed: '#c0392b',
-  rosePink: '#ff6b9d',
-  teaGold: '#f39c12',
-  clockGold: '#d4af37',
-  magicPurple: '#9b59b6',
-  magicBlue: '#3498db',
-  magicPink: '#e056fd',
-  magicTeal: '#00cec9',
+  bgDark: '#0a0505',
+  bgVolcanic: '#1a0a08',
+  gridLine: '#3d1515',
+  gridAccent: '#5a2020',
+  // Demonic snake colors (fire and brimstone)
+  snakeHead: '#ff4500',
+  snakeBody: '#dc143c',
+  snakeTail: '#8b0000',
+  snakeHighlight: '#ff6b35',
+  snakeEye: '#ffff00',
+  snakePupil: '#000000',
+  snakeHorn: '#2d2d2d',
+  // Food - burning meteor/fireball
+  food: '#ff6600',
+  foodCore: '#ffcc00',
+  foodGlow: '#ff3300',
+  gameOverOverlay: 'rgba(10, 5, 5, 0.95)',
+  // Armageddon accent colors
+  fireOrange: '#ff6600',
+  fireRed: '#ff3300',
+  fireYellow: '#ffcc00',
+  lavaRed: '#dc143c',
+  ashGray: '#4a4a4a',
+  smokeBlack: '#1a1a1a',
+  brimstoneYellow: '#ffdd00',
+  demonPurple: '#660066',
+  bloodRed: '#8b0000',
+  emberOrange: '#ff8c00',
 };
 
 function hslToRgb(h: number, s: number, l: number): string {
@@ -76,11 +76,11 @@ function hslToRgb(h: number, s: number, l: number): string {
   return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
 }
 
-// Animation frame counter for rainbow effect
+// Animation frame counter
 let frameCount = 0;
 
-// Cheshire Cat ears - pointed, magical cat ears
-function drawCatEars(
+// Demon horns on the snake head
+function drawDemonHorns(
   ctx: CanvasRenderingContext2D,
   headX: number,
   headY: number,
@@ -90,323 +90,72 @@ function drawCatEars(
   perpY: number,
   frame: number
 ): void {
-  const earOffset = -7;
-  const earBaseX = headX - dx * earOffset;
-  const earBaseY = headY - dy * earOffset;
+  const hornOffset = -6;
+  const hornBaseX = headX - dx * hornOffset;
+  const hornBaseY = headY - dy * hornOffset;
 
-  // Animated ear twitch
-  const twitch = Math.sin(frame * 0.08) * 0.15;
+  // Animated horn flicker (fire effect)
+  const flicker = Math.sin(frame * 0.15) * 0.1;
 
-  // Cheshire Cat colors - purple with pink inner
-  const earOuter = '#9b59b6';
-  const earInner = '#ff69b4';
+  const hornSize = 10;
+  const hornSpread = 5;
 
-  const earSize = 9;
-  const earSpread = 6;
-
-  // Left ear
+  // Left horn
   ctx.save();
-  ctx.translate(earBaseX + perpX * earSpread, earBaseY + perpY * earSpread);
-  ctx.rotate(Math.atan2(perpY, perpX) + 0.4 + twitch);
+  ctx.translate(hornBaseX + perpX * hornSpread, hornBaseY + perpY * hornSpread);
+  ctx.rotate(Math.atan2(perpY, perpX) + 0.5 + flicker);
 
-  // Outer ear
-  ctx.fillStyle = earOuter;
+  // Dark horn base
+  ctx.fillStyle = COLORS.snakeHorn;
   ctx.beginPath();
-  ctx.moveTo(0, earSize);
-  ctx.lineTo(-earSize * 0.7, -earSize * 0.3);
-  ctx.lineTo(0, -earSize);
-  ctx.lineTo(earSize * 0.7, -earSize * 0.3);
+  ctx.moveTo(0, hornSize * 0.4);
+  ctx.lineTo(-hornSize * 0.4, -hornSize * 0.2);
+  ctx.lineTo(0, -hornSize);
+  ctx.lineTo(hornSize * 0.4, -hornSize * 0.2);
   ctx.closePath();
   ctx.fill();
 
-  // Inner ear (pink)
-  ctx.fillStyle = earInner;
+  // Fiery tip
+  ctx.fillStyle = COLORS.fireOrange;
+  ctx.globalAlpha = 0.6 + Math.sin(frame * 0.2) * 0.3;
   ctx.beginPath();
-  ctx.moveTo(0, earSize * 0.5);
-  ctx.lineTo(-earSize * 0.35, -earSize * 0.1);
-  ctx.lineTo(0, -earSize * 0.5);
-  ctx.lineTo(earSize * 0.35, -earSize * 0.1);
+  ctx.moveTo(0, -hornSize * 0.5);
+  ctx.lineTo(-hornSize * 0.2, -hornSize * 0.8);
+  ctx.lineTo(0, -hornSize - 3);
+  ctx.lineTo(hornSize * 0.2, -hornSize * 0.8);
   ctx.closePath();
   ctx.fill();
-  ctx.restore();
-
-  // Right ear
-  ctx.save();
-  ctx.translate(earBaseX - perpX * earSpread, earBaseY - perpY * earSpread);
-  ctx.rotate(Math.atan2(-perpY, -perpX) + 0.4 - twitch);
-
-  // Outer ear
-  ctx.fillStyle = earOuter;
-  ctx.beginPath();
-  ctx.moveTo(0, earSize);
-  ctx.lineTo(-earSize * 0.7, -earSize * 0.3);
-  ctx.lineTo(0, -earSize);
-  ctx.lineTo(earSize * 0.7, -earSize * 0.3);
-  ctx.closePath();
-  ctx.fill();
-
-  // Inner ear (pink)
-  ctx.fillStyle = earInner;
-  ctx.beginPath();
-  ctx.moveTo(0, earSize * 0.5);
-  ctx.lineTo(-earSize * 0.35, -earSize * 0.1);
-  ctx.lineTo(0, -earSize * 0.5);
-  ctx.lineTo(earSize * 0.35, -earSize * 0.1);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}
-
-// Cheshire Cat whiskers - magical glowing whiskers
-function drawWhiskers(
-  ctx: CanvasRenderingContext2D,
-  headX: number,
-  headY: number,
-  dx: number,
-  dy: number,
-  perpX: number,
-  perpY: number,
-  frame: number
-): void {
-  const whiskerBase = 4;
-  const whiskerLength = 14;
-  const wiggle = Math.sin(frame * 0.12) * 0.1;
-
-  // Magical purple whiskers
-  ctx.strokeStyle = '#d8a8e8';
-  ctx.lineWidth = 1.5;
-  ctx.lineCap = 'round';
-
-  // Left whiskers (3)
-  for (let i = 0; i < 3; i++) {
-    const angle = -0.3 + i * 0.3 + wiggle;
-    const startX = headX + perpX * whiskerBase + dx * 3;
-    const startY = headY + perpY * whiskerBase + dy * 3;
-    const endX = startX + perpX * whiskerLength * Math.cos(angle) + Math.cos(angle + Math.PI / 4) * whiskerLength * 0.5;
-    const endY = startY + perpY * whiskerLength * Math.cos(angle) + Math.sin(angle + Math.PI / 4) * whiskerLength * 0.5;
-
-    ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    ctx.quadraticCurveTo(
-      startX + perpX * whiskerLength * 0.5,
-      startY + perpY * whiskerLength * 0.5,
-      endX,
-      endY
-    );
-    ctx.stroke();
-  }
-
-  // Right whiskers (3)
-  for (let i = 0; i < 3; i++) {
-    const angle = -0.3 + i * 0.3 - wiggle;
-    const startX = headX - perpX * whiskerBase + dx * 3;
-    const startY = headY - perpY * whiskerBase + dy * 3;
-    const endX = startX - perpX * whiskerLength * Math.cos(angle) - Math.cos(angle + Math.PI / 4) * whiskerLength * 0.5;
-    const endY = startY - perpY * whiskerLength * Math.cos(angle) - Math.sin(angle + Math.PI / 4) * whiskerLength * 0.5;
-
-    ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    ctx.quadraticCurveTo(
-      startX - perpX * whiskerLength * 0.5,
-      startY - perpY * whiskerLength * 0.5,
-      endX,
-      endY
-    );
-    ctx.stroke();
-  }
-}
-
-// Cute fangs/teeth shown briefly when eating
-let teethShowTimer = 0;
-const TEETH_DURATION = 20;
-
-function drawTeeth(
-  ctx: CanvasRenderingContext2D,
-  headX: number,
-  headY: number,
-  dx: number,
-  dy: number
-): void {
-  if (teethShowTimer <= 0) return;
-
-  const toothSize = 4 * (teethShowTimer / TEETH_DURATION);
-  const mouthX = headX + dx * 6;
-  const mouthY = headY + dy * 6;
-
-  ctx.fillStyle = '#ffffff';
-  ctx.globalAlpha = teethShowTimer / TEETH_DURATION;
-
-  // Left fang
-  ctx.beginPath();
-  ctx.moveTo(mouthX - 3, mouthY);
-  ctx.lineTo(mouthX - 3 + dx * toothSize, mouthY + dy * toothSize + toothSize * 0.5);
-  ctx.lineTo(mouthX - 1, mouthY);
-  ctx.closePath();
-  ctx.fill();
-
-  // Right fang
-  ctx.beginPath();
-  ctx.moveTo(mouthX + 3, mouthY);
-  ctx.lineTo(mouthX + 3 + dx * toothSize, mouthY + dy * toothSize + toothSize * 0.5);
-  ctx.lineTo(mouthX + 1, mouthY);
-  ctx.closePath();
-  ctx.fill();
-
   ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // Right horn
+  ctx.save();
+  ctx.translate(hornBaseX - perpX * hornSpread, hornBaseY - perpY * hornSpread);
+  ctx.rotate(Math.atan2(-perpY, -perpX) + 0.5 - flicker);
+
+  ctx.fillStyle = COLORS.snakeHorn;
+  ctx.beginPath();
+  ctx.moveTo(0, hornSize * 0.4);
+  ctx.lineTo(-hornSize * 0.4, -hornSize * 0.2);
+  ctx.lineTo(0, -hornSize);
+  ctx.lineTo(hornSize * 0.4, -hornSize * 0.2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = COLORS.fireOrange;
+  ctx.globalAlpha = 0.6 + Math.sin(frame * 0.2 + 1) * 0.3;
+  ctx.beginPath();
+  ctx.moveTo(0, -hornSize * 0.5);
+  ctx.lineTo(-hornSize * 0.2, -hornSize * 0.8);
+  ctx.lineTo(0, -hornSize - 3);
+  ctx.lineTo(hornSize * 0.2, -hornSize * 0.8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
 }
 
-// Aurora wave state for Canvas 2D
-interface Aurora2D {
-  y: number;
-  phase: number;
-  speed: number;
-  hue: number;
-  thickness: number;
-  amplitude: number;
-}
-
-interface Nebula2D {
-  x: number;
-  y: number;
-  radius: number;
-  hue: number;
-  alpha: number;
-  driftX: number;
-  driftY: number;
-  pulsePhase: number;
-  pulseSpeed: number;
-}
-
-interface VortexRing2D {
-  radius: number;
-  baseRadius: number;
-  rotationOffset: number;
-  rotationSpeed: number;
-  thickness: number;
-  hue: number;
-  pulsePhase: number;
-}
-
-interface VortexParticle2D {
-  angle: number;
-  radius: number;
-  baseRadius: number;
-  speed: number;
-  size: number;
-  hue: number;
-  alpha: number;
-}
-
-let auroraWaves: Aurora2D[] = [];
-let nebulaClouds: Nebula2D[] = [];
-let vortexRings: VortexRing2D[] = [];
-let vortexParticles: VortexParticle2D[] = [];
-let vortexPulse = 0;
-let effectsInitialized = false;
-
-// New dramatic effect state
-interface BurstParticle2D {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  size: number;
-  hue: number;
-  trail: { x: number; y: number }[];
-}
-let burstParticles: BurstParticle2D[] = [];
-let chromaticIntensity = 0;
-let energyFieldPulse = 0;
-let screenShakeX = 0;
-let screenShakeY = 0;
-let screenShakeIntensity = 0;
-let lastSnakeLength = 0;
-let wasGameOver = false;
-
-// Lightning arc state for dramatic snake connections
-interface LightningBolt2D {
-  startX: number;
-  startY: number;
-  endX: number;
-  endY: number;
-  segments: { x: number; y: number }[];
-  life: number;
-  hue: number;
-  intensity: number;
-}
-let lightningBolts: LightningBolt2D[] = [];
-let lightningTimer = 0;
-
-// Scanline effect state
-let scanlineY = 0;
-let scanlineSpeed = 2;
-
-// Film noir specific state
-let venetianPhase = 0;
-let spotlightX = 200;
-let spotlightY = 200;
-
-// Floating star/sparkle state - friendly decorations
-interface FloatingStar2D {
-  x: number;
-  y: number;
-  baseX: number;
-  baseY: number;
-  size: number;
-  phase: number;
-  speed: number;
-  twinklePhase: number;
-  color: string;
-}
-let floatingStars: FloatingStar2D[] = [];
-let starsInitialized = false;
-
-// Meteor shower state
-interface Meteor2D {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  size: number;
-  hue: number;
-  alpha: number;
-  trail: { x: number; y: number }[];
-}
-let meteors: Meteor2D[] = [];
-const NUM_METEORS = 8;
-
-// Death debris state
-interface DeathDebris2D {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  size: number;
-  hue: number;
-  rotation: number;
-  rotationSpeed: number;
-  life: number;
-  type: 'shard' | 'spark' | 'ember';
-}
-let deathDebris: DeathDebris2D[] = [];
-let deathExplosionPhase = 0;
-
-// Food orb particle system - dramatic attraction effect
-interface FoodOrbitParticle2D {
-  angle: number;
-  radius: number;
-  speed: number;
-  size: number;
-  hue: number;
-  alpha: number;
-  layer: number;
-}
-let foodOrbitParticles: FoodOrbitParticle2D[] = [];
-let foodOrbPhase = 0;
-let foodOrbInitialized = false;
-
-// Flame particle system - burning effect trailing behind snake
+// Flame effects state
 interface FlameParticle2D {
   x: number;
   y: number;
@@ -416,466 +165,110 @@ interface FlameParticle2D {
   life: number;
   maxLife: number;
   hue: number;
-  brightness: number;
 }
 let flameParticles: FlameParticle2D[] = [];
-const MAX_FLAME_PARTICLES = 60;
+const MAX_FLAME_PARTICLES = 50;
 
-// Dimensional Rift - jaw-dropping portal effect when food is eaten
-interface DimensionalRift2D {
+// Meteor shower state
+interface Meteor2D {
   x: number;
   y: number;
-  life: number;
-  maxLife: number;
-  rotation: number;
-  scale: number;
+  vx: number;
+  vy: number;
+  size: number;
+  trail: { x: number; y: number }[];
 }
-let dimensionalRift: DimensionalRift2D | null = null;
+let meteors: Meteor2D[] = [];
+const NUM_METEORS = 6;
 
-// Hypnotic pulse rings emanating from snake head
-interface PulseRing2D {
+// Volcanic ash particles
+interface AshParticle2D {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  alpha: number;
+  rotation: number;
+  rotationSpeed: number;
+}
+let ashParticles: AshParticle2D[] = [];
+const NUM_ASH = 20;
+
+// Screen crack state for apocalyptic effect
+interface ScreenCrack2D {
+  x: number;
+  y: number;
+  segments: { x: number; y: number }[];
+  life: number;
+}
+let screenCracks: ScreenCrack2D[] = [];
+
+// Explosion state for food consumption
+interface Explosion2D {
   x: number;
   y: number;
   radius: number;
   maxRadius: number;
   life: number;
-  hue: number;
+  particles: { angle: number; dist: number; size: number; hue: number }[];
 }
-let pulseRings: PulseRing2D[] = [];
-let pulseRingTimer = 0;
+let explosions: Explosion2D[] = [];
 
-// Reality shatter shards for game over
-interface ShatterShard2D {
-  points: { x: number; y: number }[];
-  cx: number;
-  cy: number;
-  vx: number;
-  vy: number;
-  rotation: number;
-  rotationSpeed: number;
-  life: number;
-  delay: number;
-}
-let shatterShards: ShatterShard2D[] = [];
-let shatterInitialized = false;
+// Fire ring around food
+let foodFirePhase = 0;
 
-// Prism trail segments - rainbow light trail behind snake
-interface PrismSegment2D {
+// Screen shake
+let screenShakeX = 0;
+let screenShakeY = 0;
+let screenShakeIntensity = 0;
+
+// Tracking state
+let lastSnakeLength = 0;
+let wasGameOver = false;
+let effectsInitialized = false;
+
+// Lava flow state
+let lavaPhase = 0;
+
+// Death inferno state
+interface InfernoParticle2D {
   x: number;
   y: number;
-  hue: number;
-  life: number;
+  vx: number;
+  vy: number;
   size: number;
+  life: number;
+  hue: number;
 }
-let prismTrail: PrismSegment2D[] = [];
-const MAX_PRISM_TRAIL = 30;
+let infernoParticles: InfernoParticle2D[] = [];
 
-function initFloatingStars(): void {
-  if (starsInitialized) return;
-  starsInitialized = true;
-
-  const width = GRID_SIZE * CELL_SIZE;
-  const height = GRID_SIZE * CELL_SIZE;
-  floatingStars = [];
-
-  // Wonderland magical colors
-  const starColors = [COLORS.magicPurple, COLORS.magicPink, COLORS.magicBlue, COLORS.teaGold, COLORS.magicTeal];
-
-  // Create floating magical sparkles around the edges
-  for (let i = 0; i < 16; i++) {
-    const angle = (i / 16) * Math.PI * 2;
-    const dist = Math.max(width, height) * 0.42 + Math.random() * 20;
-    const x = width / 2 + Math.cos(angle) * dist;
-    const y = height / 2 + Math.sin(angle) * dist;
-
-    floatingStars.push({
-      x,
-      y,
-      baseX: x,
-      baseY: y,
-      size: 6 + Math.random() * 6,
-      phase: Math.random() * Math.PI * 2,
-      speed: 0.015 + Math.random() * 0.015,
-      twinklePhase: Math.random() * Math.PI * 2,
-      color: starColors[i % starColors.length],
-    });
-  }
-}
-
-function updateFloatingStars(): void {
-  const width = GRID_SIZE * CELL_SIZE;
-  const height = GRID_SIZE * CELL_SIZE;
-
-  for (const star of floatingStars) {
-    star.phase += star.speed;
-    star.twinklePhase += 0.08;
-
-    // Gentle floating motion
-    const floatX = Math.sin(star.phase) * 8;
-    const floatY = Math.cos(star.phase * 0.7) * 6;
-
-    star.x = star.baseX + floatX;
-    star.y = star.baseY + floatY;
-
-    // Keep stars on screen
-    star.x = Math.max(-20, Math.min(width + 20, star.x));
-    star.y = Math.max(-20, Math.min(height + 20, star.y));
-  }
-}
-
-function drawFloatingStar(ctx: CanvasRenderingContext2D, star: FloatingStar2D): void {
-  const { x, y, size, twinklePhase, color } = star;
-
-  const twinkle = 0.6 + Math.sin(twinklePhase) * 0.4;
-  const scale = 0.9 + Math.sin(twinklePhase * 1.5) * 0.1;
-  const starSize = size * scale;
-
-  ctx.save();
-
-  // Outer glow
-  ctx.fillStyle = color;
-  ctx.globalAlpha = twinkle * 0.3;
-  ctx.beginPath();
-  ctx.arc(x, y, starSize * 1.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Draw 4-pointed star shape
-  ctx.globalAlpha = twinkle * 0.9;
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  for (let i = 0; i < 8; i++) {
-    const angle = (i / 8) * Math.PI * 2 - Math.PI / 2;
-    const r = i % 2 === 0 ? starSize : starSize * 0.4;
-    const px = x + Math.cos(angle) * r;
-    const py = y + Math.sin(angle) * r;
-    if (i === 0) {
-      ctx.moveTo(px, py);
-    } else {
-      ctx.lineTo(px, py);
-    }
-  }
-  ctx.closePath();
-  ctx.fill();
-
-  // White center sparkle
-  ctx.fillStyle = '#ffffff';
-  ctx.globalAlpha = twinkle;
-  ctx.beginPath();
-  ctx.arc(x, y, starSize * 0.3, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.restore();
-}
-
-function initCanvas2DEffects(): void {
+function initArmageddonEffects(): void {
   if (effectsInitialized) return;
   effectsInitialized = true;
 
   const width = GRID_SIZE * CELL_SIZE;
   const height = GRID_SIZE * CELL_SIZE;
 
-  // Initialize aurora waves
-  const auroraHues = [120, 160, 180, 280, 320];
-  auroraWaves = [];
-  for (let i = 0; i < 5; i++) {
-    auroraWaves.push({
-      y: height * 0.2 + (height * 0.6 * i) / 5,
-      phase: Math.random() * Math.PI * 2,
-      speed: 0.008 + Math.random() * 0.006,
-      hue: auroraHues[i % auroraHues.length],
-      thickness: 25 + Math.random() * 20,
-      amplitude: 15 + Math.random() * 25,
-    });
-  }
-
-  // Initialize nebula clouds
-  const nebulaHues = [260, 220, 300, 180, 340, 240];
-  nebulaClouds = [];
-  for (let i = 0; i < 6; i++) {
-    nebulaClouds.push({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      radius: 40 + Math.random() * 60,
-      hue: nebulaHues[i % nebulaHues.length],
-      alpha: 0.04 + Math.random() * 0.04,
-      driftX: (Math.random() - 0.5) * 0.15,
-      driftY: (Math.random() - 0.5) * 0.15,
-      pulsePhase: Math.random() * Math.PI * 2,
-      pulseSpeed: 0.01 + Math.random() * 0.01,
-    });
-  }
-
-  // Initialize vortex rings
-  const ringHues = [280, 200, 320, 180, 260];
-  vortexRings = [];
-  for (let i = 0; i < 5; i++) {
-    const baseRadius = 25 + i * 18;
-    vortexRings.push({
-      radius: baseRadius,
-      baseRadius,
-      rotationOffset: (i * Math.PI * 2) / 5,
-      rotationSpeed: 0.02 - i * 0.003,
-      thickness: 2 + (5 - i) * 0.5,
-      hue: ringHues[i % ringHues.length],
-      pulsePhase: i * 0.5,
-    });
-  }
-
-  // Initialize vortex particles
-  vortexParticles = [];
-  for (let i = 0; i < 20; i++) {
-    const baseRadius = 20 + Math.random() * 80;
-    vortexParticles.push({
-      angle: Math.random() * Math.PI * 2,
-      radius: baseRadius,
-      baseRadius,
-      speed: 0.02 + Math.random() * 0.03,
-      size: 1 + Math.random() * 2,
-      hue: Math.random() * 360,
-      alpha: 0.3 + Math.random() * 0.5,
-    });
-  }
-
   // Initialize meteors
-  initMeteors(width, height);
-
-  // Initialize food orb particles
-  initFoodOrbParticles();
-
-  // Initialize floating stars
-  initFloatingStars();
-}
-
-function initFoodOrbParticles(): void {
-  if (foodOrbInitialized) return;
-  foodOrbInitialized = true;
-
-  foodOrbitParticles = [];
-  // Create 3 layers of orbiting particles
-  for (let layer = 0; layer < 3; layer++) {
-    const baseRadius = 12 + layer * 8;
-    const numParticles = 6 + layer * 2;
-    for (let i = 0; i < numParticles; i++) {
-      foodOrbitParticles.push({
-        angle: (i / numParticles) * Math.PI * 2 + layer * 0.5,
-        radius: baseRadius + Math.random() * 4,
-        speed: (0.04 + Math.random() * 0.02) * (layer % 2 === 0 ? 1 : -1),
-        size: 1.5 + Math.random() * 1.5,
-        hue: 340 + Math.random() * 40, // Pink to red range
-        alpha: 0.6 + Math.random() * 0.4,
-        layer,
-      });
-    }
-  }
-}
-
-// Spawn dimensional rift at food location when eaten
-function spawnDimensionalRift(x: number, y: number): void {
-  dimensionalRift = {
-    x,
-    y,
-    life: 1,
-    maxLife: 1,
-    rotation: 0,
-    scale: 0,
-  };
-}
-
-// Spawn pulse ring from snake head
-function spawnPulseRing(x: number, y: number, hue: number): void {
-  if (pulseRings.length >= 4) return;
-  pulseRings.push({
-    x,
-    y,
-    radius: 5,
-    maxRadius: 80,
-    life: 1,
-    hue,
-  });
-}
-
-// Initialize reality shatter effect for game over
-function initShatterEffect(width: number, height: number): void {
-  if (shatterInitialized) return;
-  shatterInitialized = true;
-  shatterShards = [];
-
-  // Create triangular shards covering the screen
-  const cols = 6;
-  const rows = 6;
-  const cellW = width / cols;
-  const cellH = height / rows;
-
-  for (let i = 0; i < cols; i++) {
-    for (let j = 0; j < rows; j++) {
-      const x0 = i * cellW;
-      const y0 = j * cellH;
-      const x1 = x0 + cellW;
-      const y1 = y0 + cellH;
-      const cx = x0 + cellW / 2;
-      const cy = y0 + cellH / 2;
-
-      // Create two triangles per cell
-      const midX = x0 + cellW * (0.4 + Math.random() * 0.2);
-      const midY = y0 + cellH * (0.4 + Math.random() * 0.2);
-
-      // Triangle 1
-      shatterShards.push({
-        points: [
-          { x: x0, y: y0 },
-          { x: x1, y: y0 },
-          { x: midX, y: midY },
-        ],
-        cx: (x0 + x1 + midX) / 3,
-        cy: (y0 + y0 + midY) / 3,
-        vx: (Math.random() - 0.5) * 4,
-        vy: Math.random() * 2 + 1,
-        rotation: 0,
-        rotationSpeed: (Math.random() - 0.5) * 0.15,
-        life: 1,
-        delay: (i + j) * 0.03,
-      });
-
-      // Triangle 2
-      shatterShards.push({
-        points: [
-          { x: x1, y: y0 },
-          { x: x1, y: y1 },
-          { x: midX, y: midY },
-        ],
-        cx: (x1 + x1 + midX) / 3,
-        cy: (y0 + y1 + midY) / 3,
-        vx: (Math.random() - 0.5) * 4,
-        vy: Math.random() * 2 + 1,
-        rotation: 0,
-        rotationSpeed: (Math.random() - 0.5) * 0.15,
-        life: 1,
-        delay: (i + j) * 0.03 + 0.01,
-      });
-
-      // Triangle 3
-      shatterShards.push({
-        points: [
-          { x: x1, y: y1 },
-          { x: x0, y: y1 },
-          { x: midX, y: midY },
-        ],
-        cx: (x1 + x0 + midX) / 3,
-        cy: (y1 + y1 + midY) / 3,
-        vx: (Math.random() - 0.5) * 4,
-        vy: Math.random() * 2 + 1,
-        rotation: 0,
-        rotationSpeed: (Math.random() - 0.5) * 0.15,
-        life: 1,
-        delay: (i + j) * 0.03 + 0.02,
-      });
-
-      // Triangle 4
-      shatterShards.push({
-        points: [
-          { x: x0, y: y1 },
-          { x: x0, y: y0 },
-          { x: midX, y: midY },
-        ],
-        cx: (x0 + x0 + midX) / 3,
-        cy: (y1 + y0 + midY) / 3,
-        vx: (Math.random() - 0.5) * 4,
-        vy: Math.random() * 2 + 1,
-        rotation: 0,
-        rotationSpeed: (Math.random() - 0.5) * 0.15,
-        life: 1,
-        delay: (i + j) * 0.03 + 0.03,
-      });
-    }
-  }
-}
-
-// Add prism trail segment at position
-function addPrismTrailSegment(x: number, y: number, hue: number): void {
-  prismTrail.unshift({
-    x,
-    y,
-    hue,
-    life: 1,
-    size: CELL_SIZE * 0.6,
-  });
-  if (prismTrail.length > MAX_PRISM_TRAIL) {
-    prismTrail.pop();
-  }
-}
-
-function spawnFlameParticle(x: number, y: number, intensity: number): void {
-  if (flameParticles.length >= MAX_FLAME_PARTICLES) {
-    // Remove oldest particle
-    flameParticles.shift();
-  }
-
-  const angle = Math.random() * Math.PI * 2;
-  const speed = 0.3 + Math.random() * 0.6;
-  const life = 0.5 + Math.random() * 0.5;
-
-  flameParticles.push({
-    x: x + (Math.random() - 0.5) * 6,
-    y: y + (Math.random() - 0.5) * 6,
-    vx: Math.cos(angle) * speed * 0.3,
-    vy: -0.5 - Math.random() * 1.5 * intensity, // Magic sparkles rise upward
-    size: 3 + Math.random() * 4 * intensity,
-    life,
-    maxLife: life,
-    hue: 280 + Math.random() * 60, // Purple to pink range (magical Cheshire trail)
-    brightness: 0.5 + Math.random() * 0.3,
-  });
-}
-
-function updateFlameParticles(): void {
-  for (let i = flameParticles.length - 1; i >= 0; i--) {
-    const p = flameParticles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.vy -= 0.02; // Slight upward acceleration (flames rise)
-    p.vx *= 0.98; // Horizontal drag
-    p.size *= 0.97; // Shrink over time
-    p.life -= 0.025;
-
-    if (p.life <= 0 || p.size < 0.5) {
-      flameParticles.splice(i, 1);
-    }
-  }
-}
-
-function drawFlameParticles(ctx: CanvasRenderingContext2D): void {
-  for (const p of flameParticles) {
-    const lifeRatio = p.life / p.maxLife;
-
-    // Magical purple/pink sparkle trail (Cheshire Cat disappearing effect)
-    const hue = p.hue - (1 - lifeRatio) * 20;
-    const saturation = 70;
-    const lightness = 55 + lifeRatio * 15;
-
-    // Outer magical glow
-    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness - 15}%, ${lifeRatio * 0.25})`;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Mid sparkle
-    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${lifeRatio * 0.5})`;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * 1.3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Bright core (white/pink)
-    ctx.fillStyle = `hsla(${hue + 30}, ${saturation - 20}%, ${lightness + 25}%, ${lifeRatio * 0.7})`;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
-function initMeteors(width: number, height: number): void {
   meteors = [];
   for (let i = 0; i < NUM_METEORS; i++) {
     spawnMeteor(width, height, true);
+  }
+
+  // Initialize ash particles
+  ashParticles = [];
+  for (let i = 0; i < NUM_ASH; i++) {
+    ashParticles.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: 0.2 + Math.random() * 0.3,
+      size: 1 + Math.random() * 2,
+      alpha: 0.2 + Math.random() * 0.3,
+      rotation: Math.random() * Math.PI * 2,
+      rotationSpeed: (Math.random() - 0.5) * 0.05,
+    });
   }
 }
 
@@ -883,10 +276,10 @@ function spawnMeteor(width: number, height: number, initial: boolean): void {
   if (meteors.length >= NUM_METEORS) return;
 
   const startX = initial ? Math.random() * width * 1.5 : width + 20 + Math.random() * 40;
-  const startY = initial ? Math.random() * height * 0.5 - height * 0.25 : -20 - Math.random() * 40;
+  const startY = initial ? Math.random() * height * 0.3 - height * 0.2 : -30 - Math.random() * 40;
 
-  const angle = Math.PI * 0.65 + (Math.random() - 0.5) * 0.4;
-  const speed = 1.5 + Math.random() * 2;
+  const angle = Math.PI * 0.7 + (Math.random() - 0.5) * 0.3;
+  const speed = 1.2 + Math.random() * 1.5;
 
   meteors.push({
     x: startX,
@@ -894,118 +287,108 @@ function spawnMeteor(width: number, height: number, initial: boolean): void {
     vx: -Math.cos(angle) * speed,
     vy: Math.sin(angle) * speed,
     size: 2 + Math.random() * 3,
-    hue: Math.random() < 0.3 ? 30 + Math.random() * 30 : 180 + Math.random() * 60,
-    alpha: 0.6 + Math.random() * 0.4,
     trail: [],
   });
 }
 
-function spawnDeathExplosion2D(snake: Position[], hueOffset: number): void {
-  deathDebris = [];
-  deathExplosionPhase = 1;
+function spawnFlameParticle(x: number, y: number, intensity: number): void {
+  if (flameParticles.length >= MAX_FLAME_PARTICLES) {
+    flameParticles.shift();
+  }
 
-  const maxDebris = 24;
-  const debrisPerSeg = Math.min(3, Math.floor(maxDebris / snake.length));
+  const angle = Math.random() * Math.PI * 2;
+  const speed = 0.3 + Math.random() * 0.5;
+  const life = 0.4 + Math.random() * 0.4;
+
+  flameParticles.push({
+    x: x + (Math.random() - 0.5) * 6,
+    y: y + (Math.random() - 0.5) * 6,
+    vx: Math.cos(angle) * speed * 0.3,
+    vy: -0.8 - Math.random() * 1.2 * intensity,
+    size: 3 + Math.random() * 4 * intensity,
+    life,
+    maxLife: life,
+    hue: 15 + Math.random() * 30, // Orange to red
+  });
+}
+
+function spawnExplosion(x: number, y: number): void {
+  const particles: { angle: number; dist: number; size: number; hue: number }[] = [];
+  const numParticles = 10;
+  for (let i = 0; i < numParticles; i++) {
+    particles.push({
+      angle: (i / numParticles) * Math.PI * 2 + Math.random() * 0.3,
+      dist: 0,
+      size: 3 + Math.random() * 4,
+      hue: 10 + Math.random() * 40,
+    });
+  }
+
+  explosions.push({
+    x,
+    y,
+    radius: 5,
+    maxRadius: 60,
+    life: 1,
+    particles,
+  });
+
+  screenShakeIntensity = 10;
+}
+
+function spawnScreenCrack(x: number, y: number): void {
+  if (screenCracks.length >= 3) {
+    screenCracks.shift();
+  }
+
+  const segments: { x: number; y: number }[] = [{ x, y }];
+  let cx = x, cy = y;
+  const numSegments = 4 + Math.floor(Math.random() * 3);
+
+  for (let i = 0; i < numSegments; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 15 + Math.random() * 25;
+    cx += Math.cos(angle) * dist;
+    cy += Math.sin(angle) * dist;
+    segments.push({ x: cx, y: cy });
+  }
+
+  screenCracks.push({ x, y, segments, life: 1 });
+}
+
+function spawnInferno(snake: Position[]): void {
+  infernoParticles = [];
+  const maxParticles = 30;
+  const particlesPerSeg = Math.min(4, Math.floor(maxParticles / snake.length));
 
   for (let i = 0; i < snake.length; i++) {
     const seg = snake[i];
     const cx = seg.x * CELL_SIZE + CELL_SIZE / 2;
     const cy = seg.y * CELL_SIZE + CELL_SIZE / 2;
-    const segHue = (hueOffset + i * 15) % 360;
 
-    for (let j = 0; j < debrisPerSeg; j++) {
-      if (deathDebris.length >= maxDebris) break;
+    for (let j = 0; j < particlesPerSeg; j++) {
+      if (infernoParticles.length >= maxParticles) break;
 
       const angle = Math.random() * Math.PI * 2;
       const speed = 2 + Math.random() * 4;
-      const types: ('shard' | 'spark' | 'ember')[] = ['shard', 'spark', 'ember'];
 
-      deathDebris.push({
+      infernoParticles.push({
         x: cx + (Math.random() - 0.5) * 8,
         y: cy + (Math.random() - 0.5) * 8,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 1,
-        size: 3 + Math.random() * 5,
-        hue: segHue + (Math.random() - 0.5) * 40,
-        rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.4,
+        vy: Math.sin(angle) * speed - 2,
+        size: 4 + Math.random() * 6,
         life: 1,
-        type: types[Math.floor(Math.random() * types.length)],
+        hue: 10 + Math.random() * 40,
       });
     }
   }
 }
 
-function spawnBurstParticles(x: number, y: number, hueOffset: number): void {
-  burstParticles = [];
-  const numParticles = 12;
-  for (let i = 0; i < numParticles; i++) {
-    const angle = (i / numParticles) * Math.PI * 2 + Math.random() * 0.3;
-    const speed = 3 + Math.random() * 4;
-    burstParticles.push({
-      x,
-      y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      life: 1,
-      size: 3 + Math.random() * 4,
-      hue: hueOffset + Math.random() * 60,
-      trail: [],
-    });
-  }
-}
+function updateArmageddonEffects(): void {
+  const width = GRID_SIZE * CELL_SIZE;
+  const height = GRID_SIZE * CELL_SIZE;
 
-function generateLightningPath(x1: number, y1: number, x2: number, y2: number, jitter: number): { x: number; y: number }[] {
-  const segments: { x: number; y: number }[] = [];
-  const numSegments = 4;
-  segments.push({ x: x1, y: y1 });
-
-  for (let i = 1; i < numSegments; i++) {
-    const t = i / numSegments;
-    const baseX = x1 + (x2 - x1) * t;
-    const baseY = y1 + (y2 - y1) * t;
-    const perpX = -(y2 - y1);
-    const perpY = x2 - x1;
-    const len = Math.sqrt(perpX * perpX + perpY * perpY);
-    const offset = (Math.random() - 0.5) * jitter;
-    segments.push({
-      x: baseX + (perpX / len) * offset,
-      y: baseY + (perpY / len) * offset,
-    });
-  }
-  segments.push({ x: x2, y: y2 });
-  return segments;
-}
-
-function spawnLightningBetweenSegments(snake: { x: number; y: number }[], hueOffset: number): void {
-  if (snake.length < 2) return;
-
-  // Spawn lightning between random consecutive segments
-  const maxBolts = Math.min(3, snake.length - 1);
-  for (let b = 0; b < maxBolts; b++) {
-    const idx = Math.floor(Math.random() * (snake.length - 1));
-    const seg1 = snake[idx];
-    const seg2 = snake[idx + 1];
-
-    const x1 = seg1.x * CELL_SIZE + CELL_SIZE / 2;
-    const y1 = seg1.y * CELL_SIZE + CELL_SIZE / 2;
-    const x2 = seg2.x * CELL_SIZE + CELL_SIZE / 2;
-    const y2 = seg2.y * CELL_SIZE + CELL_SIZE / 2;
-
-    lightningBolts.push({
-      startX: x1,
-      startY: y1,
-      endX: x2,
-      endY: y2,
-      segments: generateLightningPath(x1, y1, x2, y2, 8),
-      life: 1,
-      hue: (hueOffset + idx * 15 + Math.random() * 30) % 360,
-      intensity: 0.6 + Math.random() * 0.4,
-    });
-  }
-}
-
-function updateCanvas2DEffects(): void {
   // Update screen shake
   if (screenShakeIntensity > 0) {
     screenShakeX = (Math.random() - 0.5) * screenShakeIntensity;
@@ -1018,86 +401,11 @@ function updateCanvas2DEffects(): void {
     }
   }
 
-  // Decay chromatic aberration
-  if (chromaticIntensity > 0) {
-    chromaticIntensity *= 0.92;
-    if (chromaticIntensity < 0.05) chromaticIntensity = 0;
-  }
-
-  // Decay energy field pulse
-  if (energyFieldPulse > 0) {
-    energyFieldPulse *= 0.95;
-    if (energyFieldPulse < 0.05) energyFieldPulse = 0;
-  }
-
-  // Update dimensional rift
-  if (dimensionalRift) {
-    dimensionalRift.life -= 0.025;
-    dimensionalRift.rotation += 0.15;
-    dimensionalRift.scale = Math.sin(dimensionalRift.life * Math.PI) * 1.5;
-    if (dimensionalRift.life <= 0) {
-      dimensionalRift = null;
-    }
-  }
-
-  // Update pulse rings
-  for (let i = pulseRings.length - 1; i >= 0; i--) {
-    const ring = pulseRings[i];
-    ring.radius += 3;
-    ring.life -= 0.04;
-    if (ring.life <= 0 || ring.radius >= ring.maxRadius) {
-      pulseRings.splice(i, 1);
-    }
-  }
-
-  // Update shatter shards
-  for (const shard of shatterShards) {
-    if (shard.delay > 0) {
-      shard.delay -= 0.02;
-      continue;
-    }
-    shard.cx += shard.vx;
-    shard.cy += shard.vy;
-    shard.vy += 0.15;
-    shard.rotation += shard.rotationSpeed;
-    shard.life -= 0.012;
-  }
-
-  // Update prism trail
-  for (let i = prismTrail.length - 1; i >= 0; i--) {
-    prismTrail[i].life -= 0.04;
-    prismTrail[i].size *= 0.97;
-    if (prismTrail[i].life <= 0) {
-      prismTrail.splice(i, 1);
-    }
-  }
-
-  // Update lightning bolts
-  for (let i = lightningBolts.length - 1; i >= 0; i--) {
-    const bolt = lightningBolts[i];
-    bolt.life -= 0.15;
-    // Re-jitter the path for flickering effect
-    if (bolt.life > 0.3) {
-      bolt.segments = generateLightningPath(bolt.startX, bolt.startY, bolt.endX, bolt.endY, 8 * bolt.life);
-    }
-    if (bolt.life <= 0) {
-      lightningBolts.splice(i, 1);
-    }
-  }
-
-  // Update scanline
-  scanlineY += scanlineSpeed;
-  if (scanlineY > GRID_SIZE * CELL_SIZE + 20) {
-    scanlineY = -20;
-  }
-
   // Update meteors
-  const width = GRID_SIZE * CELL_SIZE;
-  const height = GRID_SIZE * CELL_SIZE;
   for (let i = meteors.length - 1; i >= 0; i--) {
     const m = meteors[i];
     m.trail.unshift({ x: m.x, y: m.y });
-    if (m.trail.length > 12) m.trail.pop();
+    if (m.trail.length > 10) m.trail.pop();
     m.x += m.vx;
     m.y += m.vy;
     if (m.x < -50 || m.y > height + 50) {
@@ -1106,137 +414,120 @@ function updateCanvas2DEffects(): void {
     }
   }
 
-  // Update death debris
-  if (deathExplosionPhase > 0) {
-    deathExplosionPhase *= 0.95;
-    if (deathExplosionPhase < 0.01) deathExplosionPhase = 0;
-  }
-  for (let i = deathDebris.length - 1; i >= 0; i--) {
-    const d = deathDebris[i];
-    d.x += d.vx;
-    d.y += d.vy;
-    d.vy += 0.08;
-    d.vx *= 0.99;
-    d.rotation += d.rotationSpeed;
-    d.life -= 0.015;
-    if (d.life <= 0) {
-      deathDebris.splice(i, 1);
-    }
-  }
+  // Update ash particles
+  for (const ash of ashParticles) {
+    ash.x += ash.vx;
+    ash.y += ash.vy;
+    ash.rotation += ash.rotationSpeed;
 
-  // Update burst particles
-  for (let i = burstParticles.length - 1; i >= 0; i--) {
-    const p = burstParticles[i];
-    p.trail.unshift({ x: p.x, y: p.y });
-    if (p.trail.length > 6) p.trail.pop();
-    p.x += p.vx;
-    p.y += p.vy;
-    p.vx *= 0.96;
-    p.vy *= 0.96;
-    p.life -= 0.025;
-    if (p.life <= 0) {
-      burstParticles.splice(i, 1);
+    if (ash.y > height + 10) {
+      ash.y = -10;
+      ash.x = Math.random() * width;
     }
+    if (ash.x < -10) ash.x = width + 10;
+    if (ash.x > width + 10) ash.x = -10;
   }
 
   // Update flame particles
-  updateFlameParticles();
+  for (let i = flameParticles.length - 1; i >= 0; i--) {
+    const p = flameParticles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy -= 0.02;
+    p.vx *= 0.98;
+    p.size *= 0.97;
+    p.life -= 0.03;
+
+    if (p.life <= 0 || p.size < 0.5) {
+      flameParticles.splice(i, 1);
+    }
+  }
+
+  // Update explosions
+  for (let i = explosions.length - 1; i >= 0; i--) {
+    const exp = explosions[i];
+    exp.radius += 4;
+    exp.life -= 0.04;
+
+    for (const particle of exp.particles) {
+      particle.dist += 3;
+    }
+
+    if (exp.life <= 0) {
+      explosions.splice(i, 1);
+    }
+  }
+
+  // Update screen cracks
+  for (let i = screenCracks.length - 1; i >= 0; i--) {
+    screenCracks[i].life -= 0.008;
+    if (screenCracks[i].life <= 0) {
+      screenCracks.splice(i, 1);
+    }
+  }
+
+  // Update inferno particles
+  for (let i = infernoParticles.length - 1; i >= 0; i--) {
+    const p = infernoParticles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.1;
+    p.vx *= 0.98;
+    p.life -= 0.02;
+
+    if (p.life <= 0) {
+      infernoParticles.splice(i, 1);
+    }
+  }
+
+  // Update lava phase
+  lavaPhase += 0.02;
+
+  // Update food fire phase
+  foodFirePhase += 0.1;
 }
 
 function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  initCanvas2DEffects();
+  initArmageddonEffects();
   frameCount++;
-  const hueOffset = (frameCount * 0.5) % 360;
-  venetianPhase += 0.008;
 
   const width = GRID_SIZE * CELL_SIZE;
   const height = GRID_SIZE * CELL_SIZE;
 
-  // Track snake head for spotlight
-  if (gameState.snake.length > 0) {
-    const head = gameState.snake[0];
-    const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
-    const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
-    spotlightX += (headX - spotlightX) * 0.08;
-    spotlightY += (headY - spotlightY) * 0.08;
-  }
-
-  // Detect food eaten (snake got longer)
+  // Detect food eaten
   if (gameState.snake.length > lastSnakeLength && lastSnakeLength > 0) {
     const head = gameState.snake[0];
     const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
     const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
-    spawnBurstParticles(headX, headY, hueOffset);
-    chromaticIntensity = 1.0;
-    energyFieldPulse = 1.0;
-    spawnLightningBetweenSegments(gameState.snake, hueOffset);
-    teethShowTimer = TEETH_DURATION;
-    // Spawn dimensional rift at food location (jaw-dropping effect!)
-    spawnDimensionalRift(headX, headY);
-    screenShakeIntensity = 8;
+    spawnExplosion(headX, headY);
+    spawnScreenCrack(headX, headY);
   }
   lastSnakeLength = gameState.snake.length;
 
-  // Spawn pulse rings from snake head periodically
-  pulseRingTimer++;
-  if (pulseRingTimer >= 12 && gameState.snake.length > 0 && !gameState.gameOver) {
-    pulseRingTimer = 0;
-    const head = gameState.snake[0];
-    const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
-    const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
-    spawnPulseRing(headX, headY, hueOffset);
+  // Detect game over
+  if (gameState.gameOver && !wasGameOver) {
+    screenShakeIntensity = 20;
+    spawnInferno(gameState.snake);
   }
+  wasGameOver = gameState.gameOver;
 
-  // Add prism trail segment at snake head
-  if (gameState.snake.length > 0 && !gameState.gameOver && frameCount % 2 === 0) {
-    const head = gameState.snake[0];
-    const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
-    const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
-    addPrismTrailSegment(headX, headY, hueOffset);
-  }
-
-  // Update teeth timer
-  if (teethShowTimer > 0) {
-    teethShowTimer--;
-  }
-
-  // Spawn periodic lightning between segments
-  lightningTimer++;
-  if (lightningTimer >= 8 && gameState.snake.length > 1 && !gameState.gameOver) {
-    lightningTimer = 0;
-    spawnLightningBetweenSegments(gameState.snake, hueOffset);
-  }
-
-  // Spawn flame particles along the snake body (every few frames)
-  if (frameCount % 2 === 0 && !gameState.gameOver) {
+  // Spawn flame particles along snake
+  if (frameCount % 3 === 0 && !gameState.gameOver) {
     for (let i = 0; i < gameState.snake.length; i++) {
       const seg = gameState.snake[i];
       const segX = seg.x * CELL_SIZE + CELL_SIZE / 2;
       const segY = seg.y * CELL_SIZE + CELL_SIZE / 2;
-      // More flames at head, fewer at tail
-      const intensity = 1 - (i / gameState.snake.length) * 0.6;
-      if (Math.random() < 0.4 * intensity) {
+      const intensity = 1 - (i / gameState.snake.length) * 0.5;
+      if (Math.random() < 0.35 * intensity) {
         spawnFlameParticle(segX, segY, intensity);
       }
     }
   }
 
-  // Detect game over transition
-  if (gameState.gameOver && !wasGameOver) {
-    screenShakeIntensity = 15;
-    chromaticIntensity = 2.0;
-    spawnDeathExplosion2D(gameState.snake, hueOffset);
-    // Initialize reality shatter effect
-    shatterInitialized = false;
-    initShatterEffect(width, height);
-  }
-  wasGameOver = gameState.gameOver;
-
-  // Update effects
-  updateCanvas2DEffects();
+  updateArmageddonEffects();
 
   ctx.save();
   ctx.scale(canvas.width / width, canvas.height / height);
@@ -1246,337 +537,233 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.translate(screenShakeX, screenShakeY);
   }
 
-  // Deep wonderland night sky background
-  ctx.fillStyle = COLORS.bgLight;
+  // Apocalyptic dark background
+  ctx.fillStyle = COLORS.bgDark;
   ctx.fillRect(0, 0, width, height);
 
-  // Magical radial gradient for dreamlike atmosphere
-  const wonderGradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.8);
-  wonderGradient.addColorStop(0, 'rgba(75, 45, 100, 0.4)');
-  wonderGradient.addColorStop(0.5, 'rgba(45, 30, 65, 0.3)');
-  wonderGradient.addColorStop(1, 'rgba(26, 21, 37, 0.5)');
-  ctx.fillStyle = wonderGradient;
+  // Volcanic gradient overlay
+  const volcanicGradient = ctx.createRadialGradient(width / 2, height, 0, width / 2, height / 2, width);
+  volcanicGradient.addColorStop(0, 'rgba(139, 0, 0, 0.3)');
+  volcanicGradient.addColorStop(0.5, 'rgba(50, 10, 10, 0.2)');
+  volcanicGradient.addColorStop(1, 'rgba(10, 5, 5, 0.1)');
+  ctx.fillStyle = volcanicGradient;
   ctx.fillRect(0, 0, width, height);
 
-  // Draw playing card suit patterns in corners (subtle background)
-  ctx.globalAlpha = 0.08;
-  const suitSize = 18;
-  const suitColors = [COLORS.cardRed, COLORS.cardBlack, COLORS.cardRed, COLORS.cardBlack];
-
-  // Draw card suits in corners
-  for (let corner = 0; corner < 4; corner++) {
-    const cx = corner % 2 === 0 ? 25 : width - 25;
-    const cy = corner < 2 ? 25 : height - 25;
-    ctx.fillStyle = suitColors[corner];
-
-    if (corner === 0) {
-      // Heart
-      ctx.beginPath();
-      ctx.moveTo(cx, cy + suitSize * 0.3);
-      ctx.bezierCurveTo(cx - suitSize * 0.5, cy - suitSize * 0.3, cx - suitSize * 0.5, cy + suitSize * 0.1, cx, cy + suitSize * 0.5);
-      ctx.bezierCurveTo(cx + suitSize * 0.5, cy + suitSize * 0.1, cx + suitSize * 0.5, cy - suitSize * 0.3, cx, cy + suitSize * 0.3);
-      ctx.closePath();
-      ctx.fill();
-    } else if (corner === 1) {
-      // Spade
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - suitSize * 0.4);
-      ctx.bezierCurveTo(cx - suitSize * 0.5, cy + suitSize * 0.1, cx - suitSize * 0.3, cy + suitSize * 0.4, cx, cy + suitSize * 0.2);
-      ctx.bezierCurveTo(cx + suitSize * 0.3, cy + suitSize * 0.4, cx + suitSize * 0.5, cy + suitSize * 0.1, cx, cy - suitSize * 0.4);
-      ctx.fill();
-      ctx.fillRect(cx - 2, cy + suitSize * 0.2, 4, suitSize * 0.25);
-    } else if (corner === 2) {
-      // Diamond
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - suitSize * 0.45);
-      ctx.lineTo(cx + suitSize * 0.3, cy);
-      ctx.lineTo(cx, cy + suitSize * 0.45);
-      ctx.lineTo(cx - suitSize * 0.3, cy);
-      ctx.closePath();
-      ctx.fill();
-    } else {
-      // Club
-      ctx.beginPath();
-      ctx.arc(cx, cy - suitSize * 0.15, suitSize * 0.22, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(cx - suitSize * 0.2, cy + suitSize * 0.1, suitSize * 0.22, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(cx + suitSize * 0.2, cy + suitSize * 0.1, suitSize * 0.22, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillRect(cx - 2, cy + suitSize * 0.2, 4, suitSize * 0.25);
-    }
-  }
-  ctx.globalAlpha = 1;
-
-  // Magical checkerboard pattern (like chess in wonderland)
-  ctx.globalAlpha = 0.04;
-  for (let i = 0; i < GRID_SIZE; i++) {
-    for (let j = 0; j < GRID_SIZE; j++) {
-      if ((i + j) % 2 === 0) {
-        ctx.fillStyle = COLORS.magicPurple;
-        ctx.fillRect(i * CELL_SIZE, j * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-      }
-    }
-  }
-  ctx.globalAlpha = 1;
-
-  // Subtle grid of magical dots
-  ctx.fillStyle = COLORS.magicPurple;
-  ctx.globalAlpha = 0.15;
-  for (let i = 1; i < GRID_SIZE; i++) {
-    for (let j = 1; j < GRID_SIZE; j++) {
-      ctx.beginPath();
-      ctx.arc(i * CELL_SIZE, j * CELL_SIZE, 1, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  ctx.globalAlpha = 1;
-
-  // Draw floating stars in corners
-  updateFloatingStars();
-  for (const star of floatingStars) {
-    drawFloatingStar(ctx, star);
-  }
-
-  // Draw pulse rings emanating from snake head (jaw-dropping hypnotic effect)
-  for (const ring of pulseRings) {
-    const ringAlpha = ring.life * 0.6;
-    const ringColor = hslToRgb(ring.hue / 360, 0.8, 0.6);
-
-    // Outer glow ring
-    ctx.strokeStyle = ringColor;
-    ctx.lineWidth = 3 * ring.life;
-    ctx.globalAlpha = ringAlpha * 0.3;
+  // Lava cracks in the ground
+  ctx.strokeStyle = COLORS.lavaRed;
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.3 + Math.sin(lavaPhase) * 0.1;
+  for (let i = 0; i < 4; i++) {
+    const startX = (i * width / 3) + Math.sin(lavaPhase + i) * 20;
     ctx.beginPath();
-    ctx.arc(ring.x, ring.y, ring.radius + 4, 0, Math.PI * 2);
+    ctx.moveTo(startX, height);
+    let cx = startX, cy = height;
+    for (let j = 0; j < 4; j++) {
+      cx += (Math.random() - 0.5) * 40 + Math.sin(lavaPhase * 2 + j) * 10;
+      cy -= 30 + Math.random() * 20;
+      ctx.lineTo(cx, cy);
+    }
     ctx.stroke();
 
-    // Main ring
-    ctx.lineWidth = 2 * ring.life;
-    ctx.globalAlpha = ringAlpha * 0.7;
-    ctx.beginPath();
-    ctx.arc(ring.x, ring.y, ring.radius, 0, Math.PI * 2);
+    // Glow around lava cracks
+    ctx.strokeStyle = COLORS.fireOrange;
+    ctx.lineWidth = 4;
+    ctx.globalAlpha = 0.1 + Math.sin(lavaPhase + i) * 0.05;
     ctx.stroke();
-
-    // Inner bright ring
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = ringAlpha * 0.5;
-    ctx.beginPath();
-    ctx.arc(ring.x, ring.y, ring.radius - 2, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.strokeStyle = COLORS.lavaRed;
+    ctx.lineWidth = 2;
   }
   ctx.globalAlpha = 1;
 
-  // Draw prism rainbow trail behind snake (jaw-dropping light trail)
-  for (let i = prismTrail.length - 1; i >= 0; i--) {
-    const seg = prismTrail[i];
-    const trailAlpha = seg.life * 0.5;
-
-    // Rainbow cycling through spectrum
-    const rainbowHue = (seg.hue + i * 12) % 360;
-    const trailColor = hslToRgb(rainbowHue / 360, 0.9, 0.6);
-
-    // Outer glow
-    ctx.fillStyle = trailColor;
-    ctx.globalAlpha = trailAlpha * 0.2;
-    ctx.beginPath();
-    ctx.arc(seg.x, seg.y, seg.size * 1.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Core trail
-    ctx.globalAlpha = trailAlpha * 0.6;
-    ctx.beginPath();
-    ctx.arc(seg.x, seg.y, seg.size, 0, Math.PI * 2);
-    ctx.fill();
-
-    // White hot center
-    ctx.fillStyle = '#ffffff';
-    ctx.globalAlpha = trailAlpha * 0.3;
-    ctx.beginPath();
-    ctx.arc(seg.x, seg.y, seg.size * 0.4, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // Draw dimensional rift portal (jaw-dropping effect when eating food!)
-  if (dimensionalRift) {
-    const rift = dimensionalRift;
-    const riftAlpha = Math.sin(rift.life * Math.PI);
-    const riftScale = rift.scale;
-
+  // Draw ash particles
+  ctx.fillStyle = COLORS.ashGray;
+  for (const ash of ashParticles) {
     ctx.save();
-    ctx.translate(rift.x, rift.y);
-    ctx.rotate(rift.rotation);
-
-    // Outer swirling void
-    for (let ring = 0; ring < 5; ring++) {
-      const ringRadius = 15 + ring * 12 * riftScale;
-      const ringHue = (hueOffset + ring * 60 + rift.rotation * 30) % 360;
-      const ringColor = hslToRgb(ringHue / 360, 0.9, 0.5);
-
-      ctx.strokeStyle = ringColor;
-      ctx.lineWidth = (5 - ring) * riftScale;
-      ctx.globalAlpha = riftAlpha * (0.8 - ring * 0.15);
-
-      // Distorted spiral ring
-      ctx.beginPath();
-      for (let a = 0; a < Math.PI * 2; a += 0.1) {
-        const wobble = Math.sin(a * 4 + rift.rotation * 3) * 5 * riftScale;
-        const rx = Math.cos(a) * (ringRadius + wobble);
-        const ry = Math.sin(a) * (ringRadius + wobble);
-        if (a === 0) ctx.moveTo(rx, ry);
-        else ctx.lineTo(rx, ry);
-      }
-      ctx.closePath();
-      ctx.stroke();
-    }
-
-    // Central void with gradient
-    const voidGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 20 * riftScale);
-    voidGrad.addColorStop(0, 'rgba(0, 0, 0, 0.9)');
-    voidGrad.addColorStop(0.5, 'rgba(75, 0, 130, 0.6)');
-    voidGrad.addColorStop(1, 'rgba(138, 43, 226, 0)');
-    ctx.fillStyle = voidGrad;
-    ctx.globalAlpha = riftAlpha;
-    ctx.beginPath();
-    ctx.arc(0, 0, 25 * riftScale, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Sparkling energy particles around rift
-    for (let p = 0; p < 8; p++) {
-      const pAngle = (p / 8) * Math.PI * 2 + rift.rotation * 2;
-      const pDist = 30 * riftScale + Math.sin(rift.rotation * 5 + p) * 10;
-      const px = Math.cos(pAngle) * pDist;
-      const py = Math.sin(pAngle) * pDist;
-      const pHue = (hueOffset + p * 45) % 360;
-
-      ctx.fillStyle = hslToRgb(pHue / 360, 1, 0.7);
-      ctx.globalAlpha = riftAlpha * 0.8;
-      ctx.beginPath();
-      ctx.arc(px, py, 3 * riftScale, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Spark glow
-      ctx.globalAlpha = riftAlpha * 0.3;
-      ctx.beginPath();
-      ctx.arc(px, py, 6 * riftScale, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
+    ctx.translate(ash.x, ash.y);
+    ctx.rotate(ash.rotation);
+    ctx.globalAlpha = ash.alpha;
+    ctx.fillRect(-ash.size / 2, -ash.size / 2, ash.size, ash.size);
     ctx.restore();
   }
   ctx.globalAlpha = 1;
 
-  // Magical Teacup (Alice in Wonderland tea party!)
+  // Draw meteors with fiery trails
+  for (const m of meteors) {
+    // Trail
+    for (let i = 0; i < m.trail.length; i++) {
+      const t = m.trail[i];
+      const trailAlpha = (1 - i / m.trail.length) * 0.6;
+      const trailSize = m.size * (1 - i / m.trail.length) * 0.8;
+
+      ctx.fillStyle = COLORS.fireOrange;
+      ctx.globalAlpha = trailAlpha * 0.3;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, trailSize * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = COLORS.fireYellow;
+      ctx.globalAlpha = trailAlpha * 0.5;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, trailSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Meteor core
+    ctx.fillStyle = COLORS.fireYellow;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // White hot center
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw screen cracks (apocalyptic fissures)
+  for (const crack of screenCracks) {
+    ctx.strokeStyle = COLORS.fireOrange;
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = crack.life * 0.6;
+
+    ctx.beginPath();
+    ctx.moveTo(crack.segments[0].x, crack.segments[0].y);
+    for (let i = 1; i < crack.segments.length; i++) {
+      ctx.lineTo(crack.segments[i].x, crack.segments[i].y);
+    }
+    ctx.stroke();
+
+    // Inner glow
+    ctx.strokeStyle = COLORS.fireYellow;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = crack.life * 0.8;
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw flame particles
+  for (const p of flameParticles) {
+    const lifeRatio = p.life / p.maxLife;
+
+    const hue = p.hue + (1 - lifeRatio) * 10;
+    const saturation = 100;
+    const lightness = 50 + lifeRatio * 20;
+
+    // Outer glow
+    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness - 20}%, ${lifeRatio * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core flame
+    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${lifeRatio * 0.6})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hot center
+    ctx.fillStyle = `hsla(${hue + 15}, ${saturation - 20}%, ${lightness + 30}%, ${lifeRatio * 0.8})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw explosions
+  for (const exp of explosions) {
+    // Shockwave ring
+    ctx.strokeStyle = COLORS.fireOrange;
+    ctx.lineWidth = 4 * exp.life;
+    ctx.globalAlpha = exp.life * 0.5;
+    ctx.beginPath();
+    ctx.arc(exp.x, exp.y, exp.radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner bright ring
+    ctx.strokeStyle = COLORS.fireYellow;
+    ctx.lineWidth = 2 * exp.life;
+    ctx.globalAlpha = exp.life * 0.7;
+    ctx.beginPath();
+    ctx.arc(exp.x, exp.y, exp.radius * 0.7, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Explosion particles
+    for (const particle of exp.particles) {
+      const px = exp.x + Math.cos(particle.angle) * particle.dist;
+      const py = exp.y + Math.sin(particle.angle) * particle.dist;
+      const pSize = particle.size * exp.life;
+
+      ctx.fillStyle = `hsl(${particle.hue}, 100%, 60%)`;
+      ctx.globalAlpha = exp.life * 0.8;
+      ctx.beginPath();
+      ctx.arc(px, py, pSize, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Particle glow
+      ctx.fillStyle = COLORS.fireYellow;
+      ctx.globalAlpha = exp.life * 0.4;
+      ctx.beginPath();
+      ctx.arc(px, py, pSize * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw food - burning meteor/fireball
   const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
   const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
 
-  // Update food bounce phase
-  foodOrbPhase += 0.08;
-  const bounce = Math.sin(foodOrbPhase * 2) * 1.5;
-  const steamWave = Math.sin(foodOrbPhase * 3);
+  // Fire ring around food
+  for (let ring = 0; ring < 3; ring++) {
+    const ringRadius = CELL_SIZE * 0.6 + ring * 5;
+    const ringAlpha = 0.3 - ring * 0.08;
 
-  // Magical glow under teacup
-  ctx.fillStyle = COLORS.teaGold;
-  ctx.globalAlpha = 0.15 + Math.sin(foodOrbPhase) * 0.05;
-  ctx.beginPath();
-  ctx.arc(foodX, foodY + bounce, CELL_SIZE * 0.8, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
+    ctx.strokeStyle = COLORS.fireOrange;
+    ctx.lineWidth = 3 - ring;
+    ctx.globalAlpha = ringAlpha + Math.sin(foodFirePhase + ring) * 0.1;
 
-  // Saucer (plate under cup)
-  ctx.fillStyle = '#e8d5c4';
-  ctx.beginPath();
-  ctx.ellipse(foodX, foodY + 6 + bounce, CELL_SIZE / 2 + 3, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#d4c4b4';
-  ctx.beginPath();
-  ctx.ellipse(foodX, foodY + 6 + bounce, CELL_SIZE / 2 + 1, 3, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Teacup body
-  const cupGradient = ctx.createLinearGradient(foodX - 8, foodY, foodX + 8, foodY);
-  cupGradient.addColorStop(0, '#f5e6d3');
-  cupGradient.addColorStop(0.3, '#ffffff');
-  cupGradient.addColorStop(0.7, '#ffffff');
-  cupGradient.addColorStop(1, '#e8d5c4');
-  ctx.fillStyle = cupGradient;
-  ctx.beginPath();
-  ctx.moveTo(foodX - 7, foodY - 4 + bounce);
-  ctx.quadraticCurveTo(foodX - 8, foodY + 5 + bounce, foodX - 5, foodY + 6 + bounce);
-  ctx.lineTo(foodX + 5, foodY + 6 + bounce);
-  ctx.quadraticCurveTo(foodX + 8, foodY + 5 + bounce, foodX + 7, foodY - 4 + bounce);
-  ctx.closePath();
-  ctx.fill();
-
-  // Cup rim (gold trim)
-  ctx.strokeStyle = COLORS.teaGold;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.ellipse(foodX, foodY - 4 + bounce, 7, 2, 0, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // Tea inside the cup
-  ctx.fillStyle = '#8b4513';
-  ctx.globalAlpha = 0.7;
-  ctx.beginPath();
-  ctx.ellipse(foodX, foodY - 3 + bounce, 5, 1.5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-
-  // Cup handle
-  ctx.strokeStyle = '#e8d5c4';
-  ctx.lineWidth = 2;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.arc(foodX + 9, foodY + bounce, 4, -Math.PI / 2, Math.PI / 2);
-  ctx.stroke();
-
-  // Gold decoration on cup (heart or pattern)
-  ctx.fillStyle = COLORS.cardRed;
-  ctx.globalAlpha = 0.6;
-  ctx.beginPath();
-  const heartX = foodX - 1;
-  const heartY = foodY + 1 + bounce;
-  ctx.moveTo(heartX, heartY + 2);
-  ctx.bezierCurveTo(heartX - 3, heartY - 1, heartX - 3, heartY + 1, heartX, heartY + 3);
-  ctx.bezierCurveTo(heartX + 3, heartY + 1, heartX + 3, heartY - 1, heartX, heartY + 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-
-  // Steam wisps (magical!)
-  ctx.strokeStyle = 'rgba(200, 180, 255, 0.5)';
-  ctx.lineWidth = 1.5;
-  ctx.lineCap = 'round';
-  for (let i = 0; i < 3; i++) {
-    const steamX = foodX - 3 + i * 3;
-    const steamPhase = foodOrbPhase + i * 0.5;
     ctx.beginPath();
-    ctx.moveTo(steamX, foodY - 5 + bounce);
-    ctx.quadraticCurveTo(
-      steamX + Math.sin(steamPhase * 2) * 3,
-      foodY - 10 + bounce,
-      steamX + Math.sin(steamPhase * 2 + 1) * 2,
-      foodY - 14 + bounce + steamWave
-    );
+    for (let a = 0; a < Math.PI * 2; a += 0.2) {
+      const wobble = Math.sin(a * 4 + foodFirePhase * 2) * 3;
+      const rx = foodX + Math.cos(a) * (ringRadius + wobble);
+      const ry = foodY + Math.sin(a) * (ringRadius + wobble);
+      if (a === 0) ctx.moveTo(rx, ry);
+      else ctx.lineTo(rx, ry);
+    }
+    ctx.closePath();
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
 
-  // Sparkle highlight on cup
-  ctx.fillStyle = '#ffffff';
-  ctx.globalAlpha = 0.7;
+  // Fireball glow
+  const fireGlow = ctx.createRadialGradient(foodX, foodY, 0, foodX, foodY, CELL_SIZE);
+  fireGlow.addColorStop(0, 'rgba(255, 255, 0, 0.8)');
+  fireGlow.addColorStop(0.3, 'rgba(255, 150, 0, 0.6)');
+  fireGlow.addColorStop(0.6, 'rgba(255, 50, 0, 0.3)');
+  fireGlow.addColorStop(1, 'rgba(139, 0, 0, 0)');
+  ctx.fillStyle = fireGlow;
   ctx.beginPath();
-  ctx.arc(foodX - 4, foodY - 2 + bounce, 2, 0, Math.PI * 2);
+  ctx.arc(foodX, foodY, CELL_SIZE, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Fireball core
+  ctx.fillStyle = COLORS.foodCore;
+  ctx.beginPath();
+  ctx.arc(foodX, foodY, CELL_SIZE / 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // White hot center
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.9;
+  ctx.beginPath();
+  ctx.arc(foodX, foodY, CELL_SIZE / 6, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  // Draw flame particles behind the snake (burning trail effect)
-  drawFlameParticles(ctx);
-
-  // Cheshire Cat snake - magical purple with stripes
+  // Draw demon snake
   const snake = gameState.snake;
   const snakeLen = snake.length;
 
@@ -1589,22 +776,31 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
     const radius = (CELL_SIZE / 2 - 1) * (0.9 + t * 0.1);
 
-    // Cheshire purple/pink gradient
-    const purpleShade = 0.45 + t * 0.1;
+    // Fire intensity based on position
+    const fireIntensity = 0.5 + (1 - t) * 0.5;
 
     if (i === 0) {
-      // Cheshire Cat head - magical purple
+      // Demon head with fiery glow
+      const headGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius + 8);
+      headGlow.addColorStop(0, COLORS.snakeHead);
+      headGlow.addColorStop(0.5, COLORS.snakeBody);
+      headGlow.addColorStop(1, 'rgba(139, 0, 0, 0)');
+      ctx.fillStyle = headGlow;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius + 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head body
       const headGradient = ctx.createRadialGradient(centerX - 2, centerY - 2, 0, centerX, centerY, radius + 2);
       headGradient.addColorStop(0, COLORS.snakeHighlight);
       headGradient.addColorStop(0.5, COLORS.snakeHead);
-      headGradient.addColorStop(1, '#7d3c98');
+      headGradient.addColorStop(1, COLORS.snakeBody);
       ctx.fillStyle = headGradient;
-      ctx.globalAlpha = 1;
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius + 2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Eyes direction
+      // Eye direction
       const nextSegment = snake[1];
       let dx = 1, dy = 0;
       if (nextSegment) {
@@ -1619,16 +815,16 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       const eyeOffset = 4;
       const eyeForward = 2;
 
-      // Cheshire Cat eyes - yellow/gold and mischievous
+      // Demon eyes - glowing yellow
       const leftEyeX = centerX + perpX * eyeOffset + dx * eyeForward;
       const leftEyeY = centerY + perpY * eyeOffset + dy * eyeForward;
       const rightEyeX = centerX - perpX * eyeOffset + dx * eyeForward;
       const rightEyeY = centerY - perpY * eyeOffset + dy * eyeForward;
 
-      // Glowing yellow eye whites
+      // Eye glow
       ctx.fillStyle = COLORS.snakeEye;
       ctx.shadowColor = COLORS.snakeEye;
-      ctx.shadowBlur = 4;
+      ctx.shadowBlur = 6;
       ctx.beginPath();
       ctx.arc(leftEyeX, leftEyeY, 4, 0, Math.PI * 2);
       ctx.fill();
@@ -1637,16 +833,16 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // Slit pupils (cat-like)
+      // Slit pupils
       ctx.fillStyle = COLORS.snakePupil;
       ctx.beginPath();
-      ctx.ellipse(leftEyeX + dx * 1, leftEyeY + dy * 1, 1, 2.5, Math.atan2(dy, dx), 0, Math.PI * 2);
+      ctx.ellipse(leftEyeX + dx, leftEyeY + dy, 1, 2.5, Math.atan2(dy, dx), 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.ellipse(rightEyeX + dx * 1, rightEyeY + dy * 1, 1, 2.5, Math.atan2(dy, dx), 0, Math.PI * 2);
+      ctx.ellipse(rightEyeX + dx, rightEyeY + dy, 1, 2.5, Math.atan2(dy, dx), 0, Math.PI * 2);
       ctx.fill();
 
-      // Eye sparkles
+      // Eye glint
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.arc(leftEyeX - 1, leftEyeY - 1, 1, 0, Math.PI * 2);
@@ -1655,390 +851,181 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.arc(rightEyeX - 1, rightEyeY - 1, 1, 0, Math.PI * 2);
       ctx.fill();
 
-      // Rosy cheeks (pink)
-      ctx.fillStyle = COLORS.snakeCheek;
-      ctx.globalAlpha = 0.4;
-      ctx.beginPath();
-      ctx.ellipse(centerX + perpX * 6, centerY + perpY * 6, 3, 2, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(centerX - perpX * 6, centerY - perpY * 6, 3, 2, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      // Draw demon horns
+      drawDemonHorns(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
 
-      // Cat nose (pink)
-      ctx.fillStyle = COLORS.snakeCheek;
-      const noseX = centerX + dx * 5;
-      const noseY = centerY + dy * 5;
-      ctx.beginPath();
-      ctx.moveTo(noseX, noseY - 2);
-      ctx.lineTo(noseX - 2, noseY + 1);
-      ctx.lineTo(noseX + 2, noseY + 1);
-      ctx.closePath();
-      ctx.fill();
-
-      // FAMOUS CHESHIRE GRIN - big wide smile!
-      ctx.strokeStyle = '#ffffff';
+      // Menacing mouth
+      ctx.strokeStyle = '#000000';
       ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
-      const grinWidth = 8;
-      const grinY = noseY + 4;
+      const mouthY = centerY + dy * 6;
+      const mouthX = centerX + dx * 6;
       ctx.beginPath();
-      ctx.moveTo(centerX - grinWidth + dx * 3, grinY - perpX * grinWidth * 0.3);
-      ctx.quadraticCurveTo(
-        centerX + dx * 5,
-        grinY + 4,
-        centerX + grinWidth + dx * 3,
-        grinY + perpX * grinWidth * 0.3
-      );
+      ctx.moveTo(mouthX - 4, mouthY);
+      ctx.lineTo(mouthX + 4, mouthY);
       ctx.stroke();
 
-      // Teeth in the grin
+      // Fangs
       ctx.fillStyle = '#ffffff';
-      for (let tooth = 0; tooth < 5; tooth++) {
-        const toothT = (tooth + 0.5) / 5;
-        const toothX = centerX - grinWidth + toothT * grinWidth * 2 + dx * 3;
-        const toothY = grinY + Math.sin(toothT * Math.PI) * 2;
-        ctx.beginPath();
-        ctx.arc(toothX, toothY, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      ctx.beginPath();
+      ctx.moveTo(mouthX - 3, mouthY);
+      ctx.lineTo(mouthX - 2, mouthY + 3);
+      ctx.lineTo(mouthX - 1, mouthY);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(mouthX + 3, mouthY);
+      ctx.lineTo(mouthX + 2, mouthY + 3);
+      ctx.lineTo(mouthX + 1, mouthY);
+      ctx.fill();
 
-      // Draw cat features
-      drawCatEars(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
-      drawWhiskers(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
-      drawTeeth(ctx, centerX, centerY, dx, dy);
     } else {
-      // Cheshire Cat body - purple with stripes
+      // Body segments with fire gradient
+      const bodyGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius + 4);
+      bodyGlow.addColorStop(0, `rgba(255, 100, 0, ${fireIntensity * 0.3})`);
+      bodyGlow.addColorStop(1, 'rgba(139, 0, 0, 0)');
+      ctx.fillStyle = bodyGlow;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius + 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      const segHue = 15 - t * 10;
       const bodyGradient = ctx.createRadialGradient(centerX - 1, centerY - 1, 0, centerX, centerY, radius);
       bodyGradient.addColorStop(0, COLORS.snakeHighlight);
-      bodyGradient.addColorStop(0.4, hslToRgb(0.78, 0.5, purpleShade));
-      bodyGradient.addColorStop(1, hslToRgb(0.78, 0.55, purpleShade - 0.1));
+      bodyGradient.addColorStop(0.4, hslToRgb(segHue / 360, 0.9, 0.45 + t * 0.1));
+      bodyGradient.addColorStop(1, hslToRgb(segHue / 360, 0.85, 0.35 + t * 0.1));
       ctx.fillStyle = bodyGradient;
-      ctx.globalAlpha = 1;
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Cheshire stripes (alternating darker purple)
+      // Scale pattern
       if (i % 2 === 0) {
-        ctx.fillStyle = 'rgba(125, 60, 152, 0.3)';
+        ctx.fillStyle = 'rgba(139, 0, 0, 0.3)';
         ctx.beginPath();
-        ctx.arc(centerX, centerY, radius * 0.85, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY, radius * 0.7, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Magical sparkle on each segment
+      // Highlight
       ctx.fillStyle = '#ffffff';
-      ctx.globalAlpha = 0.3;
+      ctx.globalAlpha = 0.2;
       ctx.beginPath();
-      ctx.arc(centerX - 2, centerY - 2, radius * 0.2, 0, Math.PI * 2);
+      ctx.arc(centerX - 2, centerY - 2, radius * 0.25, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
     }
   }
 
-  // Wonderland magical burst particles (when eating food) - playing card suits!
-  const wonderBurstColors = [COLORS.magicPurple, COLORS.teaGold, COLORS.magicPink, COLORS.magicBlue, COLORS.cardRed];
-  for (let pi = 0; pi < burstParticles.length; pi++) {
-    const p = burstParticles[pi];
-    const burstColor = wonderBurstColors[pi % wonderBurstColors.length];
+  // Draw inferno particles (game over effect)
+  for (const p of infernoParticles) {
+    const alpha = p.life * 0.9;
+    const pSize = p.size * p.life;
 
-    ctx.fillStyle = burstColor;
-    ctx.globalAlpha = p.life * 0.8;
-    const size = p.size * p.life;
+    // Outer glow
+    ctx.fillStyle = `hsla(${p.hue}, 100%, 50%, ${alpha * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, pSize * 2, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Alternate between card suit shapes: hearts, diamonds, stars
-    const shapeType = pi % 3;
-    if (shapeType === 0) {
-      // Heart shape
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y + size * 0.3);
-      ctx.bezierCurveTo(p.x - size * 0.5, p.y - size * 0.3, p.x - size * 0.5, p.y + size * 0.2, p.x, p.y + size * 0.6);
-      ctx.bezierCurveTo(p.x + size * 0.5, p.y + size * 0.2, p.x + size * 0.5, p.y - size * 0.3, p.x, p.y + size * 0.3);
-      ctx.fill();
-    } else if (shapeType === 1) {
-      // Diamond shape
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y - size * 0.6);
-      ctx.lineTo(p.x + size * 0.4, p.y);
-      ctx.lineTo(p.x, p.y + size * 0.6);
-      ctx.lineTo(p.x - size * 0.4, p.y);
-      ctx.closePath();
-      ctx.fill();
-    } else {
-      // Star shape
-      ctx.beginPath();
-      for (let j = 0; j < 10; j++) {
-        const angle = (j / 10) * Math.PI * 2 - Math.PI / 2;
-        const r = j % 2 === 0 ? size : size * 0.4;
-        const sx = p.x + Math.cos(angle) * r;
-        const sy = p.y + Math.sin(angle) * r;
-        if (j === 0) ctx.moveTo(sx, sy);
-        else ctx.lineTo(sx, sy);
-      }
-      ctx.closePath();
-      ctx.fill();
-    }
-  }
-  ctx.globalAlpha = 1;
+    // Core
+    ctx.fillStyle = `hsla(${p.hue}, 100%, 60%, ${alpha * 0.7})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, pSize, 0, Math.PI * 2);
+    ctx.fill();
 
-  // Draw death debris
-  if (deathExplosionPhase > 0.7) {
-    const flashAlpha = (deathExplosionPhase - 0.7) * 2;
-    ctx.fillStyle = '#ffffff';
-    ctx.globalAlpha = flashAlpha * 0.4;
-    ctx.fillRect(0, 0, width, height);
-    ctx.globalAlpha = 1;
+    // Hot center
+    ctx.fillStyle = `hsla(${p.hue + 30}, 80%, 80%, ${alpha})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, pSize * 0.4, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  for (const d of deathDebris) {
-    const debrisColor = hslToRgb(d.hue / 360, 0.9, 0.6);
-    const alpha = d.life * 0.9;
-
-    if (d.type === 'shard') {
-      const size = d.size * d.life;
-      const cos = Math.cos(d.rotation);
-      const sin = Math.sin(d.rotation);
-
-      const p1x = d.x + cos * size;
-      const p1y = d.y + sin * size;
-      const p2x = d.x + cos * (-size * 0.5) - sin * (size * 0.7);
-      const p2y = d.y + sin * (-size * 0.5) + cos * (size * 0.7);
-      const p3x = d.x + cos * (-size * 0.5) - sin * (-size * 0.7);
-      const p3y = d.y + sin * (-size * 0.5) + cos * (-size * 0.7);
-
-      // Glow
-      ctx.fillStyle = debrisColor;
-      ctx.globalAlpha = alpha * 0.4;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, size * 1.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Shard
-      ctx.globalAlpha = alpha;
-      ctx.beginPath();
-      ctx.moveTo(p1x, p1y);
-      ctx.lineTo(p2x, p2y);
-      ctx.lineTo(p3x, p3y);
-      ctx.closePath();
-      ctx.fill();
-
-      // Highlight
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1;
-      ctx.globalAlpha = alpha * 0.6;
-      ctx.beginPath();
-      ctx.moveTo(p1x, p1y);
-      ctx.lineTo(p2x, p2y);
-      ctx.stroke();
-
-    } else if (d.type === 'spark') {
-      const sparkLength = d.size * 2 * d.life;
-
-      const vLen = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
-      const nx = vLen > 0 ? d.vx / vLen : 1;
-      const ny = vLen > 0 ? d.vy / vLen : 0;
-
-      // Glow
-      ctx.fillStyle = debrisColor;
-      ctx.globalAlpha = alpha * 0.3;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, sparkLength * 0.8, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Spark line
-      ctx.strokeStyle = debrisColor;
-      ctx.lineWidth = d.size * 0.6;
-      ctx.globalAlpha = alpha * 0.6;
-      ctx.beginPath();
-      ctx.moveTo(d.x - nx * sparkLength, d.y - ny * sparkLength);
-      ctx.lineTo(d.x, d.y);
-      ctx.stroke();
-
-      // Bright tip
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = d.size * 0.3;
-      ctx.globalAlpha = alpha;
-      ctx.beginPath();
-      ctx.moveTo(d.x - nx * sparkLength * 0.3, d.y - ny * sparkLength * 0.3);
-      ctx.lineTo(d.x, d.y);
-      ctx.stroke();
-
-    } else {
-      const emberSize = d.size * d.life;
-
-      // Outer glow
-      ctx.fillStyle = debrisColor;
-      ctx.globalAlpha = alpha * 0.2;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, emberSize * 2, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Mid glow
-      ctx.globalAlpha = alpha * 0.5;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, emberSize * 1.3, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Core
-      ctx.globalAlpha = alpha;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, emberSize, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Hot center
-      ctx.fillStyle = '#ffffff';
-      ctx.globalAlpha = alpha * 0.7;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, emberSize * 0.4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  ctx.globalAlpha = 1;
-
-  // Reality shatter effect - jaw-dropping screen fracture on game over
-  if (gameState.gameOver && shatterShards.length > 0) {
-    // Draw shattered reality shards falling away
-    for (const shard of shatterShards) {
-      if (shard.delay > 0 || shard.life <= 0) continue;
-
-      ctx.save();
-      ctx.translate(shard.cx, shard.cy);
-      ctx.rotate(shard.rotation);
-
-      // Calculate original points relative to center
-      const relPoints = shard.points.map(p => ({
-        x: p.x - shard.points.reduce((s, pt) => s + pt.x, 0) / shard.points.length,
-        y: p.y - shard.points.reduce((s, pt) => s + pt.y, 0) / shard.points.length,
-      }));
-
-      // Shard with gradient reflecting the wonderland theme
-      const shardHue = (hueOffset + shard.cx * 0.5 + shard.cy * 0.5) % 360;
-      const shardGrad = ctx.createLinearGradient(relPoints[0].x, relPoints[0].y, relPoints[2].x, relPoints[2].y);
-      shardGrad.addColorStop(0, hslToRgb(shardHue / 360, 0.6, 0.3));
-      shardGrad.addColorStop(0.5, hslToRgb((shardHue + 30) / 360, 0.5, 0.2));
-      shardGrad.addColorStop(1, hslToRgb((shardHue + 60) / 360, 0.4, 0.15));
-
-      ctx.fillStyle = shardGrad;
-      ctx.globalAlpha = shard.life * 0.9;
-      ctx.beginPath();
-      ctx.moveTo(relPoints[0].x, relPoints[0].y);
-      for (let i = 1; i < relPoints.length; i++) {
-        ctx.lineTo(relPoints[i].x, relPoints[i].y);
-      }
-      ctx.closePath();
-      ctx.fill();
-
-      // Glowing edge on shard
-      ctx.strokeStyle = hslToRgb((shardHue + 180) / 360, 0.8, 0.6);
-      ctx.lineWidth = 1.5;
-      ctx.globalAlpha = shard.life * 0.6;
-      ctx.stroke();
-
-      // Bright crack line
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 0.5;
-      ctx.globalAlpha = shard.life * 0.4;
-      ctx.beginPath();
-      ctx.moveTo(relPoints[0].x, relPoints[0].y);
-      ctx.lineTo(relPoints[1].x, relPoints[1].y);
-      ctx.stroke();
-
-      ctx.restore();
-    }
-  }
-  ctx.globalAlpha = 1;
-
-  // Wonderland game over overlay - "Down the rabbit hole..."
+  // Game over overlay - Apocalyptic end
   if (gameState.gameOver) {
-    // Dark dreamlike overlay
+    // Dark hellish overlay
     ctx.fillStyle = COLORS.gameOverOverlay;
     ctx.fillRect(0, 0, width, height);
 
-    // Spiraling vortex effect (falling down the rabbit hole)
-    ctx.globalAlpha = 0.15;
+    // Fiery vortex
+    ctx.globalAlpha = 0.2;
     for (let ring = 0; ring < 5; ring++) {
-      const ringRadius = 40 + ring * 35;
-      const rotation = frameCount * 0.02 * (ring % 2 === 0 ? 1 : -1);
-      ctx.strokeStyle = ring % 2 === 0 ? COLORS.magicPurple : COLORS.magicPink;
-      ctx.lineWidth = 3;
+      const ringRadius = 30 + ring * 30;
+      const rotation = frameCount * 0.03 * (ring % 2 === 0 ? 1 : -1);
+      ctx.strokeStyle = ring % 2 === 0 ? COLORS.fireOrange : COLORS.fireRed;
+      ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.arc(width / 2, height / 2, ringRadius, rotation, rotation + Math.PI * 1.5);
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
 
-    // Floating card suits around the edges
-    ctx.globalAlpha = 0.3;
-    const numCards = 8;
-    for (let c = 0; c < numCards; c++) {
-      const angle = (c / numCards) * Math.PI * 2 + frameCount * 0.01;
-      const dist = 160 + Math.sin(frameCount * 0.03 + c) * 20;
-      const cx = width / 2 + Math.cos(angle) * dist;
-      const cy = height / 2 + Math.sin(angle) * dist;
-      const cardSize = 12;
+    // Falling embers around the edges
+    ctx.globalAlpha = 0.5;
+    const numEmbers = 12;
+    for (let e = 0; e < numEmbers; e++) {
+      const angle = (e / numEmbers) * Math.PI * 2 + frameCount * 0.02;
+      const dist = 140 + Math.sin(frameCount * 0.05 + e) * 20;
+      const ex = width / 2 + Math.cos(angle) * dist;
+      const ey = height / 2 + Math.sin(angle) * dist;
 
-      ctx.fillStyle = c % 2 === 0 ? COLORS.cardRed : COLORS.magicPurple;
+      ctx.fillStyle = e % 2 === 0 ? COLORS.fireOrange : COLORS.fireYellow;
+      ctx.beginPath();
+      ctx.arc(ex, ey, 4, 0, Math.PI * 2);
+      ctx.fill();
 
-      if (c % 4 === 0) {
-        // Heart
-        ctx.beginPath();
-        ctx.moveTo(cx, cy + cardSize * 0.2);
-        ctx.bezierCurveTo(cx - cardSize * 0.4, cy - cardSize * 0.2, cx - cardSize * 0.4, cy + cardSize * 0.1, cx, cy + cardSize * 0.4);
-        ctx.bezierCurveTo(cx + cardSize * 0.4, cy + cardSize * 0.1, cx + cardSize * 0.4, cy - cardSize * 0.2, cx, cy + cardSize * 0.2);
-        ctx.fill();
-      } else if (c % 4 === 1) {
-        // Diamond
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - cardSize * 0.4);
-        ctx.lineTo(cx + cardSize * 0.25, cy);
-        ctx.lineTo(cx, cy + cardSize * 0.4);
-        ctx.lineTo(cx - cardSize * 0.25, cy);
-        ctx.closePath();
-        ctx.fill();
-      } else if (c % 4 === 2) {
-        // Spade
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - cardSize * 0.35);
-        ctx.bezierCurveTo(cx - cardSize * 0.4, cy + cardSize * 0.05, cx - cardSize * 0.25, cy + cardSize * 0.3, cx, cy + cardSize * 0.15);
-        ctx.bezierCurveTo(cx + cardSize * 0.25, cy + cardSize * 0.3, cx + cardSize * 0.4, cy + cardSize * 0.05, cx, cy - cardSize * 0.35);
-        ctx.fill();
-      } else {
-        // Club
-        ctx.beginPath();
-        ctx.arc(cx, cy - cardSize * 0.12, cardSize * 0.18, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(cx - cardSize * 0.15, cy + cardSize * 0.08, cardSize * 0.18, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(cx + cardSize * 0.15, cy + cardSize * 0.08, cardSize * 0.18, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      // Ember glow
+      ctx.fillStyle = COLORS.fireRed;
+      ctx.globalAlpha = 0.2;
+      ctx.beginPath();
+      ctx.arc(ex, ey, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.5;
     }
     ctx.globalAlpha = 1;
 
-    // "We're all mad here" Cheshire grin in the center (fading in and out)
-    const grinAlpha = 0.3 + Math.sin(frameCount * 0.05) * 0.15;
-    ctx.strokeStyle = '#ffffff';
+    // Skull symbol in center (pulsing)
+    const skullAlpha = 0.4 + Math.sin(frameCount * 0.05) * 0.15;
+    ctx.strokeStyle = COLORS.fireOrange;
     ctx.lineWidth = 3;
-    ctx.globalAlpha = grinAlpha;
+    ctx.globalAlpha = skullAlpha;
+
+    // Simple skull shape
+    const skullX = width / 2;
+    const skullY = height / 2;
+    const skullSize = 30;
+
+    // Skull outline
     ctx.beginPath();
-    ctx.moveTo(width / 2 - 50, height / 2);
-    ctx.quadraticCurveTo(width / 2, height / 2 + 30, width / 2 + 50, height / 2);
+    ctx.arc(skullX, skullY - 5, skullSize, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Teeth in the floating grin
-    ctx.fillStyle = '#ffffff';
-    for (let tooth = 0; tooth < 8; tooth++) {
-      const toothT = (tooth + 0.5) / 8;
-      const toothX = width / 2 - 45 + toothT * 90;
-      const toothY = height / 2 + Math.sin(toothT * Math.PI) * 15;
+    // Eye sockets
+    ctx.fillStyle = COLORS.fireRed;
+    ctx.beginPath();
+    ctx.arc(skullX - 10, skullY - 8, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(skullX + 10, skullY - 8, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Nose
+    ctx.beginPath();
+    ctx.moveTo(skullX, skullY);
+    ctx.lineTo(skullX - 4, skullY + 8);
+    ctx.lineTo(skullX + 4, skullY + 8);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Teeth
+    ctx.strokeStyle = COLORS.fireOrange;
+    ctx.lineWidth = 2;
+    for (let tooth = 0; tooth < 5; tooth++) {
+      const toothX = skullX - 12 + tooth * 6;
       ctx.beginPath();
-      ctx.arc(toothX, toothY, 3, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(toothX, skullY + 18);
+      ctx.lineTo(toothX, skullY + 25);
+      ctx.stroke();
     }
+
     ctx.globalAlpha = 1;
   }
 
@@ -2087,7 +1074,7 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
           canvas: canvas,
           width: gridSize * CELL_SIZE,
           height: gridSize * CELL_SIZE,
-          backgroundColor: '#0a0a1a',
+          backgroundColor: '#0a0505',
           scene: SnakeScene,
           pixelArt: false,
           scale: {
