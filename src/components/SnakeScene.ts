@@ -131,6 +131,8 @@ const NUM_MONSTERS_PER_EDGE = 2;
 const MAX_FLAME_PARTICLES = 60;
 const MAX_COMET_TRAIL_LENGTH = 30;
 const MAX_ETHEREAL_PARTICLES = 50;
+const NUM_BEES = 8;
+const BEE_SPAWN_CHANCE = 0.02;
 
 // Comet trail segment - stores historical snake positions for smooth trail rendering
 interface CometTrailSegment {
@@ -228,6 +230,26 @@ interface FlameParticle {
   brightness: number;
 }
 
+// Mystical bee - glowing magical creatures that swarm around food
+interface MysticalBee {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  targetX: number;
+  targetY: number;
+  wingPhase: number;
+  wingSpeed: number;
+  size: number;
+  hue: number;
+  glowIntensity: number;
+  bobPhase: number;
+  bobSpeed: number;
+  trail: { x: number; y: number; alpha: number }[];
+  state: 'flying' | 'hovering' | 'attracted';
+  sparkleTimer: number;
+}
+
 // Color palette - PURPLE INFERNO theme: mystical purple flames, dark sorcery
 const COLORS = {
   bgDark: 0x050510,
@@ -309,6 +331,8 @@ export class SnakeScene extends Phaser.Scene {
   // Thrown food animation system
   private thrownFood: ThrownFood | null = null;
   private lastFoodPos: Position | null = null;
+  // Mystical bees swarming around
+  private bees: MysticalBee[] = [];
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -324,6 +348,7 @@ export class SnakeScene extends Phaser.Scene {
     this.initMeteors();
     this.initSmokeParticles();
     this.initMonsterShadows();
+    this.initBees();
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -393,6 +418,281 @@ export class SnakeScene extends Phaser.Scene {
         });
       }
     }
+  }
+
+  private initBees(): void {
+    this.bees = [];
+  }
+
+  private spawnBee(): void {
+    if (this.bees.length >= NUM_BEES) return;
+
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+
+    // Spawn from random edge
+    const edge = Math.floor(Math.random() * 4);
+    let x: number, y: number;
+
+    switch (edge) {
+      case 0: // top
+        x = Math.random() * width;
+        y = -20;
+        break;
+      case 1: // right
+        x = width + 20;
+        y = Math.random() * height;
+        break;
+      case 2: // bottom
+        x = Math.random() * width;
+        y = height + 20;
+        break;
+      default: // left
+        x = -20;
+        y = Math.random() * height;
+        break;
+    }
+
+    // Random target inside the play area
+    const targetX = 50 + Math.random() * (width - 100);
+    const targetY = 50 + Math.random() * (height - 100);
+
+    this.bees.push({
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      targetX,
+      targetY,
+      wingPhase: Math.random() * Math.PI * 2,
+      wingSpeed: 0.4 + Math.random() * 0.2,
+      size: 6 + Math.random() * 3,
+      hue: 40 + Math.random() * 30, // Golden/amber color
+      glowIntensity: 0.5 + Math.random() * 0.5,
+      bobPhase: Math.random() * Math.PI * 2,
+      bobSpeed: 0.08 + Math.random() * 0.04,
+      trail: [],
+      state: 'flying',
+      sparkleTimer: 0,
+    });
+  }
+
+  private updateBees(): void {
+    if (!this.currentState) return;
+
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+    const foodX = this.currentState.food.x * CELL_SIZE + CELL_SIZE / 2;
+    const foodY = this.currentState.food.y * CELL_SIZE + CELL_SIZE / 2;
+    const gameOver = this.currentState.gameOver;
+
+    // Randomly spawn new bees
+    if (!gameOver && Math.random() < BEE_SPAWN_CHANCE && this.bees.length < NUM_BEES) {
+      this.spawnBee();
+    }
+
+    for (let i = this.bees.length - 1; i >= 0; i--) {
+      const bee = this.bees[i];
+
+      // Update wing animation
+      bee.wingPhase += bee.wingSpeed;
+      bee.bobPhase += bee.bobSpeed;
+      bee.sparkleTimer += 0.1;
+
+      // Store trail position
+      if (this.frameCount % 2 === 0) {
+        bee.trail.unshift({ x: bee.x, y: bee.y, alpha: 0.6 });
+        if (bee.trail.length > 8) bee.trail.pop();
+      }
+
+      // Fade trail
+      for (const t of bee.trail) {
+        t.alpha *= 0.85;
+      }
+      bee.trail = bee.trail.filter(t => t.alpha > 0.05);
+
+      // Bees are attracted to food
+      const dxFood = foodX - bee.x;
+      const dyFood = foodY - bee.y;
+      const distFood = Math.sqrt(dxFood * dxFood + dyFood * dyFood);
+
+      // Determine behavior based on distance to food
+      if (distFood < 80) {
+        bee.state = 'attracted';
+        bee.targetX = foodX + Math.cos(bee.bobPhase * 3) * 30;
+        bee.targetY = foodY + Math.sin(bee.bobPhase * 3) * 30;
+      } else if (distFood < 150) {
+        bee.state = 'hovering';
+        // Circle around food loosely
+        const angle = Math.atan2(dyFood, dxFood) + Math.sin(bee.bobPhase) * 0.5;
+        bee.targetX = foodX - Math.cos(angle) * 60;
+        bee.targetY = foodY - Math.sin(angle) * 60;
+      } else {
+        bee.state = 'flying';
+        // Wander towards food with some randomness
+        if (Math.random() < 0.02) {
+          bee.targetX = foodX + (Math.random() - 0.5) * 200;
+          bee.targetY = foodY + (Math.random() - 0.5) * 200;
+        }
+      }
+
+      // Move towards target with smooth steering
+      const dx = bee.targetX - bee.x;
+      const dy = bee.targetY - bee.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist > 1) {
+        const speed = bee.state === 'attracted' ? 2.5 : (bee.state === 'hovering' ? 1.5 : 2);
+        const ax = (dx / dist) * speed * 0.1;
+        const ay = (dy / dist) * speed * 0.1;
+
+        bee.vx += ax;
+        bee.vy += ay;
+
+        // Add bobbing motion
+        bee.vy += Math.sin(bee.bobPhase) * 0.05;
+      }
+
+      // Limit velocity
+      const maxSpeed = bee.state === 'attracted' ? 3 : 2;
+      const currentSpeed = Math.sqrt(bee.vx * bee.vx + bee.vy * bee.vy);
+      if (currentSpeed > maxSpeed) {
+        bee.vx = (bee.vx / currentSpeed) * maxSpeed;
+        bee.vy = (bee.vy / currentSpeed) * maxSpeed;
+      }
+
+      // Apply velocity with damping
+      bee.x += bee.vx;
+      bee.y += bee.vy;
+      bee.vx *= 0.95;
+      bee.vy *= 0.95;
+
+      // Pulsing glow when near food
+      if (bee.state === 'attracted') {
+        bee.glowIntensity = 0.7 + Math.sin(bee.bobPhase * 4) * 0.3;
+      } else {
+        bee.glowIntensity = 0.5 + Math.sin(bee.bobPhase * 2) * 0.2;
+      }
+
+      // Remove bees that fly too far off screen
+      if (bee.x < -100 || bee.x > width + 100 || bee.y < -100 || bee.y > height + 100) {
+        this.bees.splice(i, 1);
+      }
+
+      // Scatter bees on game over
+      if (gameOver) {
+        bee.targetX = bee.x + (Math.random() - 0.5) * 400;
+        bee.targetY = bee.y - 200 - Math.random() * 200;
+        bee.vx += (Math.random() - 0.5) * 2;
+        bee.vy -= 1 + Math.random();
+      }
+    }
+  }
+
+  private drawBees(g: Phaser.GameObjects.Graphics): void {
+    for (const bee of this.bees) {
+      const { x, y, size, wingPhase, hue, glowIntensity, trail, state, sparkleTimer } = bee;
+
+      // Draw trail
+      for (let i = 0; i < trail.length; i++) {
+        const t = trail[i];
+        const trailSize = size * 0.4 * (1 - i / trail.length);
+        g.fillStyle(this.hslToHex(hue, 80, 60), t.alpha * 0.4);
+        g.fillCircle(t.x, t.y, trailSize);
+      }
+
+      // Outer glow
+      const glowSize = size * 2 * glowIntensity;
+      g.fillStyle(this.hslToHex(hue, 90, 50), 0.2 * glowIntensity);
+      g.fillCircle(x, y, glowSize);
+
+      // Mid glow
+      g.fillStyle(this.hslToHex(hue, 85, 60), 0.3 * glowIntensity);
+      g.fillCircle(x, y, glowSize * 0.6);
+
+      // Bee body - striped pattern
+      const bodyLength = size * 1.2;
+      const bodyWidth = size * 0.7;
+
+      // Body shadow/glow
+      g.fillStyle(this.hslToHex(hue, 70, 30), 0.5);
+      g.fillEllipse(x, y, bodyLength + 2, bodyWidth + 2);
+
+      // Main body (amber/golden)
+      g.fillStyle(this.hslToHex(hue, 90, 55), 1);
+      g.fillEllipse(x, y, bodyLength, bodyWidth);
+
+      // Dark stripes
+      g.fillStyle(0x1a1a1a, 0.8);
+      g.fillRect(x - bodyLength * 0.15, y - bodyWidth / 2, bodyLength * 0.15, bodyWidth);
+      g.fillRect(x + bodyLength * 0.15, y - bodyWidth / 2, bodyLength * 0.15, bodyWidth);
+
+      // Head
+      g.fillStyle(this.hslToHex(hue - 10, 80, 40), 1);
+      g.fillCircle(x - bodyLength * 0.4, y, size * 0.4);
+
+      // Wings - animated flutter
+      const wingAngle = Math.sin(wingPhase) * 0.8;
+      const wingSize = size * 0.9;
+
+      // Wing glow (ethereal effect)
+      g.fillStyle(0xffffff, 0.2 + Math.abs(Math.sin(wingPhase)) * 0.2);
+      g.fillEllipse(x + Math.cos(wingAngle + 0.5) * wingSize * 0.3, y - wingSize * 0.5, wingSize * 0.8, wingSize * 0.4);
+      g.fillEllipse(x + Math.cos(-wingAngle + 0.5) * wingSize * 0.3, y + wingSize * 0.5, wingSize * 0.8, wingSize * 0.4);
+
+      // Wing bodies
+      g.fillStyle(0xffffff, 0.5 + Math.abs(Math.sin(wingPhase)) * 0.3);
+      g.fillEllipse(x + Math.cos(wingAngle) * wingSize * 0.2, y - wingSize * 0.4, wingSize * 0.6, wingSize * 0.3);
+      g.fillEllipse(x + Math.cos(-wingAngle) * wingSize * 0.2, y + wingSize * 0.4, wingSize * 0.6, wingSize * 0.3);
+
+      // Eyes
+      g.fillStyle(0x000000, 1);
+      g.fillCircle(x - bodyLength * 0.45, y - size * 0.12, size * 0.12);
+      g.fillCircle(x - bodyLength * 0.45, y + size * 0.12, size * 0.12);
+
+      // Sparkles when attracted to food
+      if (state === 'attracted' && Math.sin(sparkleTimer * 3) > 0.7) {
+        const sparkleAngle = sparkleTimer * 2;
+        const sparkleDist = size * 1.5;
+        const sparkleX = x + Math.cos(sparkleAngle) * sparkleDist;
+        const sparkleY = y + Math.sin(sparkleAngle) * sparkleDist;
+
+        g.fillStyle(0xffffff, 0.8);
+        g.fillCircle(sparkleX, sparkleY, 2);
+        g.fillStyle(this.hslToHex(hue, 100, 80), 0.6);
+        g.fillCircle(sparkleX, sparkleY, 3);
+      }
+    }
+  }
+
+  // Helper to convert HSL to hex for Phaser
+  private hslToHex(h: number, s: number, l: number): number {
+    h = h / 360;
+    s = s / 100;
+    l = l / 100;
+
+    let r: number, g: number, b: number;
+
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const hue2rgb = (p: number, q: number, t: number): number => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+      };
+
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1 / 3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1 / 3);
+    }
+
+    return (Math.round(r * 255) << 16) + (Math.round(g * 255) << 8) + Math.round(b * 255);
   }
 
   private updateMonsterShadows(): void {
@@ -1226,6 +1526,7 @@ export class SnakeScene extends Phaser.Scene {
     this.updateFlameParticles();
     this.updateCometTrail();
     this.updateEtherealParticles();
+    this.updateBees();
 
     // Spawn flame particles along snake every few frames
     if (this.frameCount % 2 === 0) {
@@ -1305,6 +1606,9 @@ export class SnakeScene extends Phaser.Scene {
 
     // Food with enhanced glow, particles and energy tendrils (only if landed or no animation)
     this.drawFood(g);
+
+    // Draw mystical bees swarming around food
+    this.drawBees(g);
 
     // Snake with trail and scale effects
     this.drawSnake(g);

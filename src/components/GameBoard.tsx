@@ -290,6 +290,278 @@ let thrownFood: ThrownFood2D | null = null;
 let lastFoodX = -1;
 let lastFoodY = -1;
 
+// Mystical bee state for Canvas 2D fallback
+interface Bee2D {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  targetX: number;
+  targetY: number;
+  wingPhase: number;
+  wingSpeed: number;
+  size: number;
+  hue: number;
+  glowIntensity: number;
+  bobPhase: number;
+  bobSpeed: number;
+  trail: { x: number; y: number; alpha: number }[];
+  state: 'flying' | 'hovering' | 'attracted';
+  sparkleTimer: number;
+}
+let bees2D: Bee2D[] = [];
+const MAX_BEES_2D = 8;
+const BEE_SPAWN_CHANCE_2D = 0.02;
+
+function spawnBee2D(): void {
+  if (bees2D.length >= MAX_BEES_2D) return;
+
+  const width = GRID_SIZE * CELL_SIZE;
+  const height = GRID_SIZE * CELL_SIZE;
+
+  const edge = Math.floor(Math.random() * 4);
+  let x: number, y: number;
+
+  switch (edge) {
+    case 0:
+      x = Math.random() * width;
+      y = -20;
+      break;
+    case 1:
+      x = width + 20;
+      y = Math.random() * height;
+      break;
+    case 2:
+      x = Math.random() * width;
+      y = height + 20;
+      break;
+    default:
+      x = -20;
+      y = Math.random() * height;
+      break;
+  }
+
+  const targetX = 50 + Math.random() * (width - 100);
+  const targetY = 50 + Math.random() * (height - 100);
+
+  bees2D.push({
+    x,
+    y,
+    vx: 0,
+    vy: 0,
+    targetX,
+    targetY,
+    wingPhase: Math.random() * Math.PI * 2,
+    wingSpeed: 0.4 + Math.random() * 0.2,
+    size: 6 + Math.random() * 3,
+    hue: 40 + Math.random() * 30,
+    glowIntensity: 0.5 + Math.random() * 0.5,
+    bobPhase: Math.random() * Math.PI * 2,
+    bobSpeed: 0.08 + Math.random() * 0.04,
+    trail: [],
+    state: 'flying',
+    sparkleTimer: 0,
+  });
+}
+
+function updateBees2D(gameState: GameState, frame: number): void {
+  const width = GRID_SIZE * CELL_SIZE;
+  const height = GRID_SIZE * CELL_SIZE;
+  const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
+  const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
+  const gameOver = gameState.gameOver;
+
+  if (!gameOver && Math.random() < BEE_SPAWN_CHANCE_2D && bees2D.length < MAX_BEES_2D) {
+    spawnBee2D();
+  }
+
+  for (let i = bees2D.length - 1; i >= 0; i--) {
+    const bee = bees2D[i];
+
+    bee.wingPhase += bee.wingSpeed;
+    bee.bobPhase += bee.bobSpeed;
+    bee.sparkleTimer += 0.1;
+
+    if (frame % 2 === 0) {
+      bee.trail.unshift({ x: bee.x, y: bee.y, alpha: 0.6 });
+      if (bee.trail.length > 8) bee.trail.pop();
+    }
+
+    for (const t of bee.trail) {
+      t.alpha *= 0.85;
+    }
+    bee.trail = bee.trail.filter(t => t.alpha > 0.05);
+
+    const dxFood = foodX - bee.x;
+    const dyFood = foodY - bee.y;
+    const distFood = Math.sqrt(dxFood * dxFood + dyFood * dyFood);
+
+    if (distFood < 80) {
+      bee.state = 'attracted';
+      bee.targetX = foodX + Math.cos(bee.bobPhase * 3) * 30;
+      bee.targetY = foodY + Math.sin(bee.bobPhase * 3) * 30;
+    } else if (distFood < 150) {
+      bee.state = 'hovering';
+      const angle = Math.atan2(dyFood, dxFood) + Math.sin(bee.bobPhase) * 0.5;
+      bee.targetX = foodX - Math.cos(angle) * 60;
+      bee.targetY = foodY - Math.sin(angle) * 60;
+    } else {
+      bee.state = 'flying';
+      if (Math.random() < 0.02) {
+        bee.targetX = foodX + (Math.random() - 0.5) * 200;
+        bee.targetY = foodY + (Math.random() - 0.5) * 200;
+      }
+    }
+
+    const dx = bee.targetX - bee.x;
+    const dy = bee.targetY - bee.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist > 1) {
+      const speed = bee.state === 'attracted' ? 2.5 : (bee.state === 'hovering' ? 1.5 : 2);
+      const ax = (dx / dist) * speed * 0.1;
+      const ay = (dy / dist) * speed * 0.1;
+
+      bee.vx += ax;
+      bee.vy += ay;
+      bee.vy += Math.sin(bee.bobPhase) * 0.05;
+    }
+
+    const maxSpeed = bee.state === 'attracted' ? 3 : 2;
+    const currentSpeed = Math.sqrt(bee.vx * bee.vx + bee.vy * bee.vy);
+    if (currentSpeed > maxSpeed) {
+      bee.vx = (bee.vx / currentSpeed) * maxSpeed;
+      bee.vy = (bee.vy / currentSpeed) * maxSpeed;
+    }
+
+    bee.x += bee.vx;
+    bee.y += bee.vy;
+    bee.vx *= 0.95;
+    bee.vy *= 0.95;
+
+    if (bee.state === 'attracted') {
+      bee.glowIntensity = 0.7 + Math.sin(bee.bobPhase * 4) * 0.3;
+    } else {
+      bee.glowIntensity = 0.5 + Math.sin(bee.bobPhase * 2) * 0.2;
+    }
+
+    if (bee.x < -100 || bee.x > width + 100 || bee.y < -100 || bee.y > height + 100) {
+      bees2D.splice(i, 1);
+    }
+
+    if (gameOver) {
+      bee.targetX = bee.x + (Math.random() - 0.5) * 400;
+      bee.targetY = bee.y - 200 - Math.random() * 200;
+      bee.vx += (Math.random() - 0.5) * 2;
+      bee.vy -= 1 + Math.random();
+    }
+  }
+}
+
+function drawBees2D(ctx: CanvasRenderingContext2D): void {
+  for (const bee of bees2D) {
+    const { x, y, size, wingPhase, hue, glowIntensity, trail, state, sparkleTimer } = bee;
+
+    // Draw trail
+    for (let i = 0; i < trail.length; i++) {
+      const t = trail[i];
+      const trailSize = size * 0.4 * (1 - i / trail.length);
+      ctx.fillStyle = `hsla(${hue}, 80%, 60%, ${t.alpha * 0.4})`;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, trailSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Outer glow
+    const glowSize = size * 2 * glowIntensity;
+    ctx.fillStyle = `hsla(${hue}, 90%, 50%, ${0.2 * glowIntensity})`;
+    ctx.beginPath();
+    ctx.arc(x, y, glowSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Mid glow
+    ctx.fillStyle = `hsla(${hue}, 85%, 60%, ${0.3 * glowIntensity})`;
+    ctx.beginPath();
+    ctx.arc(x, y, glowSize * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bee body
+    const bodyLength = size * 1.2;
+    const bodyWidth = size * 0.7;
+
+    // Body shadow
+    ctx.fillStyle = `hsla(${hue}, 70%, 30%, 0.5)`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, bodyLength / 2 + 1, bodyWidth / 2 + 1, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Main body (amber/golden)
+    ctx.fillStyle = `hsl(${hue}, 90%, 55%)`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, bodyLength / 2, bodyWidth / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Dark stripes
+    ctx.fillStyle = 'rgba(26, 26, 26, 0.8)';
+    ctx.fillRect(x - bodyLength * 0.075, y - bodyWidth / 2, bodyLength * 0.15, bodyWidth);
+    ctx.fillRect(x + bodyLength * 0.075, y - bodyWidth / 2, bodyLength * 0.15, bodyWidth);
+
+    // Head
+    ctx.fillStyle = `hsl(${hue - 10}, 80%, 40%)`;
+    ctx.beginPath();
+    ctx.arc(x - bodyLength * 0.4, y, size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Wings
+    const wingAngle = Math.sin(wingPhase) * 0.8;
+    const wingSize = size * 0.9;
+
+    // Wing glow
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.2 + Math.abs(Math.sin(wingPhase)) * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(x + Math.cos(wingAngle + 0.5) * wingSize * 0.3, y - wingSize * 0.5, wingSize * 0.4, wingSize * 0.2, wingAngle, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + Math.cos(-wingAngle + 0.5) * wingSize * 0.3, y + wingSize * 0.5, wingSize * 0.4, wingSize * 0.2, -wingAngle, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Wing bodies
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.5 + Math.abs(Math.sin(wingPhase)) * 0.3})`;
+    ctx.beginPath();
+    ctx.ellipse(x + Math.cos(wingAngle) * wingSize * 0.2, y - wingSize * 0.4, wingSize * 0.3, wingSize * 0.15, wingAngle, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + Math.cos(-wingAngle) * wingSize * 0.2, y + wingSize * 0.4, wingSize * 0.3, wingSize * 0.15, -wingAngle, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(x - bodyLength * 0.45, y - size * 0.12, size * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x - bodyLength * 0.45, y + size * 0.12, size * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sparkles when attracted
+    if (state === 'attracted' && Math.sin(sparkleTimer * 3) > 0.7) {
+      const sparkleAngle = sparkleTimer * 2;
+      const sparkleDist = size * 1.5;
+      const sparkleX = x + Math.cos(sparkleAngle) * sparkleDist;
+      const sparkleY = y + Math.sin(sparkleAngle) * sparkleDist;
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.beginPath();
+      ctx.arc(sparkleX, sparkleY, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `hsla(${hue}, 100%, 80%, 0.6)`;
+      ctx.beginPath();
+      ctx.arc(sparkleX, sparkleY, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
 function spawnThrownFood2D(targetGridX: number, targetGridY: number): void {
   const width = GRID_SIZE * CELL_SIZE;
   const height = GRID_SIZE * CELL_SIZE;
