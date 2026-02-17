@@ -73,7 +73,8 @@ function hslToRgb(h: number, s: number, l: number): string {
 // Animation frame counter for rainbow effect
 let frameCount = 0;
 
-function drawBow(
+// Cat ears - cute triangular ears on top of snake head
+function drawCatEars(
   ctx: CanvasRenderingContext2D,
   headX: number,
   headY: number,
@@ -83,63 +84,168 @@ function drawBow(
   perpY: number,
   frame: number
 ): void {
-  // Cute bow sits on top of the snake's head
-  const bowOffset = -6;
-  const bowBaseX = headX - dx * bowOffset;
-  const bowBaseY = headY - dy * bowOffset;
+  const earOffset = -7;
+  const earBaseX = headX - dx * earOffset;
+  const earBaseY = headY - dy * earOffset;
 
-  // Animated bounce
-  const bounce = Math.sin(frame * 0.1) * 1.5;
-  const bowY = bowBaseY + bounce;
+  // Animated ear twitch
+  const twitch = Math.sin(frame * 0.08) * 0.15;
 
-  // Bow colors
-  const bowColor = '#ff69b4';
-  const bowDark = '#ff1493';
-  const bowLight = '#ffb6c1';
+  // Ear colors
+  const earOuter = '#8ce368';
+  const earInner = '#ffb6c1';
 
-  // Left loop
-  ctx.fillStyle = bowColor;
-  ctx.beginPath();
-  ctx.ellipse(bowBaseX + perpX * 6, bowY + perpY * 6, 5, 7, Math.atan2(perpY, perpX) + 0.3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = bowLight;
-  ctx.beginPath();
-  ctx.ellipse(bowBaseX + perpX * 6 - 1, bowY + perpY * 6 - 1, 2, 3, Math.atan2(perpY, perpX), 0, Math.PI * 2);
-  ctx.fill();
+  const earSize = 8;
+  const earSpread = 6;
 
-  // Right loop
-  ctx.fillStyle = bowColor;
+  // Left ear
+  ctx.save();
+  ctx.translate(earBaseX + perpX * earSpread, earBaseY + perpY * earSpread);
+  ctx.rotate(Math.atan2(perpY, perpX) + 0.4 + twitch);
+
+  // Outer ear
+  ctx.fillStyle = earOuter;
   ctx.beginPath();
-  ctx.ellipse(bowBaseX - perpX * 6, bowY - perpY * 6, 5, 7, Math.atan2(perpY, perpX) - 0.3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = bowLight;
-  ctx.beginPath();
-  ctx.ellipse(bowBaseX - perpX * 6 - 1, bowY - perpY * 6 - 1, 2, 3, Math.atan2(perpY, perpX), 0, Math.PI * 2);
+  ctx.moveTo(0, earSize);
+  ctx.lineTo(-earSize * 0.7, -earSize * 0.3);
+  ctx.lineTo(0, -earSize);
+  ctx.lineTo(earSize * 0.7, -earSize * 0.3);
+  ctx.closePath();
   ctx.fill();
 
-  // Center knot
-  ctx.fillStyle = bowDark;
+  // Inner ear (pink)
+  ctx.fillStyle = earInner;
   ctx.beginPath();
-  ctx.arc(bowBaseX, bowY, 4, 0, Math.PI * 2);
+  ctx.moveTo(0, earSize * 0.5);
+  ctx.lineTo(-earSize * 0.35, -earSize * 0.1);
+  ctx.lineTo(0, -earSize * 0.5);
+  ctx.lineTo(earSize * 0.35, -earSize * 0.1);
+  ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = bowLight;
+  ctx.restore();
+
+  // Right ear
+  ctx.save();
+  ctx.translate(earBaseX - perpX * earSpread, earBaseY - perpY * earSpread);
+  ctx.rotate(Math.atan2(-perpY, -perpX) + 0.4 - twitch);
+
+  // Outer ear
+  ctx.fillStyle = earOuter;
   ctx.beginPath();
-  ctx.arc(bowBaseX - 1, bowY - 1, 1.5, 0, Math.PI * 2);
+  ctx.moveTo(0, earSize);
+  ctx.lineTo(-earSize * 0.7, -earSize * 0.3);
+  ctx.lineTo(0, -earSize);
+  ctx.lineTo(earSize * 0.7, -earSize * 0.3);
+  ctx.closePath();
   ctx.fill();
 
-  // Ribbons hanging down
-  ctx.strokeStyle = bowColor;
-  ctx.lineWidth = 3;
+  // Inner ear (pink)
+  ctx.fillStyle = earInner;
+  ctx.beginPath();
+  ctx.moveTo(0, earSize * 0.5);
+  ctx.lineTo(-earSize * 0.35, -earSize * 0.1);
+  ctx.lineTo(0, -earSize * 0.5);
+  ctx.lineTo(earSize * 0.35, -earSize * 0.1);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+// Cat whiskers on side of snake face
+function drawWhiskers(
+  ctx: CanvasRenderingContext2D,
+  headX: number,
+  headY: number,
+  dx: number,
+  dy: number,
+  perpX: number,
+  perpY: number,
+  frame: number
+): void {
+  const whiskerBase = 4;
+  const whiskerLength = 12;
+  const wiggle = Math.sin(frame * 0.12) * 0.1;
+
+  ctx.strokeStyle = '#4a9030';
+  ctx.lineWidth = 1;
   ctx.lineCap = 'round';
-  const ribbonWave = Math.sin(frame * 0.15) * 2;
+
+  // Left whiskers (3)
+  for (let i = 0; i < 3; i++) {
+    const angle = -0.3 + i * 0.3 + wiggle;
+    const startX = headX + perpX * whiskerBase + dx * 3;
+    const startY = headY + perpY * whiskerBase + dy * 3;
+    const endX = startX + perpX * whiskerLength * Math.cos(angle) + Math.cos(angle + Math.PI / 4) * whiskerLength * 0.5;
+    const endY = startY + perpY * whiskerLength * Math.cos(angle) + Math.sin(angle + Math.PI / 4) * whiskerLength * 0.5;
+
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.quadraticCurveTo(
+      startX + perpX * whiskerLength * 0.5,
+      startY + perpY * whiskerLength * 0.5,
+      endX,
+      endY
+    );
+    ctx.stroke();
+  }
+
+  // Right whiskers (3)
+  for (let i = 0; i < 3; i++) {
+    const angle = -0.3 + i * 0.3 - wiggle;
+    const startX = headX - perpX * whiskerBase + dx * 3;
+    const startY = headY - perpY * whiskerBase + dy * 3;
+    const endX = startX - perpX * whiskerLength * Math.cos(angle) - Math.cos(angle + Math.PI / 4) * whiskerLength * 0.5;
+    const endY = startY - perpY * whiskerLength * Math.cos(angle) - Math.sin(angle + Math.PI / 4) * whiskerLength * 0.5;
+
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.quadraticCurveTo(
+      startX - perpX * whiskerLength * 0.5,
+      startY - perpY * whiskerLength * 0.5,
+      endX,
+      endY
+    );
+    ctx.stroke();
+  }
+}
+
+// Cute fangs/teeth shown briefly when eating
+let teethShowTimer = 0;
+const TEETH_DURATION = 20;
+
+function drawTeeth(
+  ctx: CanvasRenderingContext2D,
+  headX: number,
+  headY: number,
+  dx: number,
+  dy: number
+): void {
+  if (teethShowTimer <= 0) return;
+
+  const toothSize = 4 * (teethShowTimer / TEETH_DURATION);
+  const mouthX = headX + dx * 6;
+  const mouthY = headY + dy * 6;
+
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = teethShowTimer / TEETH_DURATION;
+
+  // Left fang
   ctx.beginPath();
-  ctx.moveTo(bowBaseX + 2, bowY + 3);
-  ctx.quadraticCurveTo(bowBaseX + 4 + ribbonWave, bowY + 10, bowBaseX + 2, bowY + 14);
-  ctx.stroke();
+  ctx.moveTo(mouthX - 3, mouthY);
+  ctx.lineTo(mouthX - 3 + dx * toothSize, mouthY + dy * toothSize + toothSize * 0.5);
+  ctx.lineTo(mouthX - 1, mouthY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Right fang
   ctx.beginPath();
-  ctx.moveTo(bowBaseX - 2, bowY + 3);
-  ctx.quadraticCurveTo(bowBaseX - 4 - ribbonWave, bowY + 10, bowBaseX - 2, bowY + 14);
-  ctx.stroke();
+  ctx.moveTo(mouthX + 3, mouthY);
+  ctx.lineTo(mouthX + 3 + dx * toothSize, mouthY + dy * toothSize + toothSize * 0.5);
+  ctx.lineTo(mouthX + 1, mouthY);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
 }
 
 // Aurora wave state for Canvas 2D
@@ -747,8 +853,14 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     chromaticIntensity = 1.0;
     energyFieldPulse = 1.0;
     spawnLightningBetweenSegments(gameState.snake, hueOffset);
+    teethShowTimer = TEETH_DURATION;
   }
   lastSnakeLength = gameState.snake.length;
+
+  // Update teeth timer
+  if (teethShowTimer > 0) {
+    teethShowTimer--;
+  }
 
   // Spawn periodic lightning between segments
   lightningTimer++;
@@ -991,18 +1103,31 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.fill();
       ctx.globalAlpha = 1;
 
-      // Cute smile
+      // Cat nose (small pink triangle)
+      ctx.fillStyle = COLORS.snakeCheek;
+      const noseX = centerX + dx * 5;
+      const noseY = centerY + dy * 5;
+      ctx.beginPath();
+      ctx.moveTo(noseX, noseY - 2);
+      ctx.lineTo(noseX - 2, noseY + 1);
+      ctx.lineTo(noseX + 2, noseY + 1);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cat mouth (w-shape)
       ctx.strokeStyle = '#4a9030';
       ctx.lineWidth = 1.5;
       ctx.lineCap = 'round';
-      const smileX = centerX + dx * 5;
-      const smileY = centerY + dy * 5;
       ctx.beginPath();
-      ctx.arc(smileX, smileY, 3, 0.2, Math.PI - 0.2);
+      ctx.moveTo(noseX - 3, noseY + 3);
+      ctx.quadraticCurveTo(noseX - 1.5, noseY + 5, noseX, noseY + 3);
+      ctx.quadraticCurveTo(noseX + 1.5, noseY + 5, noseX + 3, noseY + 3);
       ctx.stroke();
 
-      // Draw cute bow instead of crown
-      drawBow(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
+      // Draw cat features
+      drawCatEars(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
+      drawWhiskers(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
+      drawTeeth(ctx, centerX, centerY, dx, dy);
     } else {
       // Body segment with cute soft gradient
       const bodyGradient = ctx.createRadialGradient(centerX - 1, centerY - 1, 0, centerX, centerY, radius);
