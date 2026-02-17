@@ -22,30 +22,36 @@ const CELL_SIZE = 20;
 
 const GRID_SIZE = 20;
 
-// Color palette - Childish theme: bright, playful, pastel colors
+// Color palette - Alice in Wonderland theme: magical, whimsical, dreamlike
 const COLORS = {
-  bgLight: '#fffef0',
-  bgPaper: '#fff8e7',
-  gridLine: '#ffe4c4',
-  gridAccent: '#ffd1a4',
-  snakeHead: '#7cd85a',
-  snakeBody: '#8ce368',
-  snakeTail: '#a8ed8a',
-  snakeHighlight: '#c4f7aa',
-  snakeEye: '#ffffff',
+  bgLight: '#1a1525',
+  bgPaper: '#231d30',
+  gridLine: '#3d2d50',
+  gridAccent: '#5a3d70',
+  // Cheshire Cat colors (purple/pink)
+  snakeHead: '#9b59b6',
+  snakeBody: '#8e44ad',
+  snakeTail: '#7d3c98',
+  snakeHighlight: '#d8a8e8',
+  snakeEye: '#f0e68c',
   snakePupil: '#2d2d2d',
-  snakeCheek: '#ffb6c1',
-  food: '#ff6b8a',
-  foodCore: '#ff8fa3',
-  foodGlow: '#ffccd5',
-  gameOverOverlay: 'rgba(255, 200, 220, 0.9)',
-  crayonRed: '#ff6b6b',
-  crayonOrange: '#ffa94d',
-  crayonYellow: '#ffd43b',
-  crayonGreen: '#69db7c',
-  crayonBlue: '#74c0fc',
-  crayonPurple: '#da77f2',
-  crayonPink: '#faa2c1',
+  snakeCheek: '#ff69b4',
+  // Teacup/food colors
+  food: '#f4d03f',
+  foodCore: '#ffeaa7',
+  foodGlow: '#fff5cc',
+  gameOverOverlay: 'rgba(26, 21, 37, 0.95)',
+  // Wonderland accent colors
+  cardRed: '#e74c3c',
+  cardBlack: '#2c3e50',
+  roseRed: '#c0392b',
+  rosePink: '#ff6b9d',
+  teaGold: '#f39c12',
+  clockGold: '#d4af37',
+  magicPurple: '#9b59b6',
+  magicBlue: '#3498db',
+  magicPink: '#e056fd',
+  magicTeal: '#00cec9',
 };
 
 function hslToRgb(h: number, s: number, l: number): string {
@@ -73,7 +79,7 @@ function hslToRgb(h: number, s: number, l: number): string {
 // Animation frame counter for rainbow effect
 let frameCount = 0;
 
-// Cat ears - cute triangular ears on top of snake head
+// Cheshire Cat ears - pointed, magical cat ears
 function drawCatEars(
   ctx: CanvasRenderingContext2D,
   headX: number,
@@ -91,11 +97,11 @@ function drawCatEars(
   // Animated ear twitch
   const twitch = Math.sin(frame * 0.08) * 0.15;
 
-  // Ear colors
-  const earOuter = '#8ce368';
-  const earInner = '#ffb6c1';
+  // Cheshire Cat colors - purple with pink inner
+  const earOuter = '#9b59b6';
+  const earInner = '#ff69b4';
 
-  const earSize = 8;
+  const earSize = 9;
   const earSpread = 6;
 
   // Left ear
@@ -151,7 +157,7 @@ function drawCatEars(
   ctx.restore();
 }
 
-// Cat whiskers on side of snake face
+// Cheshire Cat whiskers - magical glowing whiskers
 function drawWhiskers(
   ctx: CanvasRenderingContext2D,
   headX: number,
@@ -163,11 +169,12 @@ function drawWhiskers(
   frame: number
 ): void {
   const whiskerBase = 4;
-  const whiskerLength = 12;
+  const whiskerLength = 14;
   const wiggle = Math.sin(frame * 0.12) * 0.1;
 
-  ctx.strokeStyle = '#4a9030';
-  ctx.lineWidth = 1;
+  // Magical purple whiskers
+  ctx.strokeStyle = '#d8a8e8';
+  ctx.lineWidth = 1.5;
   ctx.lineCap = 'round';
 
   // Left whiskers (3)
@@ -422,12 +429,13 @@ function initFloatingStars(): void {
   const height = GRID_SIZE * CELL_SIZE;
   floatingStars = [];
 
-  const starColors = [COLORS.crayonYellow, COLORS.crayonPink, COLORS.crayonBlue, COLORS.crayonPurple, COLORS.crayonOrange];
+  // Wonderland magical colors
+  const starColors = [COLORS.magicPurple, COLORS.magicPink, COLORS.magicBlue, COLORS.teaGold, COLORS.magicTeal];
 
-  // Create friendly floating stars around the edges
-  for (let i = 0; i < 12; i++) {
-    const angle = (i / 12) * Math.PI * 2;
-    const dist = Math.max(width, height) * 0.45;
+  // Create floating magical sparkles around the edges
+  for (let i = 0; i < 16; i++) {
+    const angle = (i / 16) * Math.PI * 2;
+    const dist = Math.max(width, height) * 0.42 + Math.random() * 20;
     const x = width / 2 + Math.cos(angle) * dist;
     const y = height / 2 + Math.sin(angle) * dist;
 
@@ -436,9 +444,9 @@ function initFloatingStars(): void {
       y,
       baseX: x,
       baseY: y,
-      size: 8 + Math.random() * 8,
+      size: 6 + Math.random() * 6,
       phase: Math.random() * Math.PI * 2,
-      speed: 0.02 + Math.random() * 0.02,
+      speed: 0.015 + Math.random() * 0.015,
       twinklePhase: Math.random() * Math.PI * 2,
       color: starColors[i % starColors.length],
     });
@@ -626,11 +634,11 @@ function spawnFlameParticle(x: number, y: number, intensity: number): void {
     x: x + (Math.random() - 0.5) * 6,
     y: y + (Math.random() - 0.5) * 6,
     vx: Math.cos(angle) * speed * 0.3,
-    vy: -0.5 - Math.random() * 1.5 * intensity, // Flames rise upward
+    vy: -0.5 - Math.random() * 1.5 * intensity, // Magic sparkles rise upward
     size: 3 + Math.random() * 4 * intensity,
     life,
     maxLife: life,
-    hue: 15 + Math.random() * 30, // Orange to red-orange range
+    hue: 280 + Math.random() * 60, // Purple to pink range (magical Cheshire trail)
     brightness: 0.5 + Math.random() * 0.3,
   });
 }
@@ -655,27 +663,27 @@ function drawFlameParticles(ctx: CanvasRenderingContext2D): void {
   for (const p of flameParticles) {
     const lifeRatio = p.life / p.maxLife;
 
-    // Hue shifts from yellow (high life) to red (low life)
-    const hue = p.hue - (1 - lifeRatio) * 15;
-    const saturation = 100;
-    const lightness = 50 + lifeRatio * 20;
+    // Magical purple/pink sparkle trail (Cheshire Cat disappearing effect)
+    const hue = p.hue - (1 - lifeRatio) * 20;
+    const saturation = 70;
+    const lightness = 55 + lifeRatio * 15;
 
-    // Outer glow
-    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness - 20}%, ${lifeRatio * 0.3})`;
+    // Outer magical glow
+    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness - 15}%, ${lifeRatio * 0.25})`;
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Mid flame
-    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${lifeRatio * 0.6})`;
+    // Mid sparkle
+    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${lifeRatio * 0.5})`;
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size * 1.3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Core (bright yellow/white)
-    ctx.fillStyle = `hsla(${hue + 20}, ${saturation - 30}%, ${lightness + 30}%, ${lifeRatio * 0.8})`;
+    // Bright core (white/pink)
+    ctx.fillStyle = `hsla(${hue + 30}, ${saturation - 20}%, ${lightness + 25}%, ${lifeRatio * 0.7})`;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * 0.6, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -988,50 +996,89 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.translate(screenShakeX, screenShakeY);
   }
 
-  // Childish warm paper background
+  // Deep wonderland night sky background
   ctx.fillStyle = COLORS.bgLight;
   ctx.fillRect(0, 0, width, height);
 
-  // Subtle paper texture gradient
-  const paperGradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.8);
-  paperGradient.addColorStop(0, 'rgba(255, 255, 240, 0.5)');
-  paperGradient.addColorStop(1, 'rgba(255, 245, 220, 0.3)');
-  ctx.fillStyle = paperGradient;
+  // Magical radial gradient for dreamlike atmosphere
+  const wonderGradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.8);
+  wonderGradient.addColorStop(0, 'rgba(75, 45, 100, 0.4)');
+  wonderGradient.addColorStop(0.5, 'rgba(45, 30, 65, 0.3)');
+  wonderGradient.addColorStop(1, 'rgba(26, 21, 37, 0.5)');
+  ctx.fillStyle = wonderGradient;
   ctx.fillRect(0, 0, width, height);
 
-  // Draw cute crayon-style border doodles
-  const crayonColors = [COLORS.crayonRed, COLORS.crayonOrange, COLORS.crayonYellow, COLORS.crayonGreen, COLORS.crayonBlue, COLORS.crayonPurple];
-  ctx.lineWidth = 3;
-  ctx.lineCap = 'round';
+  // Draw playing card suit patterns in corners (subtle background)
+  ctx.globalAlpha = 0.08;
+  const suitSize = 18;
+  const suitColors = [COLORS.cardRed, COLORS.cardBlack, COLORS.cardRed, COLORS.cardBlack];
 
-  // Wavy border lines
-  for (let side = 0; side < 4; side++) {
-    const color = crayonColors[side % crayonColors.length];
-    ctx.strokeStyle = color;
-    ctx.globalAlpha = 0.3;
-    ctx.beginPath();
-    for (let i = 0; i <= 20; i++) {
-      const t = i / 20;
-      const wobble = Math.sin(t * Math.PI * 4 + frameCount * 0.03) * 3;
-      let px = 0, py = 0;
-      if (side === 0) { px = t * width; py = 5 + wobble; }
-      else if (side === 1) { px = width - 5 - wobble; py = t * height; }
-      else if (side === 2) { px = (1 - t) * width; py = height - 5 - wobble; }
-      else { px = 5 + wobble; py = (1 - t) * height; }
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
+  // Draw card suits in corners
+  for (let corner = 0; corner < 4; corner++) {
+    const cx = corner % 2 === 0 ? 25 : width - 25;
+    const cy = corner < 2 ? 25 : height - 25;
+    ctx.fillStyle = suitColors[corner];
+
+    if (corner === 0) {
+      // Heart
+      ctx.beginPath();
+      ctx.moveTo(cx, cy + suitSize * 0.3);
+      ctx.bezierCurveTo(cx - suitSize * 0.5, cy - suitSize * 0.3, cx - suitSize * 0.5, cy + suitSize * 0.1, cx, cy + suitSize * 0.5);
+      ctx.bezierCurveTo(cx + suitSize * 0.5, cy + suitSize * 0.1, cx + suitSize * 0.5, cy - suitSize * 0.3, cx, cy + suitSize * 0.3);
+      ctx.closePath();
+      ctx.fill();
+    } else if (corner === 1) {
+      // Spade
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - suitSize * 0.4);
+      ctx.bezierCurveTo(cx - suitSize * 0.5, cy + suitSize * 0.1, cx - suitSize * 0.3, cy + suitSize * 0.4, cx, cy + suitSize * 0.2);
+      ctx.bezierCurveTo(cx + suitSize * 0.3, cy + suitSize * 0.4, cx + suitSize * 0.5, cy + suitSize * 0.1, cx, cy - suitSize * 0.4);
+      ctx.fill();
+      ctx.fillRect(cx - 2, cy + suitSize * 0.2, 4, suitSize * 0.25);
+    } else if (corner === 2) {
+      // Diamond
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - suitSize * 0.45);
+      ctx.lineTo(cx + suitSize * 0.3, cy);
+      ctx.lineTo(cx, cy + suitSize * 0.45);
+      ctx.lineTo(cx - suitSize * 0.3, cy);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // Club
+      ctx.beginPath();
+      ctx.arc(cx, cy - suitSize * 0.15, suitSize * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx - suitSize * 0.2, cy + suitSize * 0.1, suitSize * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx + suitSize * 0.2, cy + suitSize * 0.1, suitSize * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(cx - 2, cy + suitSize * 0.2, 4, suitSize * 0.25);
     }
-    ctx.stroke();
   }
   ctx.globalAlpha = 1;
 
-  // Playful dotted grid like graph paper
-  ctx.fillStyle = COLORS.gridLine;
-  ctx.globalAlpha = 0.25;
+  // Magical checkerboard pattern (like chess in wonderland)
+  ctx.globalAlpha = 0.04;
+  for (let i = 0; i < GRID_SIZE; i++) {
+    for (let j = 0; j < GRID_SIZE; j++) {
+      if ((i + j) % 2 === 0) {
+        ctx.fillStyle = COLORS.magicPurple;
+        ctx.fillRect(i * CELL_SIZE, j * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Subtle grid of magical dots
+  ctx.fillStyle = COLORS.magicPurple;
+  ctx.globalAlpha = 0.15;
   for (let i = 1; i < GRID_SIZE; i++) {
     for (let j = 1; j < GRID_SIZE; j++) {
       ctx.beginPath();
-      ctx.arc(i * CELL_SIZE, j * CELL_SIZE, 1.5, 0, Math.PI * 2);
+      ctx.arc(i * CELL_SIZE, j * CELL_SIZE, 1, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -1043,83 +1090,113 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     drawFloatingStar(ctx, star);
   }
 
-  // Cute apple/candy food
+  // Magical Teacup (Alice in Wonderland tea party!)
   const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
   const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
 
   // Update food bounce phase
   foodOrbPhase += 0.08;
-  const bounce = Math.sin(foodOrbPhase * 2) * 2;
-  const squish = 1 + Math.sin(foodOrbPhase * 4) * 0.05;
+  const bounce = Math.sin(foodOrbPhase * 2) * 1.5;
+  const steamWave = Math.sin(foodOrbPhase * 3);
 
-  // Shadow under apple
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+  // Magical glow under teacup
+  ctx.fillStyle = COLORS.teaGold;
+  ctx.globalAlpha = 0.15 + Math.sin(foodOrbPhase) * 0.05;
   ctx.beginPath();
-  ctx.ellipse(foodX, foodY + CELL_SIZE / 2 + 2, CELL_SIZE / 3, 3, 0, 0, Math.PI * 2);
+  ctx.arc(foodX, foodY + bounce, CELL_SIZE * 0.8, 0, Math.PI * 2);
   ctx.fill();
-
-  // Apple body with cute gradient
-  const appleGradient = ctx.createRadialGradient(foodX - 3, foodY - 3 + bounce, 2, foodX, foodY + bounce, CELL_SIZE / 2);
-  appleGradient.addColorStop(0, '#ff9999');
-  appleGradient.addColorStop(0.4, COLORS.food);
-  appleGradient.addColorStop(1, '#cc3355');
-  ctx.fillStyle = appleGradient;
   ctx.globalAlpha = 1;
+
+  // Saucer (plate under cup)
+  ctx.fillStyle = '#e8d5c4';
   ctx.beginPath();
-  ctx.ellipse(foodX, foodY + bounce, CELL_SIZE / 2 * squish, CELL_SIZE / 2 / squish, 0, 0, Math.PI * 2);
+  ctx.ellipse(foodX, foodY + 6 + bounce, CELL_SIZE / 2 + 3, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#d4c4b4';
+  ctx.beginPath();
+  ctx.ellipse(foodX, foodY + 6 + bounce, CELL_SIZE / 2 + 1, 3, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Apple indent at top
-  ctx.fillStyle = '#cc3355';
+  // Teacup body
+  const cupGradient = ctx.createLinearGradient(foodX - 8, foodY, foodX + 8, foodY);
+  cupGradient.addColorStop(0, '#f5e6d3');
+  cupGradient.addColorStop(0.3, '#ffffff');
+  cupGradient.addColorStop(0.7, '#ffffff');
+  cupGradient.addColorStop(1, '#e8d5c4');
+  ctx.fillStyle = cupGradient;
   ctx.beginPath();
-  ctx.ellipse(foodX, foodY - CELL_SIZE / 2 + 4 + bounce, 4, 2, 0, 0, Math.PI * 2);
+  ctx.moveTo(foodX - 7, foodY - 4 + bounce);
+  ctx.quadraticCurveTo(foodX - 8, foodY + 5 + bounce, foodX - 5, foodY + 6 + bounce);
+  ctx.lineTo(foodX + 5, foodY + 6 + bounce);
+  ctx.quadraticCurveTo(foodX + 8, foodY + 5 + bounce, foodX + 7, foodY - 4 + bounce);
+  ctx.closePath();
   ctx.fill();
 
-  // Cute leaf
-  ctx.fillStyle = '#69db7c';
+  // Cup rim (gold trim)
+  ctx.strokeStyle = COLORS.teaGold;
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.ellipse(foodX + 4, foodY - CELL_SIZE / 2 + bounce, 5, 3, Math.PI / 4, 0, Math.PI * 2);
-  ctx.fill();
-  // Leaf vein
-  ctx.strokeStyle = '#40a050';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(foodX + 2, foodY - CELL_SIZE / 2 + 2 + bounce);
-  ctx.lineTo(foodX + 6, foodY - CELL_SIZE / 2 - 2 + bounce);
+  ctx.ellipse(foodX, foodY - 4 + bounce, 7, 2, 0, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Stem
-  ctx.strokeStyle = '#8b5a2b';
+  // Tea inside the cup
+  ctx.fillStyle = '#8b4513';
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.ellipse(foodX, foodY - 3 + bounce, 5, 1.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Cup handle
+  ctx.strokeStyle = '#e8d5c4';
   ctx.lineWidth = 2;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(foodX, foodY - CELL_SIZE / 2 + 2 + bounce);
-  ctx.lineTo(foodX - 1, foodY - CELL_SIZE / 2 - 4 + bounce);
+  ctx.arc(foodX + 9, foodY + bounce, 4, -Math.PI / 2, Math.PI / 2);
   ctx.stroke();
 
-  // Cute highlight sparkle
-  ctx.fillStyle = '#ffffff';
-  ctx.globalAlpha = 0.8;
+  // Gold decoration on cup (heart or pattern)
+  ctx.fillStyle = COLORS.cardRed;
+  ctx.globalAlpha = 0.6;
   ctx.beginPath();
-  ctx.arc(foodX - 4, foodY - 3 + bounce, 3, 0, Math.PI * 2);
+  const heartX = foodX - 1;
+  const heartY = foodY + 1 + bounce;
+  ctx.moveTo(heartX, heartY + 2);
+  ctx.bezierCurveTo(heartX - 3, heartY - 1, heartX - 3, heartY + 1, heartX, heartY + 3);
+  ctx.bezierCurveTo(heartX + 3, heartY + 1, heartX + 3, heartY - 1, heartX, heartY + 2);
   ctx.fill();
-  ctx.globalAlpha = 0.5;
-  ctx.beginPath();
-  ctx.arc(foodX - 2, foodY - 5 + bounce, 1.5, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.globalAlpha = 1;
 
-  // Rosy cheek on apple (makes it cute!)
-  ctx.fillStyle = COLORS.snakeCheek;
-  ctx.globalAlpha = 0.4;
+  // Steam wisps (magical!)
+  ctx.strokeStyle = 'rgba(200, 180, 255, 0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const steamX = foodX - 3 + i * 3;
+    const steamPhase = foodOrbPhase + i * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(steamX, foodY - 5 + bounce);
+    ctx.quadraticCurveTo(
+      steamX + Math.sin(steamPhase * 2) * 3,
+      foodY - 10 + bounce,
+      steamX + Math.sin(steamPhase * 2 + 1) * 2,
+      foodY - 14 + bounce + steamWave
+    );
+    ctx.stroke();
+  }
+
+  // Sparkle highlight on cup
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.7;
   ctx.beginPath();
-  ctx.ellipse(foodX + 4, foodY + 2 + bounce, 3, 2, 0, 0, Math.PI * 2);
+  ctx.arc(foodX - 4, foodY - 2 + bounce, 2, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
 
   // Draw flame particles behind the snake (burning trail effect)
   drawFlameParticles(ctx);
 
-  // Cute snake with soft colors
+  // Cheshire Cat snake - magical purple with stripes
   const snake = gameState.snake;
   const snakeLen = snake.length;
 
@@ -1132,15 +1209,15 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
     const radius = (CELL_SIZE / 2 - 1) * (0.9 + t * 0.1);
 
-    // Pastel green gradient for body
-    const greenShade = 0.5 + t * 0.15;
+    // Cheshire purple/pink gradient
+    const purpleShade = 0.45 + t * 0.1;
 
     if (i === 0) {
-      // Cute snake head
+      // Cheshire Cat head - magical purple
       const headGradient = ctx.createRadialGradient(centerX - 2, centerY - 2, 0, centerX, centerY, radius + 2);
       headGradient.addColorStop(0, COLORS.snakeHighlight);
       headGradient.addColorStop(0.5, COLORS.snakeHead);
-      headGradient.addColorStop(1, '#5bc040');
+      headGradient.addColorStop(1, '#7d3c98');
       ctx.fillStyle = headGradient;
       ctx.globalAlpha = 1;
       ctx.beginPath();
@@ -1162,42 +1239,45 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       const eyeOffset = 4;
       const eyeForward = 2;
 
-      // Big cute eyes
+      // Cheshire Cat eyes - yellow/gold and mischievous
       const leftEyeX = centerX + perpX * eyeOffset + dx * eyeForward;
       const leftEyeY = centerY + perpY * eyeOffset + dy * eyeForward;
       const rightEyeX = centerX - perpX * eyeOffset + dx * eyeForward;
       const rightEyeY = centerY - perpY * eyeOffset + dy * eyeForward;
 
-      // Eye whites (bigger for cute look)
+      // Glowing yellow eye whites
       ctx.fillStyle = COLORS.snakeEye;
+      ctx.shadowColor = COLORS.snakeEye;
+      ctx.shadowBlur = 4;
       ctx.beginPath();
       ctx.arc(leftEyeX, leftEyeY, 4, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
       ctx.arc(rightEyeX, rightEyeY, 4, 0, Math.PI * 2);
       ctx.fill();
+      ctx.shadowBlur = 0;
 
-      // Pupils (looking in movement direction)
+      // Slit pupils (cat-like)
       ctx.fillStyle = COLORS.snakePupil;
       ctx.beginPath();
-      ctx.arc(leftEyeX + dx * 1.5, leftEyeY + dy * 1.5, 2, 0, Math.PI * 2);
+      ctx.ellipse(leftEyeX + dx * 1, leftEyeY + dy * 1, 1, 2.5, Math.atan2(dy, dx), 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(rightEyeX + dx * 1.5, rightEyeY + dy * 1.5, 2, 0, Math.PI * 2);
+      ctx.ellipse(rightEyeX + dx * 1, rightEyeY + dy * 1, 1, 2.5, Math.atan2(dy, dx), 0, Math.PI * 2);
       ctx.fill();
 
-      // Eye sparkles (makes it cute!)
+      // Eye sparkles
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(leftEyeX - 1, leftEyeY - 1, 1.2, 0, Math.PI * 2);
+      ctx.arc(leftEyeX - 1, leftEyeY - 1, 1, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(rightEyeX - 1, rightEyeY - 1, 1.2, 0, Math.PI * 2);
+      ctx.arc(rightEyeX - 1, rightEyeY - 1, 1, 0, Math.PI * 2);
       ctx.fill();
 
-      // Rosy cheeks
+      // Rosy cheeks (pink)
       ctx.fillStyle = COLORS.snakeCheek;
-      ctx.globalAlpha = 0.5;
+      ctx.globalAlpha = 0.4;
       ctx.beginPath();
       ctx.ellipse(centerX + perpX * 6, centerY + perpY * 6, 3, 2, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -1206,7 +1286,7 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.fill();
       ctx.globalAlpha = 1;
 
-      // Cat nose (small pink triangle)
+      // Cat nose (pink)
       ctx.fillStyle = COLORS.snakeCheek;
       const noseX = centerX + dx * 5;
       const noseY = centerY + dy * 5;
@@ -1217,65 +1297,109 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.closePath();
       ctx.fill();
 
-      // Cat mouth (w-shape)
-      ctx.strokeStyle = '#4a9030';
-      ctx.lineWidth = 1.5;
+      // FAMOUS CHESHIRE GRIN - big wide smile!
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
       ctx.lineCap = 'round';
+      const grinWidth = 8;
+      const grinY = noseY + 4;
       ctx.beginPath();
-      ctx.moveTo(noseX - 3, noseY + 3);
-      ctx.quadraticCurveTo(noseX - 1.5, noseY + 5, noseX, noseY + 3);
-      ctx.quadraticCurveTo(noseX + 1.5, noseY + 5, noseX + 3, noseY + 3);
+      ctx.moveTo(centerX - grinWidth + dx * 3, grinY - perpX * grinWidth * 0.3);
+      ctx.quadraticCurveTo(
+        centerX + dx * 5,
+        grinY + 4,
+        centerX + grinWidth + dx * 3,
+        grinY + perpX * grinWidth * 0.3
+      );
       ctx.stroke();
+
+      // Teeth in the grin
+      ctx.fillStyle = '#ffffff';
+      for (let tooth = 0; tooth < 5; tooth++) {
+        const toothT = (tooth + 0.5) / 5;
+        const toothX = centerX - grinWidth + toothT * grinWidth * 2 + dx * 3;
+        const toothY = grinY + Math.sin(toothT * Math.PI) * 2;
+        ctx.beginPath();
+        ctx.arc(toothX, toothY, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       // Draw cat features
       drawCatEars(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
       drawWhiskers(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
       drawTeeth(ctx, centerX, centerY, dx, dy);
     } else {
-      // Body segment with cute soft gradient
+      // Cheshire Cat body - purple with stripes
       const bodyGradient = ctx.createRadialGradient(centerX - 1, centerY - 1, 0, centerX, centerY, radius);
       bodyGradient.addColorStop(0, COLORS.snakeHighlight);
-      bodyGradient.addColorStop(0.4, hslToRgb(0.33, 0.6, greenShade));
-      bodyGradient.addColorStop(1, hslToRgb(0.33, 0.65, greenShade - 0.1));
+      bodyGradient.addColorStop(0.4, hslToRgb(0.78, 0.5, purpleShade));
+      bodyGradient.addColorStop(1, hslToRgb(0.78, 0.55, purpleShade - 0.1));
       ctx.fillStyle = bodyGradient;
       ctx.globalAlpha = 1;
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Cute highlight on each segment
+      // Cheshire stripes (alternating darker purple)
+      if (i % 2 === 0) {
+        ctx.fillStyle = 'rgba(125, 60, 152, 0.3)';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius * 0.85, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Magical sparkle on each segment
       ctx.fillStyle = '#ffffff';
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha = 0.3;
       ctx.beginPath();
-      ctx.arc(centerX - 2, centerY - 2, radius * 0.25, 0, Math.PI * 2);
+      ctx.arc(centerX - 2, centerY - 2, radius * 0.2, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
     }
   }
 
-  // Draw cute sparkle burst particles (when eating food)
-  const crayonBurstColors = [COLORS.crayonPink, COLORS.crayonYellow, COLORS.crayonBlue, COLORS.crayonPurple, COLORS.crayonOrange];
+  // Wonderland magical burst particles (when eating food) - playing card suits!
+  const wonderBurstColors = [COLORS.magicPurple, COLORS.teaGold, COLORS.magicPink, COLORS.magicBlue, COLORS.cardRed];
   for (let pi = 0; pi < burstParticles.length; pi++) {
     const p = burstParticles[pi];
-    const burstColor = crayonBurstColors[pi % crayonBurstColors.length];
+    const burstColor = wonderBurstColors[pi % wonderBurstColors.length];
 
-    // Draw as little hearts/stars
     ctx.fillStyle = burstColor;
     ctx.globalAlpha = p.life * 0.8;
     const size = p.size * p.life;
 
-    // Draw a little star shape
-    ctx.beginPath();
-    for (let j = 0; j < 10; j++) {
-      const angle = (j / 10) * Math.PI * 2 - Math.PI / 2;
-      const r = j % 2 === 0 ? size : size * 0.4;
-      const sx = p.x + Math.cos(angle) * r;
-      const sy = p.y + Math.sin(angle) * r;
-      if (j === 0) ctx.moveTo(sx, sy);
-      else ctx.lineTo(sx, sy);
+    // Alternate between card suit shapes: hearts, diamonds, stars
+    const shapeType = pi % 3;
+    if (shapeType === 0) {
+      // Heart shape
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y + size * 0.3);
+      ctx.bezierCurveTo(p.x - size * 0.5, p.y - size * 0.3, p.x - size * 0.5, p.y + size * 0.2, p.x, p.y + size * 0.6);
+      ctx.bezierCurveTo(p.x + size * 0.5, p.y + size * 0.2, p.x + size * 0.5, p.y - size * 0.3, p.x, p.y + size * 0.3);
+      ctx.fill();
+    } else if (shapeType === 1) {
+      // Diamond shape
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y - size * 0.6);
+      ctx.lineTo(p.x + size * 0.4, p.y);
+      ctx.lineTo(p.x, p.y + size * 0.6);
+      ctx.lineTo(p.x - size * 0.4, p.y);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // Star shape
+      ctx.beginPath();
+      for (let j = 0; j < 10; j++) {
+        const angle = (j / 10) * Math.PI * 2 - Math.PI / 2;
+        const r = j % 2 === 0 ? size : size * 0.4;
+        const sx = p.x + Math.cos(angle) * r;
+        const sy = p.y + Math.sin(angle) * r;
+        if (j === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.closePath();
+      ctx.fill();
     }
-    ctx.closePath();
-    ctx.fill();
   }
   ctx.globalAlpha = 1;
 
@@ -1393,34 +1517,95 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   }
   ctx.globalAlpha = 1;
 
-  // Cute game over overlay
+  // Wonderland game over overlay - "Down the rabbit hole..."
   if (gameState.gameOver) {
+    // Dark dreamlike overlay
     ctx.fillStyle = COLORS.gameOverOverlay;
     ctx.fillRect(0, 0, width, height);
 
-    // Friendly wavy border
-    ctx.strokeStyle = COLORS.crayonPink;
-    ctx.lineWidth = 6;
-    ctx.lineCap = 'round';
-    ctx.globalAlpha = 0.6;
-    ctx.beginPath();
-    for (let i = 0; i <= 40; i++) {
-      const t = i / 40;
-      const wave = Math.sin(t * Math.PI * 8 + frameCount * 0.05) * 3;
-      const x = t * width;
-      if (i === 0) ctx.moveTo(x, 8 + wave);
-      else ctx.lineTo(x, 8 + wave);
+    // Spiraling vortex effect (falling down the rabbit hole)
+    ctx.globalAlpha = 0.15;
+    for (let ring = 0; ring < 5; ring++) {
+      const ringRadius = 40 + ring * 35;
+      const rotation = frameCount * 0.02 * (ring % 2 === 0 ? 1 : -1);
+      ctx.strokeStyle = ring % 2 === 0 ? COLORS.magicPurple : COLORS.magicPink;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(width / 2, height / 2, ringRadius, rotation, rotation + Math.PI * 1.5);
+      ctx.stroke();
     }
-    ctx.stroke();
-    ctx.beginPath();
-    for (let i = 0; i <= 40; i++) {
-      const t = i / 40;
-      const wave = Math.sin(t * Math.PI * 8 + frameCount * 0.05) * 3;
-      const x = t * width;
-      if (i === 0) ctx.moveTo(x, height - 8 + wave);
-      else ctx.lineTo(x, height - 8 + wave);
+    ctx.globalAlpha = 1;
+
+    // Floating card suits around the edges
+    ctx.globalAlpha = 0.3;
+    const numCards = 8;
+    for (let c = 0; c < numCards; c++) {
+      const angle = (c / numCards) * Math.PI * 2 + frameCount * 0.01;
+      const dist = 160 + Math.sin(frameCount * 0.03 + c) * 20;
+      const cx = width / 2 + Math.cos(angle) * dist;
+      const cy = height / 2 + Math.sin(angle) * dist;
+      const cardSize = 12;
+
+      ctx.fillStyle = c % 2 === 0 ? COLORS.cardRed : COLORS.magicPurple;
+
+      if (c % 4 === 0) {
+        // Heart
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + cardSize * 0.2);
+        ctx.bezierCurveTo(cx - cardSize * 0.4, cy - cardSize * 0.2, cx - cardSize * 0.4, cy + cardSize * 0.1, cx, cy + cardSize * 0.4);
+        ctx.bezierCurveTo(cx + cardSize * 0.4, cy + cardSize * 0.1, cx + cardSize * 0.4, cy - cardSize * 0.2, cx, cy + cardSize * 0.2);
+        ctx.fill();
+      } else if (c % 4 === 1) {
+        // Diamond
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - cardSize * 0.4);
+        ctx.lineTo(cx + cardSize * 0.25, cy);
+        ctx.lineTo(cx, cy + cardSize * 0.4);
+        ctx.lineTo(cx - cardSize * 0.25, cy);
+        ctx.closePath();
+        ctx.fill();
+      } else if (c % 4 === 2) {
+        // Spade
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - cardSize * 0.35);
+        ctx.bezierCurveTo(cx - cardSize * 0.4, cy + cardSize * 0.05, cx - cardSize * 0.25, cy + cardSize * 0.3, cx, cy + cardSize * 0.15);
+        ctx.bezierCurveTo(cx + cardSize * 0.25, cy + cardSize * 0.3, cx + cardSize * 0.4, cy + cardSize * 0.05, cx, cy - cardSize * 0.35);
+        ctx.fill();
+      } else {
+        // Club
+        ctx.beginPath();
+        ctx.arc(cx, cy - cardSize * 0.12, cardSize * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx - cardSize * 0.15, cy + cardSize * 0.08, cardSize * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + cardSize * 0.15, cy + cardSize * 0.08, cardSize * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
+    ctx.globalAlpha = 1;
+
+    // "We're all mad here" Cheshire grin in the center (fading in and out)
+    const grinAlpha = 0.3 + Math.sin(frameCount * 0.05) * 0.15;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = grinAlpha;
+    ctx.beginPath();
+    ctx.moveTo(width / 2 - 50, height / 2);
+    ctx.quadraticCurveTo(width / 2, height / 2 + 30, width / 2 + 50, height / 2);
     ctx.stroke();
+
+    // Teeth in the floating grin
+    ctx.fillStyle = '#ffffff';
+    for (let tooth = 0; tooth < 8; tooth++) {
+      const toothT = (tooth + 0.5) / 8;
+      const toothX = width / 2 - 45 + toothT * 90;
+      const toothY = height / 2 + Math.sin(toothT * Math.PI) * 15;
+      ctx.beginPath();
+      ctx.arc(toothX, toothY, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.globalAlpha = 1;
   }
 
