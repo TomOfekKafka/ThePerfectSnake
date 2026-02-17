@@ -22,23 +22,26 @@ const CELL_SIZE = 20;
 
 const GRID_SIZE = 20;
 
-// Color palette matching SnakeScene - enhanced neon cyberpunk theme
+// Color palette matching SnakeScene - Film Noir theme
 const COLORS = {
-  bgDark: '#050510',
-  bgMid: '#0a0a1a',
-  gridLine: '#1a1a3e',
-  gridAccent: '#2a2a6e',
-  snakeHead: '#00ffaa',
-  snakeBody: '#00dd88',
-  snakeTail: '#00aa66',
-  snakeHighlight: '#88ffcc',
+  bgDark: '#0a0a0a',
+  bgMid: '#1a1a1a',
+  gridLine: '#2a2a2a',
+  gridAccent: '#404040',
+  snakeHead: '#e8e8e8',
+  snakeBody: '#c0c0c0',
+  snakeTail: '#909090',
+  snakeHighlight: '#ffffff',
   snakeEye: '#ffffff',
   snakePupil: '#000000',
-  snakeGlow: '#00ff88',
-  food: '#ff2266',
-  foodCore: '#ffaacc',
-  foodGlow: '#ff4488',
-  gameOverOverlay: 'rgba(0, 0, 0, 0.7)',
+  snakeGlow: '#d0d0d0',
+  food: '#ffffff',
+  foodCore: '#ffffff',
+  foodGlow: '#cccccc',
+  gameOverOverlay: 'rgba(0, 0, 0, 0.85)',
+  noirWhite: '#f0f0f0',
+  noirGray: '#808080',
+  noirDark: '#303030',
 };
 
 function hslToRgb(h: number, s: number, l: number): string {
@@ -282,6 +285,11 @@ let lightningTimer = 0;
 // Scanline effect state
 let scanlineY = 0;
 let scanlineSpeed = 2;
+
+// Film noir specific state
+let venetianPhase = 0;
+let spotlightX = 200;
+let spotlightY = 200;
 
 // Meteor shower state
 interface Meteor2D {
@@ -659,9 +667,19 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   initCanvas2DEffects();
   frameCount++;
   const hueOffset = (frameCount * 0.5) % 360;
+  venetianPhase += 0.008;
 
   const width = GRID_SIZE * CELL_SIZE;
   const height = GRID_SIZE * CELL_SIZE;
+
+  // Track snake head for spotlight
+  if (gameState.snake.length > 0) {
+    const head = gameState.snake[0];
+    const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+    spotlightX += (headX - spotlightX) * 0.08;
+    spotlightY += (headY - spotlightY) * 0.08;
+  }
 
   // Detect food eaten (snake got longer)
   if (gameState.snake.length > lastSnakeLength && lastSnakeLength > 0) {
@@ -671,7 +689,6 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     spawnBurstParticles(headX, headY, hueOffset);
     chromaticIntensity = 1.0;
     energyFieldPulse = 1.0;
-    // Spawn extra lightning on food eat
     spawnLightningBetweenSegments(gameState.snake, hueOffset);
   }
   lastSnakeLength = gameState.snake.length;
@@ -702,261 +719,54 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.translate(screenShakeX, screenShakeY);
   }
 
-  // Deep space background
+  // Film noir deep black background
   ctx.fillStyle = COLORS.bgDark;
   ctx.fillRect(0, 0, width, height);
 
-  // Draw nebula clouds
-  for (const cloud of nebulaClouds) {
-    cloud.x += cloud.driftX;
-    cloud.y += cloud.driftY;
-    cloud.pulsePhase += cloud.pulseSpeed;
-
-    if (cloud.x < -cloud.radius) cloud.x = width + cloud.radius;
-    if (cloud.x > width + cloud.radius) cloud.x = -cloud.radius;
-    if (cloud.y < -cloud.radius) cloud.y = height + cloud.radius;
-    if (cloud.y > height + cloud.radius) cloud.y = -cloud.radius;
-
-    const pulseAlpha = cloud.alpha * (0.7 + Math.sin(cloud.pulsePhase) * 0.3);
-    const nebulaColor = hslToRgb(cloud.hue / 360, 0.6, 0.3);
-
-    const layers = 4;
-    for (let i = layers; i > 0; i--) {
-      const layerRadius = cloud.radius * (i / layers);
-      const layerAlpha = pulseAlpha * (1 - i / (layers + 1)) * 0.6;
-      ctx.fillStyle = nebulaColor;
-      ctx.globalAlpha = layerAlpha;
-      ctx.beginPath();
-      ctx.arc(cloud.x, cloud.y, layerRadius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    const coreColor = hslToRgb(cloud.hue / 360, 0.8, 0.5);
-    ctx.fillStyle = coreColor;
-    ctx.globalAlpha = pulseAlpha * 0.4;
-    ctx.beginPath();
-    ctx.arc(cloud.x, cloud.y, cloud.radius * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // Draw cosmic vortex
-  const centerX = width / 2;
-  const centerY = height / 2;
-  vortexPulse += 0.03;
-  const globalPulse = 0.8 + Math.sin(vortexPulse) * 0.2;
-
-  // Outer glow
-  const outerGlowColor = hslToRgb(280 / 360, 0.7, 0.3);
-  ctx.fillStyle = outerGlowColor;
-  ctx.globalAlpha = 0.08 * globalPulse;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, 120, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 0.05 * globalPulse;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, 140, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Draw orbiting particles
-  for (const particle of vortexParticles) {
-    particle.angle += particle.speed;
-    particle.radius = particle.baseRadius + Math.sin(particle.angle * 3) * 8;
-    particle.hue = (particle.hue + 0.5) % 360;
-
-    const px = centerX + Math.cos(particle.angle) * particle.radius;
-    const py = centerY + Math.sin(particle.angle) * particle.radius;
-    const particleColor = hslToRgb(particle.hue / 360, 0.8, 0.6);
-
-    // Trail
-    const trailAngle = particle.angle - 0.3;
-    const trailX = centerX + Math.cos(trailAngle) * particle.radius;
-    const trailY = centerY + Math.sin(trailAngle) * particle.radius;
-    ctx.strokeStyle = particleColor;
-    ctx.lineWidth = particle.size * 0.8;
-    ctx.globalAlpha = particle.alpha * 0.3 * globalPulse;
-    ctx.beginPath();
-    ctx.moveTo(trailX, trailY);
-    ctx.lineTo(px, py);
-    ctx.stroke();
-
-    // Particle
-    ctx.fillStyle = particleColor;
-    ctx.globalAlpha = particle.alpha * globalPulse;
-    ctx.beginPath();
-    ctx.arc(px, py, particle.size, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Bright core
-    ctx.fillStyle = '#ffffff';
-    ctx.globalAlpha = particle.alpha * 0.5 * globalPulse;
-    ctx.beginPath();
-    ctx.arc(px, py, particle.size * 0.4, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Draw rotating rings
-  for (const ring of vortexRings) {
-    ring.rotationOffset += ring.rotationSpeed;
-    ring.pulsePhase += 0.02;
-
-    const ringPulse = 0.7 + Math.sin(ring.pulsePhase) * 0.3;
-    const adjustedRadius = ring.baseRadius * (0.95 + ringPulse * 0.1);
-    const ringColor = hslToRgb(ring.hue / 360, 0.8, 0.5);
-
-    const segments = 6;
-    const arcLength = (Math.PI * 2) / segments * 0.7;
-
-    for (let i = 0; i < segments; i++) {
-      const startAngle = ring.rotationOffset + (i * Math.PI * 2) / segments;
-      const endAngle = startAngle + arcLength;
-      const segmentAlpha = 0.15 + Math.sin(startAngle + frameCount * 0.02) * 0.1;
-
-      ctx.strokeStyle = ringColor;
-      ctx.lineWidth = ring.thickness;
-      ctx.globalAlpha = segmentAlpha * ringPulse * globalPulse;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, adjustedRadius, startAngle, endAngle);
-      ctx.stroke();
-    }
-  }
-
-  // Central dark core
-  ctx.fillStyle = '#000000';
-  ctx.globalAlpha = 0.9;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, 12, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 0.7;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, 18, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 0.4;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, 25, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Accretion ring
-  const accretionHue = (frameCount * 2) % 360;
-  const accretionColor = hslToRgb(accretionHue / 360, 1, 0.6);
-  ctx.strokeStyle = accretionColor;
-  ctx.lineWidth = 2;
-  ctx.globalAlpha = 0.4 * globalPulse;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, 14, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.3 * globalPulse;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, 13, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // Gravitational lensing streaks
-  for (let i = 0; i < 4; i++) {
-    const streakAngle = (i * Math.PI * 2) / 4 + frameCount * 0.01;
-    const streakHue = (accretionHue + i * 60) % 360;
-    const streakColor = hslToRgb(streakHue / 360, 0.9, 0.7);
-
-    const innerRadius = 20;
-    const outerRadius = 35 + Math.sin(frameCount * 0.05 + i) * 10;
-
-    const x1 = centerX + Math.cos(streakAngle) * innerRadius;
-    const y1 = centerY + Math.sin(streakAngle) * innerRadius;
-    const x2 = centerX + Math.cos(streakAngle + 0.2) * outerRadius;
-    const y2 = centerY + Math.sin(streakAngle + 0.2) * outerRadius;
-
-    ctx.strokeStyle = streakColor;
-    ctx.lineWidth = 3;
-    ctx.globalAlpha = 0.15 * globalPulse;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.2 * globalPulse;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-
-  // Draw aurora waves
-  for (const aurora of auroraWaves) {
-    aurora.phase += aurora.speed;
-
-    const shiftedHue = (aurora.hue + Math.sin(aurora.phase * 0.5) * 20) % 360;
-    const auroraColor = hslToRgb(shiftedHue / 360, 0.7, 0.5);
-
-    ctx.fillStyle = auroraColor;
-    ctx.globalAlpha = 0.06;
-    const step = 4;
-    for (let x = 0; x < width; x += step) {
-      const wave1 = Math.sin(x * 0.02 + aurora.phase) * aurora.amplitude;
-      const wave2 = Math.sin(x * 0.035 + aurora.phase * 1.3) * aurora.amplitude * 0.5;
-      const wave3 = Math.sin(x * 0.01 + aurora.phase * 0.7) * aurora.amplitude * 0.3;
-      const yOffset = wave1 + wave2 + wave3;
-      const segmentY = aurora.y + yOffset;
-      const thickness = aurora.thickness * (0.7 + Math.sin(x * 0.05 + aurora.phase) * 0.3);
-      ctx.fillRect(x, segmentY - thickness / 2, step + 1, thickness);
-    }
-  }
-  ctx.globalAlpha = 1;
-
-  // Draw meteor shower
-  for (const m of meteors) {
-    const meteorColor = hslToRgb(m.hue / 360, 0.9, 0.6);
-    const coreColor = hslToRgb(m.hue / 360, 0.6, 0.9);
-
-    // Draw trail
-    for (let i = m.trail.length - 1; i >= 0; i--) {
-      const t = m.trail[i];
-      const trailProgress = 1 - i / m.trail.length;
-      const trailAlpha = m.alpha * trailProgress * 0.4;
-      const trailSize = m.size * trailProgress * 0.6;
-
-      ctx.fillStyle = meteorColor;
-      ctx.globalAlpha = trailAlpha;
-      ctx.beginPath();
-      ctx.arc(t.x, t.y, trailSize, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Outer glow
-    ctx.fillStyle = meteorColor;
-    ctx.globalAlpha = m.alpha * 0.3;
-    ctx.beginPath();
-    ctx.arc(m.x, m.y, m.size * 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Main body
-    ctx.globalAlpha = m.alpha * 0.8;
-    ctx.beginPath();
-    ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Bright core
-    ctx.fillStyle = coreColor;
-    ctx.globalAlpha = m.alpha;
-    ctx.beginPath();
-    ctx.arc(m.x, m.y, m.size * 0.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // Radial gradient effect in center
-  const gradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.6);
-  gradient.addColorStop(0, 'rgba(10, 10, 26, 0.2)');
-  gradient.addColorStop(1, 'rgba(5, 5, 16, 0)');
-  ctx.fillStyle = gradient;
+  // Dramatic spotlight effect centered on snake
+  const spotPulse = 0.9 + Math.sin(frameCount * 0.03) * 0.1;
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
   ctx.fillRect(0, 0, width, height);
 
-  // Main grid lines
+  // Spotlight cone - multiple layers for smooth falloff
+  const spotGradient = ctx.createRadialGradient(spotlightX, spotlightY, 0, spotlightX, spotlightY, width * 0.5 * spotPulse);
+  spotGradient.addColorStop(0, 'rgba(255, 255, 238, 0.12)');
+  spotGradient.addColorStop(0.3, 'rgba(240, 240, 240, 0.06)');
+  spotGradient.addColorStop(0.6, 'rgba(200, 200, 200, 0.02)');
+  spotGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = spotGradient;
+  ctx.fillRect(0, 0, width, height);
+
+  // Venetian blind light streaks
+  const blindSpacing = 25;
+  const blindWidth = 8;
+  const waveOffset = Math.sin(venetianPhase) * 10;
+  ctx.fillStyle = COLORS.noirWhite;
+  for (let y = waveOffset; y < height; y += blindSpacing) {
+    const brightness = 0.03 + Math.sin(y * 0.02 + venetianPhase * 2) * 0.015;
+    ctx.globalAlpha = brightness;
+    ctx.fillRect(0, y, width, blindWidth);
+  }
+  ctx.globalAlpha = 1;
+
+  // Diagonal shadow bars
+  ctx.fillStyle = '#000000';
+  ctx.globalAlpha = 0.04 + Math.sin(frameCount * 0.02) * 0.01;
+  for (let i = -2; i < 6; i++) {
+    const x1 = i * 100 + Math.sin(venetianPhase) * 20;
+    ctx.beginPath();
+    ctx.moveTo(x1, 0);
+    ctx.lineTo(x1 + 40, 0);
+    ctx.lineTo(x1 + 40 + height * 0.3, height);
+    ctx.lineTo(x1 + height * 0.3, height);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Film noir grid: subtle dark lines
   ctx.strokeStyle = COLORS.gridLine;
-  ctx.globalAlpha = 0.2;
+  ctx.globalAlpha = 0.08;
   ctx.lineWidth = 1;
   for (let i = 0; i <= GRID_SIZE; i++) {
     ctx.beginPath();
@@ -970,8 +780,9 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   }
 
   // Accent lines every 5 cells
+  const accentPulse = 0.12 + Math.sin(frameCount * 0.03) * 0.04;
   ctx.strokeStyle = COLORS.gridAccent;
-  ctx.globalAlpha = 0.25;
+  ctx.globalAlpha = accentPulse;
   for (let i = 0; i <= GRID_SIZE; i += 5) {
     ctx.beginPath();
     ctx.moveTo(i * CELL_SIZE, 0);
@@ -981,6 +792,17 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.moveTo(0, i * CELL_SIZE);
     ctx.lineTo(width, i * CELL_SIZE);
     ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Heavy vignette for dramatic noir look
+  for (let i = 0; i < 5; i++) {
+    const inset = i * 30;
+    const vignetteAlpha = 0.15 * (1 - i / 5);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 60;
+    ctx.globalAlpha = vignetteAlpha;
+    ctx.strokeRect(inset - 30, inset - 30, width - inset * 2 + 60, height - inset * 2 + 60);
   }
   ctx.globalAlpha = 1;
 

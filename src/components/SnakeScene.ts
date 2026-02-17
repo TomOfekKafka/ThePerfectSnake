@@ -155,31 +155,36 @@ interface DeathDebris {
   type: 'shard' | 'spark' | 'ember';
 }
 
-// Color palette - enhanced neon cyberpunk theme with plasma colors
+// Color palette - Film Noir theme: high contrast black/white with dramatic shadows
 const COLORS = {
-  bgDark: 0x020208,
-  bgMid: 0x080816,
-  gridLine: 0x1a1a3e,
-  gridAccent: 0x3a3a8e,
-  snakeHead: 0x00ffaa,
-  snakeBody: 0x00dd88,
-  snakeTail: 0x00aa66,
-  snakeHighlight: 0x88ffcc,
-  snakeScale: 0x008855,
+  bgDark: 0x0a0a0a,
+  bgMid: 0x1a1a1a,
+  gridLine: 0x2a2a2a,
+  gridAccent: 0x404040,
+  snakeHead: 0xe8e8e8,
+  snakeBody: 0xc0c0c0,
+  snakeTail: 0x909090,
+  snakeHighlight: 0xffffff,
+  snakeScale: 0x707070,
   snakeEye: 0xffffff,
   snakePupil: 0x000000,
-  snakeGlow: 0x00ff88,
-  food: 0xff2266,
-  foodCore: 0xffaacc,
-  foodGlow: 0xff4488,
-  foodParticle: 0xff88aa,
+  snakeGlow: 0xd0d0d0,
+  food: 0xffffff,
+  foodCore: 0xffffff,
+  foodGlow: 0xcccccc,
+  foodParticle: 0xdddddd,
   star: 0xffffff,
   gameOverOverlay: 0x000000,
-  gameOverText: 0xff3366,
-  plasma1: 0x8800ff,
-  plasma2: 0x00aaff,
-  plasma3: 0xff0088,
+  gameOverText: 0xffffff,
+  plasma1: 0x606060,
+  plasma2: 0x808080,
+  plasma3: 0x505050,
   screenFlash: 0xffffff,
+  // Film noir specific colors
+  noirWhite: 0xf0f0f0,
+  noirGray: 0x808080,
+  noirDark: 0x303030,
+  spotlight: 0xffffee,
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -214,6 +219,11 @@ export class SnakeScene extends Phaser.Scene {
   private energyFieldPulse = 0;
   private foodBurstParticles: { x: number; y: number; vx: number; vy: number; life: number; size: number; hue: number; trail: { x: number; y: number }[] }[] = [];
   private chromaticIntensity = 0;
+  // Film noir effects
+  private venetianPhase = 0;
+  private spotlightX = 0;
+  private spotlightY = 0;
+  private smokeParticles: { x: number; y: number; vx: number; vy: number; size: number; alpha: number; life: number }[] = [];
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -227,9 +237,27 @@ export class SnakeScene extends Phaser.Scene {
     this.initNebulaClouds();
     this.initVortex();
     this.initMeteors();
+    this.initSmokeParticles();
 
     if (this.currentState) {
       this.needsRedraw = true;
+    }
+  }
+
+  private initSmokeParticles(): void {
+    this.smokeParticles = [];
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+    for (let i = 0; i < 12; i++) {
+      this.smokeParticles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: -0.1 - Math.random() * 0.2,
+        size: 30 + Math.random() * 50,
+        alpha: 0.02 + Math.random() * 0.03,
+        life: Math.random(),
+      });
     }
   }
 
@@ -708,7 +736,9 @@ export class SnakeScene extends Phaser.Scene {
   update(): void {
     this.frameCount++;
     this.hueOffset = (this.hueOffset + 0.5) % 360;
+    this.venetianPhase += 0.008;
     this.updateParticles();
+    this.updateSmokeParticles();
 
     // Spawn trail particles when snake moves
     if (this.currentState && this.currentState.snake.length > 0) {
@@ -719,6 +749,9 @@ export class SnakeScene extends Phaser.Scene {
         this.spawnTrailParticles(headX, headY);
       }
       this.lastHeadPos = { x: head.x, y: head.y };
+      // Update spotlight to follow snake head smoothly
+      this.spotlightX += (headX - this.spotlightX) * 0.08;
+      this.spotlightY += (headY - this.spotlightY) * 0.08;
     }
 
     // Always redraw for animations (stars, particles, pulsing)
@@ -735,35 +768,20 @@ export class SnakeScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
 
-    // Deep space background with gradient effect
+    // Film noir deep black background
     g.fillStyle(COLORS.bgDark, 1);
     g.fillRect(0, 0, width, height);
 
-    // Nebula clouds (deepest layer)
-    this.drawNebulaClouds(g, width, height);
+    // Dramatic spotlight gradient from snake position
+    this.drawSpotlight(g, width, height);
 
-    // Cosmic vortex in center
-    this.drawVortex(g, width, height);
+    // Smoke/fog atmosphere
+    this.drawSmoke(g);
 
-    // Animated plasma waves in background
-    this.drawPlasmaWaves(g, width, height);
+    // Venetian blind light streaks
+    this.drawVenetianBlinds(g, width, height);
 
-    // Meteor shower
-    this.updateMeteors(width, height);
-    this.drawMeteors(g);
-
-    // Aurora borealis waves
-    this.drawAuroraWaves(g, width);
-
-    // Radial gradient effect in center (lighter area)
-    const centerGradientAlpha = 0.12 + Math.sin(this.frameCount * 0.02) * 0.04;
-    g.fillStyle(COLORS.bgMid, centerGradientAlpha);
-    g.fillCircle(width / 2, height / 2, width * 0.6);
-
-    // Animated star field
-    this.drawStars(g);
-
-    // Grid with pulsing accent lines
+    // Grid with noir styling
     this.drawGrid(g, width, height);
 
     if (!this.currentState) return;
@@ -819,11 +837,92 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   private drawStars(g: Phaser.GameObjects.Graphics): void {
+    // In film noir mode, stars are subtle distant lights
     for (const star of this.stars) {
       const twinkle = 0.5 + Math.sin(this.frameCount * star.speed + star.x) * 0.5;
-      const alpha = star.brightness * twinkle * 0.6;
+      const alpha = star.brightness * twinkle * 0.25;
       g.fillStyle(COLORS.star, alpha);
-      g.fillCircle(star.x, star.y, star.size);
+      g.fillCircle(star.x, star.y, star.size * 0.7);
+    }
+  }
+
+  private updateSmokeParticles(): void {
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+    for (const smoke of this.smokeParticles) {
+      smoke.x += smoke.vx;
+      smoke.y += smoke.vy;
+      smoke.life -= 0.002;
+      if (smoke.life <= 0 || smoke.y < -smoke.size) {
+        smoke.x = Math.random() * width;
+        smoke.y = height + smoke.size;
+        smoke.life = 1;
+        smoke.size = 30 + Math.random() * 50;
+        smoke.alpha = 0.02 + Math.random() * 0.03;
+      }
+      if (smoke.x < -smoke.size) smoke.x = width + smoke.size;
+      if (smoke.x > width + smoke.size) smoke.x = -smoke.size;
+    }
+  }
+
+  private drawSpotlight(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+    // Create dramatic spotlight effect centered on snake
+    const cx = this.spotlightX || width / 2;
+    const cy = this.spotlightY || height / 2;
+    const pulse = 0.9 + Math.sin(this.frameCount * 0.03) * 0.1;
+
+    // Outer darkness vignette
+    g.fillStyle(0x000000, 0.6);
+    g.fillRect(0, 0, width, height);
+
+    // Spotlight cone - multiple layers for smooth falloff
+    const layers = 4;
+    for (let i = layers; i > 0; i--) {
+      const layerRadius = (width * 0.4 + i * 30) * pulse;
+      const layerAlpha = 0.15 * (1 - i / (layers + 1));
+      g.fillStyle(COLORS.spotlight, layerAlpha);
+      g.fillCircle(cx, cy, layerRadius);
+    }
+
+    // Bright center
+    g.fillStyle(COLORS.noirWhite, 0.08 * pulse);
+    g.fillCircle(cx, cy, width * 0.25);
+  }
+
+  private drawVenetianBlinds(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+    // Horizontal light streaks simulating light through venetian blinds
+    const blindSpacing = 25;
+    const blindWidth = 8;
+    const waveOffset = Math.sin(this.venetianPhase) * 10;
+
+    for (let y = waveOffset; y < height; y += blindSpacing) {
+      const brightness = 0.03 + Math.sin(y * 0.02 + this.venetianPhase * 2) * 0.015;
+      g.fillStyle(COLORS.noirWhite, brightness);
+      g.fillRect(0, y, width, blindWidth);
+    }
+
+    // Diagonal shadow bars from window frame
+    const diagonalAlpha = 0.04 + Math.sin(this.frameCount * 0.02) * 0.01;
+    g.fillStyle(0x000000, diagonalAlpha);
+    for (let i = -2; i < 6; i++) {
+      const x1 = i * 100 + Math.sin(this.venetianPhase) * 20;
+      g.beginPath();
+      g.moveTo(x1, 0);
+      g.lineTo(x1 + 40, 0);
+      g.lineTo(x1 + 40 + height * 0.3, height);
+      g.lineTo(x1 + height * 0.3, height);
+      g.closePath();
+      g.fillPath();
+    }
+  }
+
+  private drawSmoke(g: Phaser.GameObjects.Graphics): void {
+    for (const smoke of this.smokeParticles) {
+      const alpha = smoke.alpha * smoke.life;
+      g.fillStyle(COLORS.noirGray, alpha);
+      g.fillCircle(smoke.x, smoke.y, smoke.size);
+      g.fillStyle(COLORS.noirWhite, alpha * 0.3);
+      g.fillCircle(smoke.x, smoke.y, smoke.size * 0.5);
     }
   }
 
@@ -861,12 +960,14 @@ export class SnakeScene extends Phaser.Scene {
     // Draw explosion flash at the beginning
     if (this.deathExplosionPhase > 0.7) {
       const flashAlpha = (this.deathExplosionPhase - 0.7) * 2;
-      g.fillStyle(0xffffff, flashAlpha * 0.4);
+      g.fillStyle(0xffffff, flashAlpha * 0.5);
       g.fillRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
     }
 
     for (const d of this.deathDebris) {
-      const color = this.hslToRgb(d.hue / 360, 0.9, 0.6);
+      // Film noir: grayscale debris
+      const brightness = 0.4 + (d.hue % 60) / 100;
+      const color = this.hslToRgb(0, 0, brightness);
       const alpha = d.life * 0.9;
 
       g.save();
@@ -1185,12 +1286,10 @@ export class SnakeScene extends Phaser.Scene {
 
   private drawTrailParticles(g: Phaser.GameObjects.Graphics): void {
     for (const p of this.trailParticles) {
-      const color = this.hslToRgb(p.hue / 360, 0.8, 0.6);
-      // Outer glow
-      g.fillStyle(color, p.life * 0.3);
+      // Film noir: grayscale trail
+      g.fillStyle(COLORS.noirGray, p.life * 0.2);
       g.fillCircle(p.x, p.y, p.size * 1.5 * p.life);
-      // Core
-      g.fillStyle(color, p.life * 0.7);
+      g.fillStyle(COLORS.noirWhite, p.life * 0.5);
       g.fillCircle(p.x, p.y, p.size * p.life);
     }
   }
@@ -1214,14 +1313,12 @@ export class SnakeScene extends Phaser.Scene {
 
   private drawLightningBolts(g: Phaser.GameObjects.Graphics): void {
     for (const bolt of this.lightningBolts) {
-      const color = this.hslToRgb(bolt.hue / 360, 0.9, 0.7);
       const alpha = bolt.life;
 
-      // Glow layer
-      g.lineStyle(4, color, alpha * 0.3);
+      // Film noir: white lightning
+      g.lineStyle(4, COLORS.noirGray, alpha * 0.3);
       this.drawLightningPath(g, bolt.points);
 
-      // Core layer
       g.lineStyle(2, 0xffffff, alpha * 0.8);
       this.drawLightningPath(g, bolt.points);
     }
@@ -1246,7 +1343,6 @@ export class SnakeScene extends Phaser.Scene {
     if (this.frameCount % 3 !== 0) return;
 
     for (let i = 0; i < snake.length - 1; i++) {
-      // Only draw arcs occasionally for visual interest
       if (Math.random() > 0.4) continue;
 
       const seg1 = snake[i];
@@ -1256,16 +1352,12 @@ export class SnakeScene extends Phaser.Scene {
       const x2 = seg2.x * CELL_SIZE + CELL_SIZE / 2;
       const y2 = seg2.y * CELL_SIZE + CELL_SIZE / 2;
 
-      // Generate a mini lightning arc
       const arcPoints = this.generateLightningPath(x1, y1, x2, y2);
-      const arcHue = (this.hueOffset + i * 15) % 360;
-      const arcColor = this.hslToRgb(arcHue / 360, 0.9, 0.7);
 
-      // Glow
-      g.lineStyle(3, arcColor, 0.4);
+      // Film noir: grayscale arcs
+      g.lineStyle(3, COLORS.noirGray, 0.3);
       this.drawLightningPath(g, arcPoints);
-      // Core
-      g.lineStyle(1, 0xffffff, 0.8);
+      g.lineStyle(1, 0xffffff, 0.7);
       this.drawLightningPath(g, arcPoints);
     }
   }
@@ -1293,38 +1385,34 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   private drawGrid(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
-    // Main grid lines with subtle glow
-    g.lineStyle(1, COLORS.gridLine, 0.15);
+    // Film noir grid: subtle, dark lines suggesting tile floor or city grid
+    g.lineStyle(1, COLORS.gridLine, 0.08);
     for (let i = 0; i <= GRID_SIZE; i++) {
       g.lineBetween(i * CELL_SIZE, 0, i * CELL_SIZE, height);
       g.lineBetween(0, i * CELL_SIZE, width, i * CELL_SIZE);
     }
 
-    // Pulsing accent lines every 5 cells
-    const accentPulse = 0.25 + Math.sin(this.frameCount * 0.05) * 0.12;
-    g.lineStyle(1.5, COLORS.gridAccent, accentPulse);
+    // Accent lines every 5 cells - subtle gray
+    const accentPulse = 0.12 + Math.sin(this.frameCount * 0.03) * 0.04;
+    g.lineStyle(1, COLORS.gridAccent, accentPulse);
     for (let i = 0; i <= GRID_SIZE; i += 5) {
       g.lineBetween(i * CELL_SIZE, 0, i * CELL_SIZE, height);
       g.lineBetween(0, i * CELL_SIZE, width, i * CELL_SIZE);
     }
 
-    // Diagonal accent lines for cyberpunk feel
-    const diagPulse = 0.08 + Math.sin(this.frameCount * 0.03 + 1) * 0.04;
-    g.lineStyle(1, COLORS.gridAccent, diagPulse);
-    // Draw from corners
-    g.lineBetween(0, 0, width * 0.15, height * 0.15);
-    g.lineBetween(width, 0, width * 0.85, height * 0.15);
-    g.lineBetween(0, height, width * 0.15, height * 0.85);
-    g.lineBetween(width, height, width * 0.85, height * 0.85);
+    // Heavy vignette for dramatic noir look
+    this.drawVignette(g, width, height);
+  }
 
-    // Animated scanning line
-    const scanY = (this.frameCount * 2) % (height + 40) - 20;
-    const scanAlpha = 0.15 + Math.sin(this.frameCount * 0.1) * 0.05;
-    g.lineStyle(2, 0x00ffff, scanAlpha);
-    g.lineBetween(0, scanY, width, scanY);
-    // Glow around scan line
-    g.fillStyle(0x00ffff, scanAlpha * 0.3);
-    g.fillRect(0, scanY - 3, width, 6);
+  private drawVignette(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+    // Multiple layers of vignette for smooth falloff
+    const layers = 5;
+    for (let i = 0; i < layers; i++) {
+      const inset = i * 30;
+      const alpha = 0.15 * (1 - i / layers);
+      g.lineStyle(60, 0x000000, alpha);
+      g.strokeRect(inset - 30, inset - 30, width - inset * 2 + 60, height - inset * 2 + 60);
+    }
   }
 
   private drawFood(g: Phaser.GameObjects.Graphics): void {
@@ -1333,43 +1421,40 @@ export class SnakeScene extends Phaser.Scene {
     const food = this.currentState.food;
     const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
     const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
-    const pulseScale = 1 + Math.sin(this.frameCount * 0.15) * 0.12;
-    const glowPulse = 0.3 + Math.sin(this.frameCount * 0.1) * 0.15;
+    const pulseScale = 1 + Math.sin(this.frameCount * 0.15) * 0.08;
+    const glowPulse = 0.4 + Math.sin(this.frameCount * 0.1) * 0.2;
 
     // Spawn particles
     this.spawnFoodParticles(foodX, foodY);
 
-    // Draw particles
+    // Draw particles (grayscale)
     for (const p of this.foodParticles) {
-      g.fillStyle(COLORS.foodParticle, p.life * 0.6);
+      g.fillStyle(COLORS.noirWhite, p.life * 0.4);
       g.fillCircle(p.x, p.y, p.size * p.life);
     }
 
-    // Draw energy tendrils reaching toward snake head
-    this.drawEnergyTendrils(g, foodX, foodY);
+    // Film noir food: bright white orb like a spotlight or diamond
+    // Shadow underneath
+    g.fillStyle(0x000000, 0.5);
+    g.fillCircle(foodX + 3, foodY + 3, (CELL_SIZE / 2) * pulseScale);
 
-    // Multi-layer glow
-    g.fillStyle(COLORS.foodGlow, glowPulse * 0.3);
-    g.fillCircle(foodX, foodY, (CELL_SIZE / 2 + 8) * pulseScale);
-    g.fillStyle(COLORS.foodGlow, glowPulse * 0.5);
-    g.fillCircle(foodX, foodY, (CELL_SIZE / 2 + 4) * pulseScale);
-    g.fillStyle(COLORS.food, 0.9);
+    // Outer ethereal glow
+    g.fillStyle(COLORS.noirWhite, glowPulse * 0.2);
+    g.fillCircle(foodX, foodY, (CELL_SIZE / 2 + 12) * pulseScale);
+    g.fillStyle(COLORS.noirWhite, glowPulse * 0.35);
+    g.fillCircle(foodX, foodY, (CELL_SIZE / 2 + 6) * pulseScale);
+
+    // Main food body - brilliant white
+    g.fillStyle(COLORS.food, 0.95);
     g.fillCircle(foodX, foodY, (CELL_SIZE / 2) * pulseScale);
 
-    // Bright core highlight
-    g.fillStyle(COLORS.foodCore, 0.8);
-    g.fillCircle(foodX - 2, foodY - 2, 3 * pulseScale);
+    // Film noir sharp highlight - like light on a gem
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(foodX - 3, foodY - 3, 4 * pulseScale);
 
-    // Inner plasma swirl
-    const swirlAngle = this.frameCount * 0.1;
-    for (let i = 0; i < 3; i++) {
-      const angle = swirlAngle + (i * Math.PI * 2) / 3;
-      const dist = 4 * pulseScale;
-      const swirlX = foodX + Math.cos(angle) * dist;
-      const swirlY = foodY + Math.sin(angle) * dist;
-      g.fillStyle(0xffffff, 0.6);
-      g.fillCircle(swirlX, swirlY, 1.5);
-    }
+    // Secondary sparkle
+    g.fillStyle(0xffffff, 0.6);
+    g.fillCircle(foodX + 2, foodY - 2, 2 * pulseScale);
   }
 
   private drawEnergyTendrils(g: Phaser.GameObjects.Graphics, foodX: number, foodY: number): void {
@@ -1423,23 +1508,31 @@ export class SnakeScene extends Phaser.Scene {
     const snake = this.currentState.snake;
     const snakeLen = snake.length;
 
-    // Draw trailing glow first (behind snake) with rainbow colors
+    // Film noir: dramatic shadow under snake
+    for (let i = snakeLen - 1; i >= 0; i--) {
+      const segment = snake[i];
+      const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2 + 3;
+      const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2 + 3;
+      const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
+      const shadowRadius = (CELL_SIZE / 2) * (0.9 + t * 0.1);
+      g.fillStyle(0x000000, 0.4 * t);
+      g.fillCircle(centerX, centerY, shadowRadius);
+    }
+
+    // Draw trailing glow (noir white/gray)
     for (let i = snakeLen - 1; i >= 0; i--) {
       const segment = snake[i];
       const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
       const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2;
       const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
-      const glowAlpha = 0.2 * t;
+      const glowAlpha = 0.15 * t;
       const glowSize = (CELL_SIZE / 2 + 4) * (0.5 + t * 0.5);
 
-      // Rainbow glow matching segment color
-      const segmentHue = (this.hueOffset + (i * 15)) % 360;
-      const glowColor = this.hslToRgb(segmentHue / 360, 0.9, 0.6);
-      g.fillStyle(glowColor, glowAlpha);
+      g.fillStyle(COLORS.noirWhite, glowAlpha);
       g.fillCircle(centerX, centerY, glowSize);
     }
 
-    // Draw snake segments from tail to head with rainbow gradient
+    // Draw snake segments from tail to head with grayscale gradient
     for (let i = snakeLen - 1; i >= 0; i--) {
       const segment = snake[i];
       const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
@@ -1448,61 +1541,50 @@ export class SnakeScene extends Phaser.Scene {
       const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
       const radius = (CELL_SIZE / 2 - 1) * (0.85 + t * 0.15);
 
-      // Head has special treatment
+      // Grayscale gradient from tail (dark) to head (bright)
+      const brightness = 0.4 + t * 0.5;
+      const segmentColor = this.hslToRgb(0, 0, brightness);
+
       if (i === 0) {
-        // Dynamic head color cycling through hues
-        const headHue = (this.hueOffset + 120) % 360;
-        const headColor = this.hslToRgb(headHue / 360, 0.9, 0.55);
+        // Head: brightest white with dramatic glow
+        g.fillStyle(COLORS.noirWhite, 0.5);
+        g.fillCircle(centerX, centerY, radius + 6);
 
-        // Head glow
-        g.fillStyle(headColor, 0.4);
-        g.fillCircle(centerX, centerY, radius + 5);
-
-        // Head base
-        g.fillStyle(headColor, 1);
+        g.fillStyle(COLORS.snakeHead, 1);
         g.fillCircle(centerX, centerY, radius + 1);
 
-        // Head highlight
-        g.fillStyle(0xffffff, 0.5);
-        g.fillCircle(centerX - 2, centerY - 2, radius * 0.4);
+        // Film noir head highlight - sharp specular
+        g.fillStyle(0xffffff, 0.7);
+        g.fillCircle(centerX - 2, centerY - 2, radius * 0.35);
 
         this.drawSnakeHead(g, segment, snake[1]);
       } else {
-        // Body segment with rainbow gradient based on position
-        const segmentHue = (this.hueOffset + (i * 15)) % 360;
-        const segmentColor = this.hslToRgb(segmentHue / 360, 0.8, 0.5);
-
-        // Body segment glow
-        g.fillStyle(segmentColor, 0.3);
+        // Body segment with grayscale
+        g.fillStyle(COLORS.noirGray, 0.2);
         g.fillCircle(centerX, centerY, radius + 2);
 
-        // Body segment
         g.fillStyle(segmentColor, 1);
         g.fillCircle(centerX, centerY, radius);
 
-        // Highlight on each segment
-        g.fillStyle(0xffffff, 0.25 * t);
-        g.fillCircle(centerX - 1, centerY - 1, radius * 0.3);
+        // Specular highlight
+        g.fillStyle(0xffffff, 0.2 * t);
+        g.fillCircle(centerX - 1, centerY - 1, radius * 0.25);
       }
     }
-
   }
 
   private drawFoodBurst(g: Phaser.GameObjects.Graphics): void {
     for (const p of this.foodBurstParticles) {
-      const color = this.hslToRgb(p.hue / 360, 1, 0.6);
-
-      // Draw trail
+      // Film noir: grayscale burst
       for (let i = 0; i < p.trail.length; i++) {
         const t = p.trail[i];
-        const trailAlpha = p.life * 0.5 * (1 - i / p.trail.length);
+        const trailAlpha = p.life * 0.4 * (1 - i / p.trail.length);
         const trailSize = p.size * p.life * (1 - i / p.trail.length);
-        g.fillStyle(color, trailAlpha);
+        g.fillStyle(COLORS.noirGray, trailAlpha);
         g.fillCircle(t.x, t.y, trailSize);
       }
 
-      // Draw particle core with bright center
-      g.fillStyle(color, p.life * 0.8);
+      g.fillStyle(COLORS.noirWhite, p.life * 0.7);
       g.fillCircle(p.x, p.y, p.size * p.life);
       g.fillStyle(0xffffff, p.life * 0.9);
       g.fillCircle(p.x, p.y, p.size * p.life * 0.4);
@@ -1513,31 +1595,26 @@ export class SnakeScene extends Phaser.Scene {
     if (!this.currentState || this.currentState.snake.length === 0) return;
 
     const snake = this.currentState.snake;
-    const baseIntensity = 0.08 + this.energyFieldPulse * 0.3;
-    const pulseOffset = Math.sin(this.frameCount * 0.1) * 0.03;
-    const alpha = Math.min(0.4, baseIntensity + pulseOffset);
+    const baseIntensity = 0.06 + this.energyFieldPulse * 0.2;
+    const pulseOffset = Math.sin(this.frameCount * 0.1) * 0.02;
+    const alpha = Math.min(0.3, baseIntensity + pulseOffset);
 
-    // Draw energy field around entire snake
+    // Film noir: subtle grayscale energy field
     for (let i = 0; i < snake.length; i++) {
       const seg = snake[i];
       const cx = seg.x * CELL_SIZE + CELL_SIZE / 2;
       const cy = seg.y * CELL_SIZE + CELL_SIZE / 2;
 
-      // Larger pulsing field around each segment
-      const fieldRadius = CELL_SIZE * (0.8 + this.energyFieldPulse * 0.6) + Math.sin(this.frameCount * 0.15 + i * 0.5) * 3;
-      const segmentHue = (this.hueOffset + i * 15) % 360;
-      const fieldColor = this.hslToRgb(segmentHue / 360, 0.7, 0.5);
+      const fieldRadius = CELL_SIZE * (0.8 + this.energyFieldPulse * 0.5) + Math.sin(this.frameCount * 0.15 + i * 0.5) * 2;
 
-      // Outer glow
-      g.fillStyle(fieldColor, alpha * 0.3);
+      g.fillStyle(COLORS.noirWhite, alpha * 0.25);
       g.fillCircle(cx, cy, fieldRadius + 4);
 
-      // Inner field
-      g.fillStyle(fieldColor, alpha * 0.5);
+      g.fillStyle(COLORS.noirWhite, alpha * 0.4);
       g.fillCircle(cx, cy, fieldRadius);
     }
 
-    // Additional connecting energy arcs when pulse is active
+    // Connecting lines when pulse is active
     if (this.energyFieldPulse > 0.3 && snake.length > 1) {
       for (let i = 0; i < snake.length - 1; i++) {
         const seg1 = snake[i];
@@ -1547,12 +1624,9 @@ export class SnakeScene extends Phaser.Scene {
         const x2 = seg2.x * CELL_SIZE + CELL_SIZE / 2;
         const y2 = seg2.y * CELL_SIZE + CELL_SIZE / 2;
 
-        const arcHue = (this.hueOffset + i * 15 + 30) % 360;
-        const arcColor = this.hslToRgb(arcHue / 360, 0.9, 0.7);
-
-        g.lineStyle(3, arcColor, this.energyFieldPulse * 0.4);
+        g.lineStyle(3, COLORS.noirGray, this.energyFieldPulse * 0.3);
         g.lineBetween(x1, y1, x2, y2);
-        g.lineStyle(1.5, 0xffffff, this.energyFieldPulse * 0.6);
+        g.lineStyle(1.5, 0xffffff, this.energyFieldPulse * 0.5);
         g.lineBetween(x1, y1, x2, y2);
       }
     }
@@ -1564,73 +1638,65 @@ export class SnakeScene extends Phaser.Scene {
     const snake = this.currentState.snake;
     const offset = this.chromaticIntensity * 3;
 
-    // Draw offset colored versions of the snake for RGB split effect
+    // Film noir: grayscale ghosting effect instead of color split
     for (let i = 0; i < snake.length; i++) {
       const seg = snake[i];
       const cx = seg.x * CELL_SIZE + CELL_SIZE / 2;
       const cy = seg.y * CELL_SIZE + CELL_SIZE / 2;
       const t = snake.length > 1 ? i / (snake.length - 1) : 1;
       const radius = (CELL_SIZE / 2 - 1) * (0.85 + t * 0.15);
-      const alpha = this.chromaticIntensity * 0.4 * (i === 0 ? 1 : 0.6);
+      const alpha = this.chromaticIntensity * 0.3 * (i === 0 ? 1 : 0.5);
 
-      // Red channel - offset left
-      g.fillStyle(0xff0000, alpha);
+      // Light ghost - offset left
+      g.fillStyle(0xffffff, alpha);
       g.fillCircle(cx - offset, cy, radius);
 
-      // Blue channel - offset right
-      g.fillStyle(0x0000ff, alpha);
+      // Dark ghost - offset right
+      g.fillStyle(0x404040, alpha);
       g.fillCircle(cx + offset, cy, radius);
-
-      // Cyan channel - offset up
-      g.fillStyle(0x00ffff, alpha * 0.5);
-      g.fillCircle(cx, cy - offset * 0.7, radius);
     }
   }
 
   private drawGameOver(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
-    // Animate fade in
-    if (this.gameOverAlpha < 0.75) {
-      this.gameOverAlpha += 0.04;
+    // Film noir game over: dramatic fade to black with spotlight
+    if (this.gameOverAlpha < 0.85) {
+      this.gameOverAlpha += 0.03;
     }
 
-    // Glitch effect offset
-    this.gameOverGlitchOffset = Math.random() < 0.1 ? (Math.random() - 0.5) * 8 : this.gameOverGlitchOffset * 0.9;
-
-    // Dark overlay
+    // Heavy dark overlay
     g.fillStyle(COLORS.gameOverOverlay, this.gameOverAlpha);
     g.fillRect(0, 0, width, height);
 
-    // Scanline effect
-    for (let y = 0; y < height; y += 4) {
-      g.fillStyle(0x000000, 0.15);
-      g.fillRect(0, y, width, 2);
+    // Film grain effect (subtle noise lines)
+    for (let y = 0; y < height; y += 3) {
+      const grainAlpha = 0.05 + Math.random() * 0.05;
+      g.fillStyle(Math.random() > 0.5 ? 0xffffff : 0x000000, grainAlpha);
+      g.fillRect(0, y, width, 1);
     }
 
-    // Glitch color bars (random horizontal strips)
-    if (Math.random() < 0.2) {
-      const glitchY = Math.random() * height;
-      const glitchHeight = 2 + Math.random() * 6;
-      const glitchColor = Math.random() < 0.5 ? 0xff0066 : 0x00ffff;
-      g.fillStyle(glitchColor, 0.3);
-      g.fillRect(this.gameOverGlitchOffset, glitchY, width, glitchHeight);
-    }
+    // Dramatic spotlight in center
+    const spotPulse = 0.15 + Math.sin(this.frameCount * 0.05) * 0.05;
+    g.fillStyle(COLORS.noirWhite, spotPulse);
+    g.fillCircle(width / 2, height / 2, 80);
+    g.fillStyle(COLORS.noirWhite, spotPulse * 0.5);
+    g.fillCircle(width / 2, height / 2, 120);
 
-    // Pulsing vignette border with glitch
-    const vignetteAlpha = 0.4 + Math.sin(this.frameCount * 0.1) * 0.15;
-    const borderSize = 5 + Math.sin(this.frameCount * 0.15) * 2;
-    g.fillStyle(COLORS.gameOverText, vignetteAlpha * 0.4);
-    g.fillRect(this.gameOverGlitchOffset, 0, width, borderSize);
-    g.fillRect(this.gameOverGlitchOffset, height - borderSize, width, borderSize);
+    // Noir border: thick black frame
+    const borderSize = 8;
+    g.fillStyle(0x000000, 0.8);
+    g.fillRect(0, 0, width, borderSize);
+    g.fillRect(0, height - borderSize, width, borderSize);
     g.fillRect(0, 0, borderSize, height);
     g.fillRect(width - borderSize, 0, borderSize, height);
 
-    // Corner flares
-    const flareSize = 20 + Math.sin(this.frameCount * 0.08) * 5;
-    g.fillStyle(COLORS.gameOverText, vignetteAlpha * 0.6);
-    g.fillTriangle(0, 0, flareSize, 0, 0, flareSize);
-    g.fillTriangle(width, 0, width - flareSize, 0, width, flareSize);
-    g.fillTriangle(0, height, flareSize, height, 0, height - flareSize);
-    g.fillTriangle(width, height, width - flareSize, height, width, height - flareSize);
+    // White inner border
+    const innerBorder = 2;
+    const innerOffset = borderSize;
+    g.fillStyle(COLORS.noirWhite, 0.3);
+    g.fillRect(innerOffset, innerOffset, width - innerOffset * 2, innerBorder);
+    g.fillRect(innerOffset, height - innerOffset - innerBorder, width - innerOffset * 2, innerBorder);
+    g.fillRect(innerOffset, innerOffset, innerBorder, height - innerOffset * 2);
+    g.fillRect(width - innerOffset - innerBorder, innerOffset, innerBorder, height - innerOffset * 2);
   }
 
   private drawSnakeHead(
@@ -1692,21 +1758,17 @@ export class SnakeScene extends Phaser.Scene {
     perpX: number,
     perpY: number
   ): void {
-    // Crown sits on top/back of the head
+    // Film noir crown: silver/platinum with white diamonds
     const crownOffset = -8;
     const crownBaseX = headX - dx * crownOffset;
     const crownBaseY = headY - dy * crownOffset;
 
-    // Crown dimensions
     const crownWidth = 14;
     const crownHeight = 10;
     const halfWidth = crownWidth / 2;
 
-    // Animated sparkle
     const sparkle = 0.7 + Math.sin(this.frameCount * 0.15) * 0.3;
 
-    // Calculate crown points based on snake direction
-    // The crown base sits perpendicular to movement direction
     const baseLeft = {
       x: crownBaseX + perpX * halfWidth,
       y: crownBaseY + perpY * halfWidth
@@ -1716,29 +1778,27 @@ export class SnakeScene extends Phaser.Scene {
       y: crownBaseY - perpY * halfWidth
     };
 
-    // Crown points extend opposite to movement direction
     const pointOffset = -dx * crownHeight;
     const pointOffsetY = -dy * crownHeight;
 
-    // Five crown points
     const crownPoints = [
       baseLeft,
       { x: baseLeft.x + pointOffset * 0.4, y: baseLeft.y + pointOffsetY * 0.4 },
       { x: crownBaseX + perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY + perpY * (halfWidth * 0.5) + pointOffsetY * 0.9 },
       { x: crownBaseX + perpX * (halfWidth * 0.25) + pointOffset * 0.5, y: crownBaseY + perpY * (halfWidth * 0.25) + pointOffsetY * 0.5 },
-      { x: crownBaseX + pointOffset, y: crownBaseY + pointOffsetY }, // Center point (tallest)
+      { x: crownBaseX + pointOffset, y: crownBaseY + pointOffsetY },
       { x: crownBaseX - perpX * (halfWidth * 0.25) + pointOffset * 0.5, y: crownBaseY - perpY * (halfWidth * 0.25) + pointOffsetY * 0.5 },
       { x: crownBaseX - perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY - perpY * (halfWidth * 0.5) + pointOffsetY * 0.9 },
       { x: baseRight.x + pointOffset * 0.4, y: baseRight.y + pointOffsetY * 0.4 },
       baseRight
     ];
 
-    // Crown glow (golden aura)
-    g.fillStyle(0xffd700, 0.3 * sparkle);
+    // Noir crown glow (silver/white aura)
+    g.fillStyle(COLORS.noirWhite, 0.25 * sparkle);
     g.fillCircle(crownBaseX + pointOffset * 0.5, crownBaseY + pointOffsetY * 0.5, crownHeight + 4);
 
-    // Crown base (golden)
-    g.fillStyle(0xffd700, 1);
+    // Crown base (platinum silver)
+    g.fillStyle(0xc0c0c0, 1);
     g.beginPath();
     g.moveTo(crownPoints[0].x, crownPoints[0].y);
     for (let i = 1; i < crownPoints.length; i++) {
@@ -1747,8 +1807,8 @@ export class SnakeScene extends Phaser.Scene {
     g.closePath();
     g.fillPath();
 
-    // Crown outline (darker gold)
-    g.lineStyle(1.5, 0xb8860b, 1);
+    // Crown outline (dark gray)
+    g.lineStyle(1.5, 0x505050, 1);
     g.beginPath();
     g.moveTo(crownPoints[0].x, crownPoints[0].y);
     for (let i = 1; i < crownPoints.length; i++) {
@@ -1757,7 +1817,7 @@ export class SnakeScene extends Phaser.Scene {
     g.closePath();
     g.strokePath();
 
-    // Crown band (horizontal stripe at base)
+    // Crown band
     const bandY1 = {
       x: baseLeft.x + pointOffset * 0.15,
       y: baseLeft.y + pointOffsetY * 0.15
@@ -1766,32 +1826,29 @@ export class SnakeScene extends Phaser.Scene {
       x: baseRight.x + pointOffset * 0.15,
       y: baseRight.y + pointOffsetY * 0.15
     };
-    g.lineStyle(3, 0xdaa520, 1);
+    g.lineStyle(3, 0x808080, 1);
     g.lineBetween(bandY1.x, bandY1.y, bandY2.x, bandY2.y);
 
-    // Jewels on crown points
+    // Noir jewels: white diamonds
     const jewelPositions = [
-      { x: crownBaseX + pointOffset, y: crownBaseY + pointOffsetY, color: 0xff0044, size: 2.5 }, // Center ruby
-      { x: crownBaseX + perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY + perpY * (halfWidth * 0.5) + pointOffsetY * 0.9, color: 0x00ff88, size: 2 }, // Emerald
-      { x: crownBaseX - perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY - perpY * (halfWidth * 0.5) + pointOffsetY * 0.9, color: 0x4488ff, size: 2 }, // Sapphire
+      { x: crownBaseX + pointOffset, y: crownBaseY + pointOffsetY, size: 2.5 },
+      { x: crownBaseX + perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY + perpY * (halfWidth * 0.5) + pointOffsetY * 0.9, size: 2 },
+      { x: crownBaseX - perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY - perpY * (halfWidth * 0.5) + pointOffsetY * 0.9, size: 2 },
     ];
 
     for (const jewel of jewelPositions) {
-      // Jewel glow
-      g.fillStyle(jewel.color, 0.5 * sparkle);
+      g.fillStyle(COLORS.noirWhite, 0.5 * sparkle);
       g.fillCircle(jewel.x, jewel.y, jewel.size + 2);
 
-      // Jewel body
-      g.fillStyle(jewel.color, 1);
+      g.fillStyle(0xffffff, 1);
       g.fillCircle(jewel.x, jewel.y, jewel.size);
 
-      // Jewel highlight
-      g.fillStyle(0xffffff, 0.8 * sparkle);
+      g.fillStyle(0xffffff, 0.9 * sparkle);
       g.fillCircle(jewel.x - 0.5, jewel.y - 0.5, jewel.size * 0.4);
     }
 
-    // Crown highlight (shiny reflection)
-    g.fillStyle(0xffffe0, 0.5 * sparkle);
+    // Crown highlight
+    g.fillStyle(0xffffff, 0.6 * sparkle);
     g.fillCircle(crownBaseX + perpX * 3 + pointOffset * 0.3, crownBaseY + perpY * 3 + pointOffsetY * 0.3, 2);
   }
 }
