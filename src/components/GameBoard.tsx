@@ -421,6 +421,55 @@ interface FlameParticle2D {
 let flameParticles: FlameParticle2D[] = [];
 const MAX_FLAME_PARTICLES = 60;
 
+// Dimensional Rift - jaw-dropping portal effect when food is eaten
+interface DimensionalRift2D {
+  x: number;
+  y: number;
+  life: number;
+  maxLife: number;
+  rotation: number;
+  scale: number;
+}
+let dimensionalRift: DimensionalRift2D | null = null;
+
+// Hypnotic pulse rings emanating from snake head
+interface PulseRing2D {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  life: number;
+  hue: number;
+}
+let pulseRings: PulseRing2D[] = [];
+let pulseRingTimer = 0;
+
+// Reality shatter shards for game over
+interface ShatterShard2D {
+  points: { x: number; y: number }[];
+  cx: number;
+  cy: number;
+  vx: number;
+  vy: number;
+  rotation: number;
+  rotationSpeed: number;
+  life: number;
+  delay: number;
+}
+let shatterShards: ShatterShard2D[] = [];
+let shatterInitialized = false;
+
+// Prism trail segments - rainbow light trail behind snake
+interface PrismSegment2D {
+  x: number;
+  y: number;
+  hue: number;
+  life: number;
+  size: number;
+}
+let prismTrail: PrismSegment2D[] = [];
+const MAX_PRISM_TRAIL = 30;
+
 function initFloatingStars(): void {
   if (starsInitialized) return;
   starsInitialized = true;
@@ -617,6 +666,141 @@ function initFoodOrbParticles(): void {
         layer,
       });
     }
+  }
+}
+
+// Spawn dimensional rift at food location when eaten
+function spawnDimensionalRift(x: number, y: number): void {
+  dimensionalRift = {
+    x,
+    y,
+    life: 1,
+    maxLife: 1,
+    rotation: 0,
+    scale: 0,
+  };
+}
+
+// Spawn pulse ring from snake head
+function spawnPulseRing(x: number, y: number, hue: number): void {
+  if (pulseRings.length >= 4) return;
+  pulseRings.push({
+    x,
+    y,
+    radius: 5,
+    maxRadius: 80,
+    life: 1,
+    hue,
+  });
+}
+
+// Initialize reality shatter effect for game over
+function initShatterEffect(width: number, height: number): void {
+  if (shatterInitialized) return;
+  shatterInitialized = true;
+  shatterShards = [];
+
+  // Create triangular shards covering the screen
+  const cols = 6;
+  const rows = 6;
+  const cellW = width / cols;
+  const cellH = height / rows;
+
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      const x0 = i * cellW;
+      const y0 = j * cellH;
+      const x1 = x0 + cellW;
+      const y1 = y0 + cellH;
+      const cx = x0 + cellW / 2;
+      const cy = y0 + cellH / 2;
+
+      // Create two triangles per cell
+      const midX = x0 + cellW * (0.4 + Math.random() * 0.2);
+      const midY = y0 + cellH * (0.4 + Math.random() * 0.2);
+
+      // Triangle 1
+      shatterShards.push({
+        points: [
+          { x: x0, y: y0 },
+          { x: x1, y: y0 },
+          { x: midX, y: midY },
+        ],
+        cx: (x0 + x1 + midX) / 3,
+        cy: (y0 + y0 + midY) / 3,
+        vx: (Math.random() - 0.5) * 4,
+        vy: Math.random() * 2 + 1,
+        rotation: 0,
+        rotationSpeed: (Math.random() - 0.5) * 0.15,
+        life: 1,
+        delay: (i + j) * 0.03,
+      });
+
+      // Triangle 2
+      shatterShards.push({
+        points: [
+          { x: x1, y: y0 },
+          { x: x1, y: y1 },
+          { x: midX, y: midY },
+        ],
+        cx: (x1 + x1 + midX) / 3,
+        cy: (y0 + y1 + midY) / 3,
+        vx: (Math.random() - 0.5) * 4,
+        vy: Math.random() * 2 + 1,
+        rotation: 0,
+        rotationSpeed: (Math.random() - 0.5) * 0.15,
+        life: 1,
+        delay: (i + j) * 0.03 + 0.01,
+      });
+
+      // Triangle 3
+      shatterShards.push({
+        points: [
+          { x: x1, y: y1 },
+          { x: x0, y: y1 },
+          { x: midX, y: midY },
+        ],
+        cx: (x1 + x0 + midX) / 3,
+        cy: (y1 + y1 + midY) / 3,
+        vx: (Math.random() - 0.5) * 4,
+        vy: Math.random() * 2 + 1,
+        rotation: 0,
+        rotationSpeed: (Math.random() - 0.5) * 0.15,
+        life: 1,
+        delay: (i + j) * 0.03 + 0.02,
+      });
+
+      // Triangle 4
+      shatterShards.push({
+        points: [
+          { x: x0, y: y1 },
+          { x: x0, y: y0 },
+          { x: midX, y: midY },
+        ],
+        cx: (x0 + x0 + midX) / 3,
+        cy: (y1 + y0 + midY) / 3,
+        vx: (Math.random() - 0.5) * 4,
+        vy: Math.random() * 2 + 1,
+        rotation: 0,
+        rotationSpeed: (Math.random() - 0.5) * 0.15,
+        life: 1,
+        delay: (i + j) * 0.03 + 0.03,
+      });
+    }
+  }
+}
+
+// Add prism trail segment at position
+function addPrismTrailSegment(x: number, y: number, hue: number): void {
+  prismTrail.unshift({
+    x,
+    y,
+    hue,
+    life: 1,
+    size: CELL_SIZE * 0.6,
+  });
+  if (prismTrail.length > MAX_PRISM_TRAIL) {
+    prismTrail.pop();
   }
 }
 
@@ -846,6 +1030,48 @@ function updateCanvas2DEffects(): void {
     if (energyFieldPulse < 0.05) energyFieldPulse = 0;
   }
 
+  // Update dimensional rift
+  if (dimensionalRift) {
+    dimensionalRift.life -= 0.025;
+    dimensionalRift.rotation += 0.15;
+    dimensionalRift.scale = Math.sin(dimensionalRift.life * Math.PI) * 1.5;
+    if (dimensionalRift.life <= 0) {
+      dimensionalRift = null;
+    }
+  }
+
+  // Update pulse rings
+  for (let i = pulseRings.length - 1; i >= 0; i--) {
+    const ring = pulseRings[i];
+    ring.radius += 3;
+    ring.life -= 0.04;
+    if (ring.life <= 0 || ring.radius >= ring.maxRadius) {
+      pulseRings.splice(i, 1);
+    }
+  }
+
+  // Update shatter shards
+  for (const shard of shatterShards) {
+    if (shard.delay > 0) {
+      shard.delay -= 0.02;
+      continue;
+    }
+    shard.cx += shard.vx;
+    shard.cy += shard.vy;
+    shard.vy += 0.15;
+    shard.rotation += shard.rotationSpeed;
+    shard.life -= 0.012;
+  }
+
+  // Update prism trail
+  for (let i = prismTrail.length - 1; i >= 0; i--) {
+    prismTrail[i].life -= 0.04;
+    prismTrail[i].size *= 0.97;
+    if (prismTrail[i].life <= 0) {
+      prismTrail.splice(i, 1);
+    }
+  }
+
   // Update lightning bolts
   for (let i = lightningBolts.length - 1; i >= 0; i--) {
     const bolt = lightningBolts[i];
@@ -948,8 +1174,29 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     energyFieldPulse = 1.0;
     spawnLightningBetweenSegments(gameState.snake, hueOffset);
     teethShowTimer = TEETH_DURATION;
+    // Spawn dimensional rift at food location (jaw-dropping effect!)
+    spawnDimensionalRift(headX, headY);
+    screenShakeIntensity = 8;
   }
   lastSnakeLength = gameState.snake.length;
+
+  // Spawn pulse rings from snake head periodically
+  pulseRingTimer++;
+  if (pulseRingTimer >= 12 && gameState.snake.length > 0 && !gameState.gameOver) {
+    pulseRingTimer = 0;
+    const head = gameState.snake[0];
+    const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+    spawnPulseRing(headX, headY, hueOffset);
+  }
+
+  // Add prism trail segment at snake head
+  if (gameState.snake.length > 0 && !gameState.gameOver && frameCount % 2 === 0) {
+    const head = gameState.snake[0];
+    const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+    addPrismTrailSegment(headX, headY, hueOffset);
+  }
 
   // Update teeth timer
   if (teethShowTimer > 0) {
@@ -982,6 +1229,9 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     screenShakeIntensity = 15;
     chromaticIntensity = 2.0;
     spawnDeathExplosion2D(gameState.snake, hueOffset);
+    // Initialize reality shatter effect
+    shatterInitialized = false;
+    initShatterEffect(width, height);
   }
   wasGameOver = gameState.gameOver;
 
@@ -1089,6 +1339,136 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   for (const star of floatingStars) {
     drawFloatingStar(ctx, star);
   }
+
+  // Draw pulse rings emanating from snake head (jaw-dropping hypnotic effect)
+  for (const ring of pulseRings) {
+    const ringAlpha = ring.life * 0.6;
+    const ringColor = hslToRgb(ring.hue / 360, 0.8, 0.6);
+
+    // Outer glow ring
+    ctx.strokeStyle = ringColor;
+    ctx.lineWidth = 3 * ring.life;
+    ctx.globalAlpha = ringAlpha * 0.3;
+    ctx.beginPath();
+    ctx.arc(ring.x, ring.y, ring.radius + 4, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Main ring
+    ctx.lineWidth = 2 * ring.life;
+    ctx.globalAlpha = ringAlpha * 0.7;
+    ctx.beginPath();
+    ctx.arc(ring.x, ring.y, ring.radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner bright ring
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = ringAlpha * 0.5;
+    ctx.beginPath();
+    ctx.arc(ring.x, ring.y, ring.radius - 2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw prism rainbow trail behind snake (jaw-dropping light trail)
+  for (let i = prismTrail.length - 1; i >= 0; i--) {
+    const seg = prismTrail[i];
+    const trailAlpha = seg.life * 0.5;
+
+    // Rainbow cycling through spectrum
+    const rainbowHue = (seg.hue + i * 12) % 360;
+    const trailColor = hslToRgb(rainbowHue / 360, 0.9, 0.6);
+
+    // Outer glow
+    ctx.fillStyle = trailColor;
+    ctx.globalAlpha = trailAlpha * 0.2;
+    ctx.beginPath();
+    ctx.arc(seg.x, seg.y, seg.size * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core trail
+    ctx.globalAlpha = trailAlpha * 0.6;
+    ctx.beginPath();
+    ctx.arc(seg.x, seg.y, seg.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // White hot center
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = trailAlpha * 0.3;
+    ctx.beginPath();
+    ctx.arc(seg.x, seg.y, seg.size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw dimensional rift portal (jaw-dropping effect when eating food!)
+  if (dimensionalRift) {
+    const rift = dimensionalRift;
+    const riftAlpha = Math.sin(rift.life * Math.PI);
+    const riftScale = rift.scale;
+
+    ctx.save();
+    ctx.translate(rift.x, rift.y);
+    ctx.rotate(rift.rotation);
+
+    // Outer swirling void
+    for (let ring = 0; ring < 5; ring++) {
+      const ringRadius = 15 + ring * 12 * riftScale;
+      const ringHue = (hueOffset + ring * 60 + rift.rotation * 30) % 360;
+      const ringColor = hslToRgb(ringHue / 360, 0.9, 0.5);
+
+      ctx.strokeStyle = ringColor;
+      ctx.lineWidth = (5 - ring) * riftScale;
+      ctx.globalAlpha = riftAlpha * (0.8 - ring * 0.15);
+
+      // Distorted spiral ring
+      ctx.beginPath();
+      for (let a = 0; a < Math.PI * 2; a += 0.1) {
+        const wobble = Math.sin(a * 4 + rift.rotation * 3) * 5 * riftScale;
+        const rx = Math.cos(a) * (ringRadius + wobble);
+        const ry = Math.sin(a) * (ringRadius + wobble);
+        if (a === 0) ctx.moveTo(rx, ry);
+        else ctx.lineTo(rx, ry);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    // Central void with gradient
+    const voidGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 20 * riftScale);
+    voidGrad.addColorStop(0, 'rgba(0, 0, 0, 0.9)');
+    voidGrad.addColorStop(0.5, 'rgba(75, 0, 130, 0.6)');
+    voidGrad.addColorStop(1, 'rgba(138, 43, 226, 0)');
+    ctx.fillStyle = voidGrad;
+    ctx.globalAlpha = riftAlpha;
+    ctx.beginPath();
+    ctx.arc(0, 0, 25 * riftScale, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sparkling energy particles around rift
+    for (let p = 0; p < 8; p++) {
+      const pAngle = (p / 8) * Math.PI * 2 + rift.rotation * 2;
+      const pDist = 30 * riftScale + Math.sin(rift.rotation * 5 + p) * 10;
+      const px = Math.cos(pAngle) * pDist;
+      const py = Math.sin(pAngle) * pDist;
+      const pHue = (hueOffset + p * 45) % 360;
+
+      ctx.fillStyle = hslToRgb(pHue / 360, 1, 0.7);
+      ctx.globalAlpha = riftAlpha * 0.8;
+      ctx.beginPath();
+      ctx.arc(px, py, 3 * riftScale, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Spark glow
+      ctx.globalAlpha = riftAlpha * 0.3;
+      ctx.beginPath();
+      ctx.arc(px, py, 6 * riftScale, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
 
   // Magical Teacup (Alice in Wonderland tea party!)
   const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
@@ -1513,6 +1893,59 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.beginPath();
       ctx.arc(d.x, d.y, emberSize * 0.4, 0, Math.PI * 2);
       ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Reality shatter effect - jaw-dropping screen fracture on game over
+  if (gameState.gameOver && shatterShards.length > 0) {
+    // Draw shattered reality shards falling away
+    for (const shard of shatterShards) {
+      if (shard.delay > 0 || shard.life <= 0) continue;
+
+      ctx.save();
+      ctx.translate(shard.cx, shard.cy);
+      ctx.rotate(shard.rotation);
+
+      // Calculate original points relative to center
+      const relPoints = shard.points.map(p => ({
+        x: p.x - shard.points.reduce((s, pt) => s + pt.x, 0) / shard.points.length,
+        y: p.y - shard.points.reduce((s, pt) => s + pt.y, 0) / shard.points.length,
+      }));
+
+      // Shard with gradient reflecting the wonderland theme
+      const shardHue = (hueOffset + shard.cx * 0.5 + shard.cy * 0.5) % 360;
+      const shardGrad = ctx.createLinearGradient(relPoints[0].x, relPoints[0].y, relPoints[2].x, relPoints[2].y);
+      shardGrad.addColorStop(0, hslToRgb(shardHue / 360, 0.6, 0.3));
+      shardGrad.addColorStop(0.5, hslToRgb((shardHue + 30) / 360, 0.5, 0.2));
+      shardGrad.addColorStop(1, hslToRgb((shardHue + 60) / 360, 0.4, 0.15));
+
+      ctx.fillStyle = shardGrad;
+      ctx.globalAlpha = shard.life * 0.9;
+      ctx.beginPath();
+      ctx.moveTo(relPoints[0].x, relPoints[0].y);
+      for (let i = 1; i < relPoints.length; i++) {
+        ctx.lineTo(relPoints[i].x, relPoints[i].y);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Glowing edge on shard
+      ctx.strokeStyle = hslToRgb((shardHue + 180) / 360, 0.8, 0.6);
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = shard.life * 0.6;
+      ctx.stroke();
+
+      // Bright crack line
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 0.5;
+      ctx.globalAlpha = shard.life * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(relPoints[0].x, relPoints[0].y);
+      ctx.lineTo(relPoints[1].x, relPoints[1].y);
+      ctx.stroke();
+
+      ctx.restore();
     }
   }
   ctx.globalAlpha = 1;
