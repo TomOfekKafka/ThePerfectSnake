@@ -1678,5 +1678,120 @@ export class SnakeScene extends Phaser.Scene {
     g.fillCircle(rightEyeX, rightEyeY, eyeRadius);
     g.fillStyle(COLORS.snakePupil, 1);
     g.fillCircle(rightEyeX + dx * 1, rightEyeY + dy * 1, pupilRadius);
+
+    // Draw the royal crown
+    this.drawCrown(g, centerX, centerY, dx, dy, perpX, perpY);
+  }
+
+  private drawCrown(
+    g: Phaser.GameObjects.Graphics,
+    headX: number,
+    headY: number,
+    dx: number,
+    dy: number,
+    perpX: number,
+    perpY: number
+  ): void {
+    // Crown sits on top/back of the head
+    const crownOffset = -8;
+    const crownBaseX = headX - dx * crownOffset;
+    const crownBaseY = headY - dy * crownOffset;
+
+    // Crown dimensions
+    const crownWidth = 14;
+    const crownHeight = 10;
+    const halfWidth = crownWidth / 2;
+
+    // Animated sparkle
+    const sparkle = 0.7 + Math.sin(this.frameCount * 0.15) * 0.3;
+
+    // Calculate crown points based on snake direction
+    // The crown base sits perpendicular to movement direction
+    const baseLeft = {
+      x: crownBaseX + perpX * halfWidth,
+      y: crownBaseY + perpY * halfWidth
+    };
+    const baseRight = {
+      x: crownBaseX - perpX * halfWidth,
+      y: crownBaseY - perpY * halfWidth
+    };
+
+    // Crown points extend opposite to movement direction
+    const pointOffset = -dx * crownHeight;
+    const pointOffsetY = -dy * crownHeight;
+
+    // Five crown points
+    const crownPoints = [
+      baseLeft,
+      { x: baseLeft.x + pointOffset * 0.4, y: baseLeft.y + pointOffsetY * 0.4 },
+      { x: crownBaseX + perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY + perpY * (halfWidth * 0.5) + pointOffsetY * 0.9 },
+      { x: crownBaseX + perpX * (halfWidth * 0.25) + pointOffset * 0.5, y: crownBaseY + perpY * (halfWidth * 0.25) + pointOffsetY * 0.5 },
+      { x: crownBaseX + pointOffset, y: crownBaseY + pointOffsetY }, // Center point (tallest)
+      { x: crownBaseX - perpX * (halfWidth * 0.25) + pointOffset * 0.5, y: crownBaseY - perpY * (halfWidth * 0.25) + pointOffsetY * 0.5 },
+      { x: crownBaseX - perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY - perpY * (halfWidth * 0.5) + pointOffsetY * 0.9 },
+      { x: baseRight.x + pointOffset * 0.4, y: baseRight.y + pointOffsetY * 0.4 },
+      baseRight
+    ];
+
+    // Crown glow (golden aura)
+    g.fillStyle(0xffd700, 0.3 * sparkle);
+    g.fillCircle(crownBaseX + pointOffset * 0.5, crownBaseY + pointOffsetY * 0.5, crownHeight + 4);
+
+    // Crown base (golden)
+    g.fillStyle(0xffd700, 1);
+    g.beginPath();
+    g.moveTo(crownPoints[0].x, crownPoints[0].y);
+    for (let i = 1; i < crownPoints.length; i++) {
+      g.lineTo(crownPoints[i].x, crownPoints[i].y);
+    }
+    g.closePath();
+    g.fillPath();
+
+    // Crown outline (darker gold)
+    g.lineStyle(1.5, 0xb8860b, 1);
+    g.beginPath();
+    g.moveTo(crownPoints[0].x, crownPoints[0].y);
+    for (let i = 1; i < crownPoints.length; i++) {
+      g.lineTo(crownPoints[i].x, crownPoints[i].y);
+    }
+    g.closePath();
+    g.strokePath();
+
+    // Crown band (horizontal stripe at base)
+    const bandY1 = {
+      x: baseLeft.x + pointOffset * 0.15,
+      y: baseLeft.y + pointOffsetY * 0.15
+    };
+    const bandY2 = {
+      x: baseRight.x + pointOffset * 0.15,
+      y: baseRight.y + pointOffsetY * 0.15
+    };
+    g.lineStyle(3, 0xdaa520, 1);
+    g.lineBetween(bandY1.x, bandY1.y, bandY2.x, bandY2.y);
+
+    // Jewels on crown points
+    const jewelPositions = [
+      { x: crownBaseX + pointOffset, y: crownBaseY + pointOffsetY, color: 0xff0044, size: 2.5 }, // Center ruby
+      { x: crownBaseX + perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY + perpY * (halfWidth * 0.5) + pointOffsetY * 0.9, color: 0x00ff88, size: 2 }, // Emerald
+      { x: crownBaseX - perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY - perpY * (halfWidth * 0.5) + pointOffsetY * 0.9, color: 0x4488ff, size: 2 }, // Sapphire
+    ];
+
+    for (const jewel of jewelPositions) {
+      // Jewel glow
+      g.fillStyle(jewel.color, 0.5 * sparkle);
+      g.fillCircle(jewel.x, jewel.y, jewel.size + 2);
+
+      // Jewel body
+      g.fillStyle(jewel.color, 1);
+      g.fillCircle(jewel.x, jewel.y, jewel.size);
+
+      // Jewel highlight
+      g.fillStyle(0xffffff, 0.8 * sparkle);
+      g.fillCircle(jewel.x - 0.5, jewel.y - 0.5, jewel.size * 0.4);
+    }
+
+    // Crown highlight (shiny reflection)
+    g.fillStyle(0xffffe0, 0.5 * sparkle);
+    g.fillCircle(crownBaseX + perpX * 3 + pointOffset * 0.3, crownBaseY + perpY * 3 + pointOffsetY * 0.3, 2);
   }
 }

@@ -66,6 +66,136 @@ function hslToRgb(h: number, s: number, l: number): string {
 // Animation frame counter for rainbow effect
 let frameCount = 0;
 
+function drawCrown(
+  ctx: CanvasRenderingContext2D,
+  headX: number,
+  headY: number,
+  dx: number,
+  dy: number,
+  perpX: number,
+  perpY: number,
+  frame: number
+): void {
+  // Crown sits on top/back of the head
+  const crownOffset = -8;
+  const crownBaseX = headX - dx * crownOffset;
+  const crownBaseY = headY - dy * crownOffset;
+
+  // Crown dimensions
+  const crownWidth = 14;
+  const crownHeight = 10;
+  const halfWidth = crownWidth / 2;
+
+  // Animated sparkle
+  const sparkle = 0.7 + Math.sin(frame * 0.15) * 0.3;
+
+  // Calculate crown points based on snake direction
+  const baseLeft = {
+    x: crownBaseX + perpX * halfWidth,
+    y: crownBaseY + perpY * halfWidth
+  };
+  const baseRight = {
+    x: crownBaseX - perpX * halfWidth,
+    y: crownBaseY - perpY * halfWidth
+  };
+
+  // Crown points extend opposite to movement direction
+  const pointOffset = -dx * crownHeight;
+  const pointOffsetY = -dy * crownHeight;
+
+  // Five crown points
+  const crownPoints = [
+    baseLeft,
+    { x: baseLeft.x + pointOffset * 0.4, y: baseLeft.y + pointOffsetY * 0.4 },
+    { x: crownBaseX + perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY + perpY * (halfWidth * 0.5) + pointOffsetY * 0.9 },
+    { x: crownBaseX + perpX * (halfWidth * 0.25) + pointOffset * 0.5, y: crownBaseY + perpY * (halfWidth * 0.25) + pointOffsetY * 0.5 },
+    { x: crownBaseX + pointOffset, y: crownBaseY + pointOffsetY }, // Center point (tallest)
+    { x: crownBaseX - perpX * (halfWidth * 0.25) + pointOffset * 0.5, y: crownBaseY - perpY * (halfWidth * 0.25) + pointOffsetY * 0.5 },
+    { x: crownBaseX - perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY - perpY * (halfWidth * 0.5) + pointOffsetY * 0.9 },
+    { x: baseRight.x + pointOffset * 0.4, y: baseRight.y + pointOffsetY * 0.4 },
+    baseRight
+  ];
+
+  // Crown glow (golden aura)
+  ctx.fillStyle = `rgba(255, 215, 0, ${0.3 * sparkle})`;
+  ctx.beginPath();
+  ctx.arc(crownBaseX + pointOffset * 0.5, crownBaseY + pointOffsetY * 0.5, crownHeight + 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Crown base (golden)
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath();
+  ctx.moveTo(crownPoints[0].x, crownPoints[0].y);
+  for (let i = 1; i < crownPoints.length; i++) {
+    ctx.lineTo(crownPoints[i].x, crownPoints[i].y);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Crown outline (darker gold)
+  ctx.strokeStyle = '#b8860b';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(crownPoints[0].x, crownPoints[0].y);
+  for (let i = 1; i < crownPoints.length; i++) {
+    ctx.lineTo(crownPoints[i].x, crownPoints[i].y);
+  }
+  ctx.closePath();
+  ctx.stroke();
+
+  // Crown band (horizontal stripe at base)
+  const bandY1 = {
+    x: baseLeft.x + pointOffset * 0.15,
+    y: baseLeft.y + pointOffsetY * 0.15
+  };
+  const bandY2 = {
+    x: baseRight.x + pointOffset * 0.15,
+    y: baseRight.y + pointOffsetY * 0.15
+  };
+  ctx.strokeStyle = '#daa520';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(bandY1.x, bandY1.y);
+  ctx.lineTo(bandY2.x, bandY2.y);
+  ctx.stroke();
+
+  // Jewels on crown points
+  const jewelPositions = [
+    { x: crownBaseX + pointOffset, y: crownBaseY + pointOffsetY, color: '#ff0044', size: 2.5 }, // Center ruby
+    { x: crownBaseX + perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY + perpY * (halfWidth * 0.5) + pointOffsetY * 0.9, color: '#00ff88', size: 2 }, // Emerald
+    { x: crownBaseX - perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY - perpY * (halfWidth * 0.5) + pointOffsetY * 0.9, color: '#4488ff', size: 2 }, // Sapphire
+  ];
+
+  for (const jewel of jewelPositions) {
+    // Jewel glow
+    ctx.fillStyle = jewel.color;
+    ctx.globalAlpha = 0.5 * sparkle;
+    ctx.beginPath();
+    ctx.arc(jewel.x, jewel.y, jewel.size + 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Jewel body
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.arc(jewel.x, jewel.y, jewel.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Jewel highlight
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.8 * sparkle;
+    ctx.beginPath();
+    ctx.arc(jewel.x - 0.5, jewel.y - 0.5, jewel.size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Crown highlight (shiny reflection)
+  ctx.fillStyle = `rgba(255, 255, 224, ${0.5 * sparkle})`;
+  ctx.beginPath();
+  ctx.arc(crownBaseX + perpX * 3 + pointOffset * 0.3, crownBaseY + perpY * 3 + pointOffsetY * 0.3, 2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 // Aurora wave state for Canvas 2D
 interface Aurora2D {
   y: number;
@@ -1131,6 +1261,9 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.beginPath();
       ctx.arc(rightEyeX + dx, rightEyeY + dy, 1.5, 0, Math.PI * 2);
       ctx.fill();
+
+      // Draw the royal crown
+      drawCrown(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
     } else {
       // Body segment with rainbow color
       const segmentHue = (hueOffset + (i * 15)) % 360;
