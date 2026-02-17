@@ -399,6 +399,21 @@ let foodOrbitParticles: FoodOrbitParticle2D[] = [];
 let foodOrbPhase = 0;
 let foodOrbInitialized = false;
 
+// Flame particle system - burning effect trailing behind snake
+interface FlameParticle2D {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  life: number;
+  maxLife: number;
+  hue: number;
+  brightness: number;
+}
+let flameParticles: FlameParticle2D[] = [];
+const MAX_FLAME_PARTICLES = 60;
+
 function initFloatingStars(): void {
   if (starsInitialized) return;
   starsInitialized = true;
@@ -594,6 +609,74 @@ function initFoodOrbParticles(): void {
         layer,
       });
     }
+  }
+}
+
+function spawnFlameParticle(x: number, y: number, intensity: number): void {
+  if (flameParticles.length >= MAX_FLAME_PARTICLES) {
+    // Remove oldest particle
+    flameParticles.shift();
+  }
+
+  const angle = Math.random() * Math.PI * 2;
+  const speed = 0.3 + Math.random() * 0.6;
+  const life = 0.5 + Math.random() * 0.5;
+
+  flameParticles.push({
+    x: x + (Math.random() - 0.5) * 6,
+    y: y + (Math.random() - 0.5) * 6,
+    vx: Math.cos(angle) * speed * 0.3,
+    vy: -0.5 - Math.random() * 1.5 * intensity, // Flames rise upward
+    size: 3 + Math.random() * 4 * intensity,
+    life,
+    maxLife: life,
+    hue: 15 + Math.random() * 30, // Orange to red-orange range
+    brightness: 0.5 + Math.random() * 0.3,
+  });
+}
+
+function updateFlameParticles(): void {
+  for (let i = flameParticles.length - 1; i >= 0; i--) {
+    const p = flameParticles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy -= 0.02; // Slight upward acceleration (flames rise)
+    p.vx *= 0.98; // Horizontal drag
+    p.size *= 0.97; // Shrink over time
+    p.life -= 0.025;
+
+    if (p.life <= 0 || p.size < 0.5) {
+      flameParticles.splice(i, 1);
+    }
+  }
+}
+
+function drawFlameParticles(ctx: CanvasRenderingContext2D): void {
+  for (const p of flameParticles) {
+    const lifeRatio = p.life / p.maxLife;
+
+    // Hue shifts from yellow (high life) to red (low life)
+    const hue = p.hue - (1 - lifeRatio) * 15;
+    const saturation = 100;
+    const lightness = 50 + lifeRatio * 20;
+
+    // Outer glow
+    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness - 20}%, ${lifeRatio * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Mid flame
+    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${lifeRatio * 0.6})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * 1.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core (bright yellow/white)
+    ctx.fillStyle = `hsla(${hue + 20}, ${saturation - 30}%, ${lightness + 30}%, ${lifeRatio * 0.8})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * 0.6, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 
@@ -821,6 +904,9 @@ function updateCanvas2DEffects(): void {
       burstParticles.splice(i, 1);
     }
   }
+
+  // Update flame particles
+  updateFlameParticles();
 }
 
 function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
@@ -867,6 +953,20 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   if (lightningTimer >= 8 && gameState.snake.length > 1 && !gameState.gameOver) {
     lightningTimer = 0;
     spawnLightningBetweenSegments(gameState.snake, hueOffset);
+  }
+
+  // Spawn flame particles along the snake body (every few frames)
+  if (frameCount % 2 === 0 && !gameState.gameOver) {
+    for (let i = 0; i < gameState.snake.length; i++) {
+      const seg = gameState.snake[i];
+      const segX = seg.x * CELL_SIZE + CELL_SIZE / 2;
+      const segY = seg.y * CELL_SIZE + CELL_SIZE / 2;
+      // More flames at head, fewer at tail
+      const intensity = 1 - (i / gameState.snake.length) * 0.6;
+      if (Math.random() < 0.4 * intensity) {
+        spawnFlameParticle(segX, segY, intensity);
+      }
+    }
   }
 
   // Detect game over transition
@@ -1015,6 +1115,9 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   ctx.ellipse(foodX + 4, foodY + 2 + bounce, 3, 2, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
+
+  // Draw flame particles behind the snake (burning trail effect)
+  drawFlameParticles(ctx);
 
   // Cute snake with soft colors
   const snake = gameState.snake;

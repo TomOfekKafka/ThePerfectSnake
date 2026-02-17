@@ -128,6 +128,7 @@ const NUM_VORTEX_PARTICLES = 20;
 const NUM_METEORS = 8;
 const MAX_DEATH_DEBRIS = 24;
 const NUM_MONSTERS_PER_EDGE = 2;
+const MAX_FLAME_PARTICLES = 60;
 
 // Meteor shower types
 interface Meteor {
@@ -170,6 +171,19 @@ interface MonsterShadow {
   edge: 'top' | 'bottom' | 'left' | 'right';
   targetAlpha: number;
   currentAlpha: number;
+}
+
+// Flame particle for burning effect
+interface FlameParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  life: number;
+  maxLife: number;
+  hue: number;
+  brightness: number;
 }
 
 // Color palette - Film Noir theme: high contrast black/white with dramatic shadows
@@ -242,6 +256,8 @@ export class SnakeScene extends Phaser.Scene {
   private spotlightY = 0;
   private smokeParticles: { x: number; y: number; vx: number; vy: number; size: number; alpha: number; life: number }[] = [];
   private monsterShadows: MonsterShadow[] = [];
+  // Burning flame particles trailing behind snake
+  private flameParticles: FlameParticle[] = [];
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -937,6 +953,12 @@ export class SnakeScene extends Phaser.Scene {
     this.venetianPhase += 0.008;
     this.updateParticles();
     this.updateSmokeParticles();
+    this.updateFlameParticles();
+
+    // Spawn flame particles along snake every few frames
+    if (this.frameCount % 2 === 0) {
+      this.spawnFlamesAlongSnake();
+    }
 
     // Spawn trail particles when snake moves
     if (this.currentState && this.currentState.snake.length > 0) {
@@ -996,6 +1018,9 @@ export class SnakeScene extends Phaser.Scene {
 
     // Draw snake afterimages (ghost trail)
     this.drawSnakeAfterimages(g);
+
+    // Draw flame particles (burning trail behind snake)
+    this.drawFlameParticles(g);
 
     // Food with enhanced glow, particles and energy tendrils
     this.drawFood(g);
@@ -1125,6 +1150,83 @@ export class SnakeScene extends Phaser.Scene {
       g.fillCircle(smoke.x, smoke.y, smoke.size);
       g.fillStyle(COLORS.noirWhite, alpha * 0.3);
       g.fillCircle(smoke.x, smoke.y, smoke.size * 0.5);
+    }
+  }
+
+  private spawnFlameParticle(x: number, y: number, intensity: number): void {
+    if (this.flameParticles.length >= MAX_FLAME_PARTICLES) {
+      this.flameParticles.shift();
+    }
+
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.3 + Math.random() * 0.6;
+    const life = 0.5 + Math.random() * 0.5;
+
+    this.flameParticles.push({
+      x: x + (Math.random() - 0.5) * 6,
+      y: y + (Math.random() - 0.5) * 6,
+      vx: Math.cos(angle) * speed * 0.3,
+      vy: -0.5 - Math.random() * 1.5 * intensity,
+      size: 3 + Math.random() * 4 * intensity,
+      life,
+      maxLife: life,
+      hue: 15 + Math.random() * 30,
+      brightness: 0.5 + Math.random() * 0.3,
+    });
+  }
+
+  private updateFlameParticles(): void {
+    for (let i = this.flameParticles.length - 1; i >= 0; i--) {
+      const p = this.flameParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy -= 0.02;
+      p.vx *= 0.98;
+      p.size *= 0.97;
+      p.life -= 0.025;
+
+      if (p.life <= 0 || p.size < 0.5) {
+        this.flameParticles.splice(i, 1);
+      }
+    }
+  }
+
+  private drawFlameParticles(g: Phaser.GameObjects.Graphics): void {
+    for (const p of this.flameParticles) {
+      const lifeRatio = p.life / p.maxLife;
+
+      // Hue shifts from yellow-orange (high life) to red (low life)
+      const hue = p.hue - (1 - lifeRatio) * 15;
+      const outerColor = this.hslToRgb(hue / 360, 1, 0.3 + lifeRatio * 0.2);
+      const midColor = this.hslToRgb(hue / 360, 1, 0.5 + lifeRatio * 0.2);
+      const coreColor = this.hslToRgb((hue + 20) / 360, 0.7, 0.7 + lifeRatio * 0.2);
+
+      // Outer glow
+      g.fillStyle(outerColor, lifeRatio * 0.3);
+      g.fillCircle(p.x, p.y, p.size * 2);
+
+      // Mid flame
+      g.fillStyle(midColor, lifeRatio * 0.6);
+      g.fillCircle(p.x, p.y, p.size * 1.3);
+
+      // Core (bright yellow/white)
+      g.fillStyle(coreColor, lifeRatio * 0.8);
+      g.fillCircle(p.x, p.y, p.size * 0.6);
+    }
+  }
+
+  private spawnFlamesAlongSnake(): void {
+    if (!this.currentState || this.currentState.gameOver) return;
+
+    const snake = this.currentState.snake;
+    for (let i = 0; i < snake.length; i++) {
+      const seg = snake[i];
+      const segX = seg.x * CELL_SIZE + CELL_SIZE / 2;
+      const segY = seg.y * CELL_SIZE + CELL_SIZE / 2;
+      const intensity = 1 - (i / snake.length) * 0.6;
+      if (Math.random() < 0.4 * intensity) {
+        this.spawnFlameParticle(segX, segY, intensity);
+      }
     }
   }
 
