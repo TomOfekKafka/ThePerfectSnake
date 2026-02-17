@@ -22,26 +22,30 @@ const CELL_SIZE = 20;
 
 const GRID_SIZE = 20;
 
-// Color palette matching SnakeScene - Film Noir theme
+// Color palette - Childish theme: bright, playful, pastel colors
 const COLORS = {
-  bgDark: '#0a0a0a',
-  bgMid: '#1a1a1a',
-  gridLine: '#2a2a2a',
-  gridAccent: '#404040',
-  snakeHead: '#e8e8e8',
-  snakeBody: '#c0c0c0',
-  snakeTail: '#909090',
-  snakeHighlight: '#ffffff',
+  bgLight: '#fffef0',
+  bgPaper: '#fff8e7',
+  gridLine: '#ffe4c4',
+  gridAccent: '#ffd1a4',
+  snakeHead: '#7cd85a',
+  snakeBody: '#8ce368',
+  snakeTail: '#a8ed8a',
+  snakeHighlight: '#c4f7aa',
   snakeEye: '#ffffff',
-  snakePupil: '#000000',
-  snakeGlow: '#d0d0d0',
-  food: '#ffffff',
-  foodCore: '#ffffff',
-  foodGlow: '#cccccc',
-  gameOverOverlay: 'rgba(0, 0, 0, 0.85)',
-  noirWhite: '#f0f0f0',
-  noirGray: '#808080',
-  noirDark: '#303030',
+  snakePupil: '#2d2d2d',
+  snakeCheek: '#ffb6c1',
+  food: '#ff6b8a',
+  foodCore: '#ff8fa3',
+  foodGlow: '#ffccd5',
+  gameOverOverlay: 'rgba(255, 200, 220, 0.9)',
+  crayonRed: '#ff6b6b',
+  crayonOrange: '#ffa94d',
+  crayonYellow: '#ffd43b',
+  crayonGreen: '#69db7c',
+  crayonBlue: '#74c0fc',
+  crayonPurple: '#da77f2',
+  crayonPink: '#faa2c1',
 };
 
 function hslToRgb(h: number, s: number, l: number): string {
@@ -69,7 +73,7 @@ function hslToRgb(h: number, s: number, l: number): string {
 // Animation frame counter for rainbow effect
 let frameCount = 0;
 
-function drawCrown(
+function drawBow(
   ctx: CanvasRenderingContext2D,
   headX: number,
   headY: number,
@@ -79,124 +83,63 @@ function drawCrown(
   perpY: number,
   frame: number
 ): void {
-  // Crown sits on top/back of the head
-  const crownOffset = -8;
-  const crownBaseX = headX - dx * crownOffset;
-  const crownBaseY = headY - dy * crownOffset;
+  // Cute bow sits on top of the snake's head
+  const bowOffset = -6;
+  const bowBaseX = headX - dx * bowOffset;
+  const bowBaseY = headY - dy * bowOffset;
 
-  // Crown dimensions
-  const crownWidth = 14;
-  const crownHeight = 10;
-  const halfWidth = crownWidth / 2;
+  // Animated bounce
+  const bounce = Math.sin(frame * 0.1) * 1.5;
+  const bowY = bowBaseY + bounce;
 
-  // Animated sparkle
-  const sparkle = 0.7 + Math.sin(frame * 0.15) * 0.3;
+  // Bow colors
+  const bowColor = '#ff69b4';
+  const bowDark = '#ff1493';
+  const bowLight = '#ffb6c1';
 
-  // Calculate crown points based on snake direction
-  const baseLeft = {
-    x: crownBaseX + perpX * halfWidth,
-    y: crownBaseY + perpY * halfWidth
-  };
-  const baseRight = {
-    x: crownBaseX - perpX * halfWidth,
-    y: crownBaseY - perpY * halfWidth
-  };
-
-  // Crown points extend opposite to movement direction
-  const pointOffset = -dx * crownHeight;
-  const pointOffsetY = -dy * crownHeight;
-
-  // Five crown points
-  const crownPoints = [
-    baseLeft,
-    { x: baseLeft.x + pointOffset * 0.4, y: baseLeft.y + pointOffsetY * 0.4 },
-    { x: crownBaseX + perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY + perpY * (halfWidth * 0.5) + pointOffsetY * 0.9 },
-    { x: crownBaseX + perpX * (halfWidth * 0.25) + pointOffset * 0.5, y: crownBaseY + perpY * (halfWidth * 0.25) + pointOffsetY * 0.5 },
-    { x: crownBaseX + pointOffset, y: crownBaseY + pointOffsetY }, // Center point (tallest)
-    { x: crownBaseX - perpX * (halfWidth * 0.25) + pointOffset * 0.5, y: crownBaseY - perpY * (halfWidth * 0.25) + pointOffsetY * 0.5 },
-    { x: crownBaseX - perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY - perpY * (halfWidth * 0.5) + pointOffsetY * 0.9 },
-    { x: baseRight.x + pointOffset * 0.4, y: baseRight.y + pointOffsetY * 0.4 },
-    baseRight
-  ];
-
-  // Crown glow (golden aura)
-  ctx.fillStyle = `rgba(255, 215, 0, ${0.3 * sparkle})`;
+  // Left loop
+  ctx.fillStyle = bowColor;
   ctx.beginPath();
-  ctx.arc(crownBaseX + pointOffset * 0.5, crownBaseY + pointOffsetY * 0.5, crownHeight + 4, 0, Math.PI * 2);
+  ctx.ellipse(bowBaseX + perpX * 6, bowY + perpY * 6, 5, 7, Math.atan2(perpY, perpX) + 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = bowLight;
+  ctx.beginPath();
+  ctx.ellipse(bowBaseX + perpX * 6 - 1, bowY + perpY * 6 - 1, 2, 3, Math.atan2(perpY, perpX), 0, Math.PI * 2);
   ctx.fill();
 
-  // Crown base (golden)
-  ctx.fillStyle = '#ffd700';
+  // Right loop
+  ctx.fillStyle = bowColor;
   ctx.beginPath();
-  ctx.moveTo(crownPoints[0].x, crownPoints[0].y);
-  for (let i = 1; i < crownPoints.length; i++) {
-    ctx.lineTo(crownPoints[i].x, crownPoints[i].y);
-  }
-  ctx.closePath();
+  ctx.ellipse(bowBaseX - perpX * 6, bowY - perpY * 6, 5, 7, Math.atan2(perpY, perpX) - 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = bowLight;
+  ctx.beginPath();
+  ctx.ellipse(bowBaseX - perpX * 6 - 1, bowY - perpY * 6 - 1, 2, 3, Math.atan2(perpY, perpX), 0, Math.PI * 2);
   ctx.fill();
 
-  // Crown outline (darker gold)
-  ctx.strokeStyle = '#b8860b';
-  ctx.lineWidth = 1.5;
+  // Center knot
+  ctx.fillStyle = bowDark;
   ctx.beginPath();
-  ctx.moveTo(crownPoints[0].x, crownPoints[0].y);
-  for (let i = 1; i < crownPoints.length; i++) {
-    ctx.lineTo(crownPoints[i].x, crownPoints[i].y);
-  }
-  ctx.closePath();
-  ctx.stroke();
+  ctx.arc(bowBaseX, bowY, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = bowLight;
+  ctx.beginPath();
+  ctx.arc(bowBaseX - 1, bowY - 1, 1.5, 0, Math.PI * 2);
+  ctx.fill();
 
-  // Crown band (horizontal stripe at base)
-  const bandY1 = {
-    x: baseLeft.x + pointOffset * 0.15,
-    y: baseLeft.y + pointOffsetY * 0.15
-  };
-  const bandY2 = {
-    x: baseRight.x + pointOffset * 0.15,
-    y: baseRight.y + pointOffsetY * 0.15
-  };
-  ctx.strokeStyle = '#daa520';
+  // Ribbons hanging down
+  ctx.strokeStyle = bowColor;
   ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  const ribbonWave = Math.sin(frame * 0.15) * 2;
   ctx.beginPath();
-  ctx.moveTo(bandY1.x, bandY1.y);
-  ctx.lineTo(bandY2.x, bandY2.y);
+  ctx.moveTo(bowBaseX + 2, bowY + 3);
+  ctx.quadraticCurveTo(bowBaseX + 4 + ribbonWave, bowY + 10, bowBaseX + 2, bowY + 14);
   ctx.stroke();
-
-  // Jewels on crown points
-  const jewelPositions = [
-    { x: crownBaseX + pointOffset, y: crownBaseY + pointOffsetY, color: '#ff0044', size: 2.5 }, // Center ruby
-    { x: crownBaseX + perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY + perpY * (halfWidth * 0.5) + pointOffsetY * 0.9, color: '#00ff88', size: 2 }, // Emerald
-    { x: crownBaseX - perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY - perpY * (halfWidth * 0.5) + pointOffsetY * 0.9, color: '#4488ff', size: 2 }, // Sapphire
-  ];
-
-  for (const jewel of jewelPositions) {
-    // Jewel glow
-    ctx.fillStyle = jewel.color;
-    ctx.globalAlpha = 0.5 * sparkle;
-    ctx.beginPath();
-    ctx.arc(jewel.x, jewel.y, jewel.size + 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Jewel body
-    ctx.globalAlpha = 1;
-    ctx.beginPath();
-    ctx.arc(jewel.x, jewel.y, jewel.size, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Jewel highlight
-    ctx.fillStyle = '#ffffff';
-    ctx.globalAlpha = 0.8 * sparkle;
-    ctx.beginPath();
-    ctx.arc(jewel.x - 0.5, jewel.y - 0.5, jewel.size * 0.4, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // Crown highlight (shiny reflection)
-  ctx.fillStyle = `rgba(255, 255, 224, ${0.5 * sparkle})`;
   ctx.beginPath();
-  ctx.arc(crownBaseX + perpX * 3 + pointOffset * 0.3, crownBaseY + perpY * 3 + pointOffsetY * 0.3, 2, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.moveTo(bowBaseX - 2, bowY + 3);
+  ctx.quadraticCurveTo(bowBaseX - 4 - ribbonWave, bowY + 10, bowBaseX - 2, bowY + 14);
+  ctx.stroke();
 }
 
 // Aurora wave state for Canvas 2D
@@ -291,8 +234,8 @@ let venetianPhase = 0;
 let spotlightX = 200;
 let spotlightY = 200;
 
-// Monster shadow state - lurking creatures at the edges
-interface MonsterShadow2D {
+// Floating star/sparkle state - friendly decorations
+interface FloatingStar2D {
   x: number;
   y: number;
   baseX: number;
@@ -300,15 +243,11 @@ interface MonsterShadow2D {
   size: number;
   phase: number;
   speed: number;
-  eyePhase: number;
-  tentaclePhase: number;
-  edge: 'top' | 'bottom' | 'left' | 'right';
-  active: boolean;
-  targetAlpha: number;
-  currentAlpha: number;
+  twinklePhase: number;
+  color: string;
 }
-let monsterShadows: MonsterShadow2D[] = [];
-let monstersInitialized = false;
+let floatingStars: FloatingStar2D[] = [];
+let starsInitialized = false;
 
 // Meteor shower state
 interface Meteor2D {
@@ -354,182 +293,81 @@ let foodOrbitParticles: FoodOrbitParticle2D[] = [];
 let foodOrbPhase = 0;
 let foodOrbInitialized = false;
 
-function initMonsterShadows(): void {
-  if (monstersInitialized) return;
-  monstersInitialized = true;
+function initFloatingStars(): void {
+  if (starsInitialized) return;
+  starsInitialized = true;
 
   const width = GRID_SIZE * CELL_SIZE;
   const height = GRID_SIZE * CELL_SIZE;
-  monsterShadows = [];
+  floatingStars = [];
 
-  // Create monsters on each edge
-  const edges: ('top' | 'bottom' | 'left' | 'right')[] = ['top', 'bottom', 'left', 'right'];
-  for (const edge of edges) {
-    // 2 monsters per edge
-    for (let i = 0; i < 2; i++) {
-      let x = 0, y = 0;
-      const offset = (i + 0.5) / 2;
+  const starColors = [COLORS.crayonYellow, COLORS.crayonPink, COLORS.crayonBlue, COLORS.crayonPurple, COLORS.crayonOrange];
 
-      switch (edge) {
-        case 'top':
-          x = width * offset;
-          y = -15;
-          break;
-        case 'bottom':
-          x = width * offset;
-          y = height + 15;
-          break;
-        case 'left':
-          x = -15;
-          y = height * offset;
-          break;
-        case 'right':
-          x = width + 15;
-          y = height * offset;
-          break;
-      }
+  // Create friendly floating stars around the edges
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    const dist = Math.max(width, height) * 0.45;
+    const x = width / 2 + Math.cos(angle) * dist;
+    const y = height / 2 + Math.sin(angle) * dist;
 
-      monsterShadows.push({
-        x,
-        y,
-        baseX: x,
-        baseY: y,
-        size: 25 + Math.random() * 15,
-        phase: Math.random() * Math.PI * 2,
-        speed: 0.02 + Math.random() * 0.015,
-        eyePhase: Math.random() * Math.PI * 2,
-        tentaclePhase: Math.random() * Math.PI * 2,
-        edge,
-        active: true,
-        targetAlpha: 0.3 + Math.random() * 0.2,
-        currentAlpha: 0,
-      });
-    }
+    floatingStars.push({
+      x,
+      y,
+      baseX: x,
+      baseY: y,
+      size: 8 + Math.random() * 8,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.02 + Math.random() * 0.02,
+      twinklePhase: Math.random() * Math.PI * 2,
+      color: starColors[i % starColors.length],
+    });
   }
 }
 
-function updateMonsterShadows(snakeHead: { x: number; y: number } | null, gameOver: boolean): void {
+function updateFloatingStars(): void {
   const width = GRID_SIZE * CELL_SIZE;
   const height = GRID_SIZE * CELL_SIZE;
 
-  for (const monster of monsterShadows) {
-    monster.phase += monster.speed;
-    monster.eyePhase += 0.05;
-    monster.tentaclePhase += 0.03;
+  for (const star of floatingStars) {
+    star.phase += star.speed;
+    star.twinklePhase += 0.08;
 
-    // Monsters creep toward the game area slightly
-    const creepAmount = gameOver ? 25 : 8;
-    const breathAmount = 3;
+    // Gentle floating motion
+    const floatX = Math.sin(star.phase) * 8;
+    const floatY = Math.cos(star.phase * 0.7) * 6;
 
-    // Calculate base position with breathing
-    let targetX = monster.baseX;
-    let targetY = monster.baseY;
+    star.x = star.baseX + floatX;
+    star.y = star.baseY + floatY;
 
-    const breath = Math.sin(monster.phase) * breathAmount;
-
-    switch (monster.edge) {
-      case 'top':
-        targetY = monster.baseY + creepAmount + breath;
-        targetX = monster.baseX + Math.sin(monster.phase * 0.5) * 10;
-        break;
-      case 'bottom':
-        targetY = monster.baseY - creepAmount - breath;
-        targetX = monster.baseX + Math.sin(monster.phase * 0.5) * 10;
-        break;
-      case 'left':
-        targetX = monster.baseX + creepAmount + breath;
-        targetY = monster.baseY + Math.sin(monster.phase * 0.5) * 10;
-        break;
-      case 'right':
-        targetX = monster.baseX - creepAmount - breath;
-        targetY = monster.baseY + Math.sin(monster.phase * 0.5) * 10;
-        break;
-    }
-
-    // If snake is nearby, monster recoils slightly
-    if (snakeHead) {
-      const headX = snakeHead.x * CELL_SIZE + CELL_SIZE / 2;
-      const headY = snakeHead.y * CELL_SIZE + CELL_SIZE / 2;
-      const dx = monster.x - headX;
-      const dy = monster.y - headY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist < 100 && !gameOver) {
-        // Recoil away from snake
-        const recoil = (100 - dist) / 100 * 20;
-        targetX += (dx / dist) * recoil;
-        targetY += (dy / dist) * recoil;
-      }
-    }
-
-    // Smooth movement
-    monster.x += (targetX - monster.x) * 0.05;
-    monster.y += (targetY - monster.y) * 0.05;
-
-    // Clamp to reasonable bounds
-    monster.x = Math.max(-50, Math.min(width + 50, monster.x));
-    monster.y = Math.max(-50, Math.min(height + 50, monster.y));
-
-    // Fade alpha - more visible during game over
-    const baseAlpha = gameOver ? 0.6 : monster.targetAlpha;
-    monster.currentAlpha += (baseAlpha - monster.currentAlpha) * 0.05;
+    // Keep stars on screen
+    star.x = Math.max(-20, Math.min(width + 20, star.x));
+    star.y = Math.max(-20, Math.min(height + 20, star.y));
   }
 }
 
-function drawMonsterShadow(ctx: CanvasRenderingContext2D, monster: MonsterShadow2D): void {
-  const { x, y, size, phase, eyePhase, tentaclePhase, currentAlpha } = monster;
+function drawFloatingStar(ctx: CanvasRenderingContext2D, star: FloatingStar2D): void {
+  const { x, y, size, twinklePhase, color } = star;
 
-  if (currentAlpha < 0.01) return;
+  const twinkle = 0.6 + Math.sin(twinklePhase) * 0.4;
+  const scale = 0.9 + Math.sin(twinklePhase * 1.5) * 0.1;
+  const starSize = size * scale;
 
   ctx.save();
 
-  // Main body - amorphous blob
-  const bodyPulse = 1 + Math.sin(phase * 2) * 0.1;
-  const bodySize = size * bodyPulse;
-
-  // Outer shadow/glow
-  ctx.fillStyle = `rgba(0, 0, 0, ${currentAlpha * 0.3})`;
+  // Outer glow
+  ctx.fillStyle = color;
+  ctx.globalAlpha = twinkle * 0.3;
   ctx.beginPath();
-  ctx.arc(x, y, bodySize * 1.4, 0, Math.PI * 2);
+  ctx.arc(x, y, starSize * 1.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // Draw tentacles extending from body
-  const numTentacles = 5;
-  for (let i = 0; i < numTentacles; i++) {
-    const angle = (i / numTentacles) * Math.PI * 2 + tentaclePhase;
-    const tentacleLength = bodySize * (0.8 + Math.sin(phase + i) * 0.3);
-    const wave = Math.sin(tentaclePhase * 2 + i * 0.7) * 8;
-
-    const startX = x + Math.cos(angle) * bodySize * 0.5;
-    const startY = y + Math.sin(angle) * bodySize * 0.5;
-    const midX = x + Math.cos(angle) * tentacleLength * 0.7 + wave;
-    const midY = y + Math.sin(angle) * tentacleLength * 0.7 + wave * 0.5;
-    const endX = x + Math.cos(angle + Math.sin(phase) * 0.3) * tentacleLength;
-    const endY = y + Math.sin(angle + Math.sin(phase) * 0.3) * tentacleLength;
-
-    ctx.strokeStyle = `rgba(10, 10, 10, ${currentAlpha * 0.7})`;
-    ctx.lineWidth = 4 - i * 0.3;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    ctx.quadraticCurveTo(midX, midY, endX, endY);
-    ctx.stroke();
-
-    // Tentacle tip glow
-    ctx.fillStyle = `rgba(30, 0, 30, ${currentAlpha * 0.5})`;
-    ctx.beginPath();
-    ctx.arc(endX, endY, 3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Main body
-  ctx.fillStyle = `rgba(5, 5, 10, ${currentAlpha * 0.9})`;
+  // Draw 4-pointed star shape
+  ctx.globalAlpha = twinkle * 0.9;
+  ctx.fillStyle = color;
   ctx.beginPath();
-  // Draw irregular blob shape
-  for (let i = 0; i <= 12; i++) {
-    const angle = (i / 12) * Math.PI * 2;
-    const wobble = Math.sin(phase * 3 + i * 0.8) * size * 0.15;
-    const r = bodySize * 0.6 + wobble;
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2 - Math.PI / 2;
+    const r = i % 2 === 0 ? starSize : starSize * 0.4;
     const px = x + Math.cos(angle) * r;
     const py = y + Math.sin(angle) * r;
     if (i === 0) {
@@ -541,45 +379,12 @@ function drawMonsterShadow(ctx: CanvasRenderingContext2D, monster: MonsterShadow
   ctx.closePath();
   ctx.fill();
 
-  // Inner darker core
-  ctx.fillStyle = `rgba(0, 0, 0, ${currentAlpha})`;
+  // White center sparkle
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = twinkle;
   ctx.beginPath();
-  ctx.arc(x, y, bodySize * 0.35, 0, Math.PI * 2);
+  ctx.arc(x, y, starSize * 0.3, 0, Math.PI * 2);
   ctx.fill();
-
-  // Glowing eyes (2-3 eyes)
-  const numEyes = 2 + Math.floor(Math.sin(phase * 0.1) + 1);
-  for (let i = 0; i < numEyes; i++) {
-    const eyeAngle = (i / numEyes) * Math.PI * 0.8 - Math.PI * 0.4 + Math.sin(eyePhase) * 0.2;
-    const eyeDist = bodySize * 0.2;
-    const eyeX = x + Math.cos(eyeAngle) * eyeDist;
-    const eyeY = y + Math.sin(eyeAngle) * eyeDist - size * 0.1;
-    const eyeSize = 3 + Math.sin(eyePhase + i) * 1;
-
-    // Eye glow
-    ctx.fillStyle = `rgba(80, 0, 40, ${currentAlpha * 0.6})`;
-    ctx.beginPath();
-    ctx.arc(eyeX, eyeY, eyeSize * 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Eye core - menacing red
-    ctx.fillStyle = `rgba(180, 20, 60, ${currentAlpha})`;
-    ctx.beginPath();
-    ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Eye pupil
-    ctx.fillStyle = `rgba(0, 0, 0, ${currentAlpha})`;
-    ctx.beginPath();
-    ctx.arc(eyeX + Math.sin(eyePhase) * 1, eyeY, eyeSize * 0.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Eye glint
-    ctx.fillStyle = `rgba(255, 100, 100, ${currentAlpha * 0.8})`;
-    ctx.beginPath();
-    ctx.arc(eyeX - 1, eyeY - 1, eyeSize * 0.25, 0, Math.PI * 2);
-    ctx.fill();
-  }
 
   ctx.restore();
 }
@@ -659,8 +464,8 @@ function initCanvas2DEffects(): void {
   // Initialize food orb particles
   initFoodOrbParticles();
 
-  // Initialize monster shadows
-  initMonsterShadows();
+  // Initialize floating stars
+  initFloatingStars();
 }
 
 function initFoodOrbParticles(): void {
@@ -971,342 +776,163 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.translate(screenShakeX, screenShakeY);
   }
 
-  // Film noir deep black background
-  ctx.fillStyle = COLORS.bgDark;
+  // Childish warm paper background
+  ctx.fillStyle = COLORS.bgLight;
   ctx.fillRect(0, 0, width, height);
 
-  // Dramatic spotlight effect centered on snake
-  const spotPulse = 0.9 + Math.sin(frameCount * 0.03) * 0.1;
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  // Subtle paper texture gradient
+  const paperGradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.8);
+  paperGradient.addColorStop(0, 'rgba(255, 255, 240, 0.5)');
+  paperGradient.addColorStop(1, 'rgba(255, 245, 220, 0.3)');
+  ctx.fillStyle = paperGradient;
   ctx.fillRect(0, 0, width, height);
 
-  // Spotlight cone - multiple layers for smooth falloff
-  const spotGradient = ctx.createRadialGradient(spotlightX, spotlightY, 0, spotlightX, spotlightY, width * 0.5 * spotPulse);
-  spotGradient.addColorStop(0, 'rgba(255, 255, 238, 0.12)');
-  spotGradient.addColorStop(0.3, 'rgba(240, 240, 240, 0.06)');
-  spotGradient.addColorStop(0.6, 'rgba(200, 200, 200, 0.02)');
-  spotGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = spotGradient;
-  ctx.fillRect(0, 0, width, height);
+  // Draw cute crayon-style border doodles
+  const crayonColors = [COLORS.crayonRed, COLORS.crayonOrange, COLORS.crayonYellow, COLORS.crayonGreen, COLORS.crayonBlue, COLORS.crayonPurple];
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
 
-  // Venetian blind light streaks
-  const blindSpacing = 25;
-  const blindWidth = 8;
-  const waveOffset = Math.sin(venetianPhase) * 10;
-  ctx.fillStyle = COLORS.noirWhite;
-  for (let y = waveOffset; y < height; y += blindSpacing) {
-    const brightness = 0.03 + Math.sin(y * 0.02 + venetianPhase * 2) * 0.015;
-    ctx.globalAlpha = brightness;
-    ctx.fillRect(0, y, width, blindWidth);
-  }
-  ctx.globalAlpha = 1;
-
-  // Diagonal shadow bars
-  ctx.fillStyle = '#000000';
-  ctx.globalAlpha = 0.04 + Math.sin(frameCount * 0.02) * 0.01;
-  for (let i = -2; i < 6; i++) {
-    const x1 = i * 100 + Math.sin(venetianPhase) * 20;
+  // Wavy border lines
+  for (let side = 0; side < 4; side++) {
+    const color = crayonColors[side % crayonColors.length];
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.3;
     ctx.beginPath();
-    ctx.moveTo(x1, 0);
-    ctx.lineTo(x1 + 40, 0);
-    ctx.lineTo(x1 + 40 + height * 0.3, height);
-    ctx.lineTo(x1 + height * 0.3, height);
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // Film noir grid: subtle dark lines
-  ctx.strokeStyle = COLORS.gridLine;
-  ctx.globalAlpha = 0.08;
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= GRID_SIZE; i++) {
-    ctx.beginPath();
-    ctx.moveTo(i * CELL_SIZE, 0);
-    ctx.lineTo(i * CELL_SIZE, height);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(0, i * CELL_SIZE);
-    ctx.lineTo(width, i * CELL_SIZE);
-    ctx.stroke();
-  }
-
-  // Accent lines every 5 cells
-  const accentPulse = 0.12 + Math.sin(frameCount * 0.03) * 0.04;
-  ctx.strokeStyle = COLORS.gridAccent;
-  ctx.globalAlpha = accentPulse;
-  for (let i = 0; i <= GRID_SIZE; i += 5) {
-    ctx.beginPath();
-    ctx.moveTo(i * CELL_SIZE, 0);
-    ctx.lineTo(i * CELL_SIZE, height);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(0, i * CELL_SIZE);
-    ctx.lineTo(width, i * CELL_SIZE);
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20;
+      const wobble = Math.sin(t * Math.PI * 4 + frameCount * 0.03) * 3;
+      let px = 0, py = 0;
+      if (side === 0) { px = t * width; py = 5 + wobble; }
+      else if (side === 1) { px = width - 5 - wobble; py = t * height; }
+      else if (side === 2) { px = (1 - t) * width; py = height - 5 - wobble; }
+      else { px = 5 + wobble; py = (1 - t) * height; }
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
 
-  // Heavy vignette for dramatic noir look
-  for (let i = 0; i < 5; i++) {
-    const inset = i * 30;
-    const vignetteAlpha = 0.15 * (1 - i / 5);
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 60;
-    ctx.globalAlpha = vignetteAlpha;
-    ctx.strokeRect(inset - 30, inset - 30, width - inset * 2 + 60, height - inset * 2 + 60);
+  // Playful dotted grid like graph paper
+  ctx.fillStyle = COLORS.gridLine;
+  ctx.globalAlpha = 0.25;
+  for (let i = 1; i < GRID_SIZE; i++) {
+    for (let j = 1; j < GRID_SIZE; j++) {
+      ctx.beginPath();
+      ctx.arc(i * CELL_SIZE, j * CELL_SIZE, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
   ctx.globalAlpha = 1;
 
-  // Update and draw monster shadows lurking at the edges
-  const snakeHead = gameState.snake.length > 0 ? gameState.snake[0] : null;
-  updateMonsterShadows(snakeHead, gameState.gameOver);
-  for (const monster of monsterShadows) {
-    drawMonsterShadow(ctx, monster);
+  // Draw floating stars in corners
+  updateFloatingStars();
+  for (const star of floatingStars) {
+    drawFloatingStar(ctx, star);
   }
 
-  // Dramatic pulsing orb food effect
+  // Cute apple/candy food
   const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
   const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
 
-  // Update food orb phase
-  foodOrbPhase += 0.05;
-  const orbPulse = 0.8 + Math.sin(foodOrbPhase * 2) * 0.2;
-  const orbPulse2 = 0.9 + Math.sin(foodOrbPhase * 3 + 1) * 0.1;
+  // Update food bounce phase
+  foodOrbPhase += 0.08;
+  const bounce = Math.sin(foodOrbPhase * 2) * 2;
+  const squish = 1 + Math.sin(foodOrbPhase * 4) * 0.05;
 
-  // Outer gravitational field - concentric rings expanding outward
-  for (let ring = 4; ring >= 0; ring--) {
-    const ringRadius = 25 + ring * 6 + Math.sin(foodOrbPhase - ring * 0.3) * 3;
-    const ringAlpha = 0.03 + (4 - ring) * 0.015;
-    const ringHue = (350 + ring * 8 + frameCount * 0.5) % 360;
-    ctx.strokeStyle = hslToRgb(ringHue / 360, 0.8, 0.5);
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = ringAlpha * orbPulse;
-    ctx.beginPath();
-    ctx.arc(foodX, foodY, ringRadius, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  // Draw orbiting particles in layers
-  for (const particle of foodOrbitParticles) {
-    particle.angle += particle.speed;
-    const wobble = Math.sin(foodOrbPhase * 2 + particle.angle * 3) * 2;
-    const px = foodX + Math.cos(particle.angle) * (particle.radius + wobble);
-    const py = foodY + Math.sin(particle.angle) * (particle.radius + wobble);
-    const particleColor = hslToRgb(particle.hue / 360, 0.9, 0.6);
-
-    // Particle trail
-    const trailAngle = particle.angle - particle.speed * 8;
-    const trailX = foodX + Math.cos(trailAngle) * particle.radius;
-    const trailY = foodY + Math.sin(trailAngle) * particle.radius;
-    ctx.strokeStyle = particleColor;
-    ctx.lineWidth = particle.size * 0.6;
-    ctx.globalAlpha = particle.alpha * 0.3 * orbPulse;
-    ctx.beginPath();
-    ctx.moveTo(trailX, trailY);
-    ctx.lineTo(px, py);
-    ctx.stroke();
-
-    // Particle glow
-    ctx.fillStyle = particleColor;
-    ctx.globalAlpha = particle.alpha * 0.4 * orbPulse;
-    ctx.beginPath();
-    ctx.arc(px, py, particle.size * 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Particle core
-    ctx.globalAlpha = particle.alpha * orbPulse;
-    ctx.beginPath();
-    ctx.arc(px, py, particle.size, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Bright center
-    ctx.fillStyle = '#ffffff';
-    ctx.globalAlpha = particle.alpha * 0.6 * orbPulse;
-    ctx.beginPath();
-    ctx.arc(px, py, particle.size * 0.4, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Rotating energy rings around the orb
-  for (let i = 0; i < 3; i++) {
-    const ringRotation = foodOrbPhase * (1.5 - i * 0.3) + i * Math.PI / 3;
-    const ringRadius = CELL_SIZE / 2 + 6 + i * 3;
-    const ringHue = (350 + i * 20 + frameCount * 0.8) % 360;
-    const arcLength = Math.PI * 0.6 + Math.sin(foodOrbPhase + i) * 0.2;
-
-    ctx.strokeStyle = hslToRgb(ringHue / 360, 1, 0.6);
-    ctx.lineWidth = 2 - i * 0.3;
-    ctx.globalAlpha = (0.5 - i * 0.1) * orbPulse2;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.arc(foodX, foodY, ringRadius, ringRotation, ringRotation + arcLength);
-    ctx.stroke();
-    // Opposite arc
-    ctx.beginPath();
-    ctx.arc(foodX, foodY, ringRadius, ringRotation + Math.PI, ringRotation + Math.PI + arcLength);
-    ctx.stroke();
-  }
-
-  // Outer mystical aura - large pulsing glow
-  const auraRadius = CELL_SIZE / 2 + 14 + Math.sin(foodOrbPhase) * 4;
-  const auraGradient = ctx.createRadialGradient(foodX, foodY, CELL_SIZE / 4, foodX, foodY, auraRadius);
-  auraGradient.addColorStop(0, 'rgba(255, 34, 102, 0)');
-  auraGradient.addColorStop(0.5, 'rgba(255, 68, 136, 0.15)');
-  auraGradient.addColorStop(0.8, 'rgba(255, 34, 102, 0.08)');
-  auraGradient.addColorStop(1, 'rgba(255, 34, 102, 0)');
-  ctx.fillStyle = auraGradient;
-  ctx.globalAlpha = orbPulse;
+  // Shadow under apple
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
   ctx.beginPath();
-  ctx.arc(foodX, foodY, auraRadius, 0, Math.PI * 2);
+  ctx.ellipse(foodX, foodY + CELL_SIZE / 2 + 2, CELL_SIZE / 3, 3, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Middle glow layer
-  ctx.fillStyle = COLORS.foodGlow;
-  ctx.globalAlpha = 0.35 * orbPulse2;
-  ctx.beginPath();
-  ctx.arc(foodX, foodY, CELL_SIZE / 2 + 6, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Inner glow
-  ctx.globalAlpha = 0.5 * orbPulse;
-  ctx.beginPath();
-  ctx.arc(foodX, foodY, CELL_SIZE / 2 + 3, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Main orb body with gradient
-  const orbGradient = ctx.createRadialGradient(foodX - 2, foodY - 2, 0, foodX, foodY, CELL_SIZE / 2);
-  orbGradient.addColorStop(0, '#ffccdd');
-  orbGradient.addColorStop(0.3, '#ff6699');
-  orbGradient.addColorStop(0.7, COLORS.food);
-  orbGradient.addColorStop(1, '#cc1144');
-  ctx.fillStyle = orbGradient;
+  // Apple body with cute gradient
+  const appleGradient = ctx.createRadialGradient(foodX - 3, foodY - 3 + bounce, 2, foodX, foodY + bounce, CELL_SIZE / 2);
+  appleGradient.addColorStop(0, '#ff9999');
+  appleGradient.addColorStop(0.4, COLORS.food);
+  appleGradient.addColorStop(1, '#cc3355');
+  ctx.fillStyle = appleGradient;
   ctx.globalAlpha = 1;
   ctx.beginPath();
-  ctx.arc(foodX, foodY, CELL_SIZE / 2, 0, Math.PI * 2);
+  ctx.ellipse(foodX, foodY + bounce, CELL_SIZE / 2 * squish, CELL_SIZE / 2 / squish, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Pulsing inner plasma effect
-  const plasmaCount = 4;
-  for (let p = 0; p < plasmaCount; p++) {
-    const plasmaAngle = foodOrbPhase * 2 + (p * Math.PI * 2) / plasmaCount;
-    const plasmaRadius = CELL_SIZE * 0.2;
-    const plasmaDist = CELL_SIZE * 0.15;
-    const plasmaX = foodX + Math.cos(plasmaAngle) * plasmaDist;
-    const plasmaY = foodY + Math.sin(plasmaAngle) * plasmaDist;
-    const plasmaHue = (350 + p * 15 + frameCount) % 360;
-
-    ctx.fillStyle = hslToRgb(plasmaHue / 360, 0.8, 0.7);
-    ctx.globalAlpha = 0.4 + Math.sin(foodOrbPhase * 3 + p) * 0.2;
-    ctx.beginPath();
-    ctx.arc(plasmaX, plasmaY, plasmaRadius, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Bright core highlight
-  ctx.fillStyle = COLORS.foodCore;
-  ctx.globalAlpha = 0.9;
+  // Apple indent at top
+  ctx.fillStyle = '#cc3355';
   ctx.beginPath();
-  ctx.arc(foodX - 3, foodY - 3, 4, 0, Math.PI * 2);
+  ctx.ellipse(foodX, foodY - CELL_SIZE / 2 + 4 + bounce, 4, 2, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Sparkle highlight
+  // Cute leaf
+  ctx.fillStyle = '#69db7c';
+  ctx.beginPath();
+  ctx.ellipse(foodX + 4, foodY - CELL_SIZE / 2 + bounce, 5, 3, Math.PI / 4, 0, Math.PI * 2);
+  ctx.fill();
+  // Leaf vein
+  ctx.strokeStyle = '#40a050';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(foodX + 2, foodY - CELL_SIZE / 2 + 2 + bounce);
+  ctx.lineTo(foodX + 6, foodY - CELL_SIZE / 2 - 2 + bounce);
+  ctx.stroke();
+
+  // Stem
+  ctx.strokeStyle = '#8b5a2b';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(foodX, foodY - CELL_SIZE / 2 + 2 + bounce);
+  ctx.lineTo(foodX - 1, foodY - CELL_SIZE / 2 - 4 + bounce);
+  ctx.stroke();
+
+  // Cute highlight sparkle
   ctx.fillStyle = '#ffffff';
-  ctx.globalAlpha = 0.8 + Math.sin(foodOrbPhase * 4) * 0.2;
+  ctx.globalAlpha = 0.8;
   ctx.beginPath();
-  ctx.arc(foodX - 4, foodY - 4, 2, 0, Math.PI * 2);
+  ctx.arc(foodX - 4, foodY - 3 + bounce, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  ctx.arc(foodX - 2, foodY - 5 + bounce, 1.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // Secondary sparkle
-  ctx.globalAlpha = 0.5 + Math.sin(foodOrbPhase * 5 + 1) * 0.3;
+  // Rosy cheek on apple (makes it cute!)
+  ctx.fillStyle = COLORS.snakeCheek;
+  ctx.globalAlpha = 0.4;
   ctx.beginPath();
-  ctx.arc(foodX + 2, foodY - 3, 1.5, 0, Math.PI * 2);
+  ctx.ellipse(foodX + 4, foodY + 2 + bounce, 3, 2, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  // Snake with rainbow effects
+  // Cute snake with soft colors
   const snake = gameState.snake;
   const snakeLen = snake.length;
 
-  // Draw trailing rainbow glow first
-  for (let i = snakeLen - 1; i >= 0; i--) {
-    const segment = snake[i];
-    const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
-    const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2;
-    const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
-    const glowAlpha = 0.2 * t;
-    const glowSize = (CELL_SIZE / 2 + 4) * (0.5 + t * 0.5);
-
-    const segmentHue = (hueOffset + (i * 15)) % 360;
-    ctx.fillStyle = hslToRgb(segmentHue / 360, 0.9, 0.6);
-    ctx.globalAlpha = glowAlpha;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, glowSize, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // Draw snake segments with rainbow gradient
+  // Draw snake segments (back to front)
   for (let i = snakeLen - 1; i >= 0; i--) {
     const segment = snake[i];
     const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
     const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2;
 
     const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
-    const radius = (CELL_SIZE / 2 - 1) * (0.85 + t * 0.15);
+    const radius = (CELL_SIZE / 2 - 1) * (0.9 + t * 0.1);
+
+    // Pastel green gradient for body
+    const greenShade = 0.5 + t * 0.15;
 
     if (i === 0) {
-      // Dynamic head color
-      const headHue = (hueOffset + 120) % 360;
-      const headColor = hslToRgb(headHue / 360, 0.9, 0.55);
-
-      // Outer plasma corona
-      const coronaHue = (hueOffset + 90) % 360;
-      const coronaColor = hslToRgb(coronaHue / 360, 1, 0.6);
-      ctx.fillStyle = coronaColor;
-      ctx.globalAlpha = 0.15 + Math.sin(frameCount * 0.2) * 0.05;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius + 10, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Head glow
-      ctx.fillStyle = headColor;
-      ctx.globalAlpha = 0.4;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius + 5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Head base
+      // Cute snake head
+      const headGradient = ctx.createRadialGradient(centerX - 2, centerY - 2, 0, centerX, centerY, radius + 2);
+      headGradient.addColorStop(0, COLORS.snakeHighlight);
+      headGradient.addColorStop(0.5, COLORS.snakeHead);
+      headGradient.addColorStop(1, '#5bc040');
+      ctx.fillStyle = headGradient;
       ctx.globalAlpha = 1;
-      ctx.fillStyle = headColor;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, radius + 1, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, radius + 2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Plasma core effect - swirling inner energy
-      const coreRadius = radius * 0.6;
-      const plasmaPhase = frameCount * 0.15;
-      for (let p = 0; p < 3; p++) {
-        const plasmaAngle = plasmaPhase + (p * Math.PI * 2) / 3;
-        const plasmaX = centerX + Math.cos(plasmaAngle) * coreRadius * 0.4;
-        const plasmaY = centerY + Math.sin(plasmaAngle) * coreRadius * 0.4;
-        const plasmaHue = (headHue + 40 + p * 20) % 360;
-        ctx.fillStyle = hslToRgb(plasmaHue / 360, 1, 0.7);
-        ctx.globalAlpha = 0.5 + Math.sin(plasmaPhase + p) * 0.2;
-        ctx.beginPath();
-        ctx.arc(plasmaX, plasmaY, coreRadius * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Head highlight
-      ctx.fillStyle = '#ffffff';
-      ctx.globalAlpha = 0.5;
-      ctx.beginPath();
-      ctx.arc(centerX - 2, centerY - 2, radius * 0.4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-
-      // Eyes
+      // Eyes direction
       const nextSegment = snake[1];
       let dx = 1, dy = 0;
       if (nextSegment) {
@@ -1319,205 +945,111 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       const perpX = -dy;
       const perpY = dx;
       const eyeOffset = 4;
-      const eyeForward = 3;
+      const eyeForward = 2;
 
+      // Big cute eyes
       const leftEyeX = centerX + perpX * eyeOffset + dx * eyeForward;
       const leftEyeY = centerY + perpY * eyeOffset + dy * eyeForward;
-      ctx.fillStyle = COLORS.snakeEye;
-      ctx.beginPath();
-      ctx.arc(leftEyeX, leftEyeY, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = COLORS.snakePupil;
-      ctx.beginPath();
-      ctx.arc(leftEyeX + dx, leftEyeY + dy, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-
       const rightEyeX = centerX - perpX * eyeOffset + dx * eyeForward;
       const rightEyeY = centerY - perpY * eyeOffset + dy * eyeForward;
+
+      // Eye whites (bigger for cute look)
       ctx.fillStyle = COLORS.snakeEye;
       ctx.beginPath();
-      ctx.arc(rightEyeX, rightEyeY, 3, 0, Math.PI * 2);
+      ctx.arc(leftEyeX, leftEyeY, 4, 0, Math.PI * 2);
       ctx.fill();
+      ctx.beginPath();
+      ctx.arc(rightEyeX, rightEyeY, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pupils (looking in movement direction)
       ctx.fillStyle = COLORS.snakePupil;
       ctx.beginPath();
-      ctx.arc(rightEyeX + dx, rightEyeY + dy, 1.5, 0, Math.PI * 2);
+      ctx.arc(leftEyeX + dx * 1.5, leftEyeY + dy * 1.5, 2, 0, Math.PI * 2);
       ctx.fill();
-
-      // Draw the royal crown
-      drawCrown(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
-    } else {
-      // Body segment with rainbow color
-      const segmentHue = (hueOffset + (i * 15)) % 360;
-      const segmentColor = hslToRgb(segmentHue / 360, 0.8, 0.5);
-
-      // Body glow
-      ctx.fillStyle = segmentColor;
-      ctx.globalAlpha = 0.3;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, radius + 2, 0, Math.PI * 2);
+      ctx.arc(rightEyeX + dx * 1.5, rightEyeY + dy * 1.5, 2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Body segment
+      // Eye sparkles (makes it cute!)
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(leftEyeX - 1, leftEyeY - 1, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(rightEyeX - 1, rightEyeY - 1, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Rosy cheeks
+      ctx.fillStyle = COLORS.snakeCheek;
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      ctx.ellipse(centerX + perpX * 6, centerY + perpY * 6, 3, 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(centerX - perpX * 6, centerY - perpY * 6, 3, 2, 0, 0, Math.PI * 2);
+      ctx.fill();
       ctx.globalAlpha = 1;
-      ctx.fillStyle = segmentColor;
+
+      // Cute smile
+      ctx.strokeStyle = '#4a9030';
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      const smileX = centerX + dx * 5;
+      const smileY = centerY + dy * 5;
+      ctx.beginPath();
+      ctx.arc(smileX, smileY, 3, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+
+      // Draw cute bow instead of crown
+      drawBow(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
+    } else {
+      // Body segment with cute soft gradient
+      const bodyGradient = ctx.createRadialGradient(centerX - 1, centerY - 1, 0, centerX, centerY, radius);
+      bodyGradient.addColorStop(0, COLORS.snakeHighlight);
+      bodyGradient.addColorStop(0.4, hslToRgb(0.33, 0.6, greenShade));
+      bodyGradient.addColorStop(1, hslToRgb(0.33, 0.65, greenShade - 0.1));
+      ctx.fillStyle = bodyGradient;
+      ctx.globalAlpha = 1;
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Highlight on segment
+      // Cute highlight on each segment
       ctx.fillStyle = '#ffffff';
-      ctx.globalAlpha = 0.25 * t;
+      ctx.globalAlpha = 0.4;
       ctx.beginPath();
-      ctx.arc(centerX - 1, centerY - 1, radius * 0.3, 0, Math.PI * 2);
+      ctx.arc(centerX - 2, centerY - 2, radius * 0.25, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
     }
   }
 
-  // Draw energy field around snake
-  if (energyFieldPulse > 0 || true) {
-    const baseIntensity = 0.08 + energyFieldPulse * 0.3;
-    const pulseOffset = Math.sin(frameCount * 0.1) * 0.03;
-    const fieldAlpha = Math.min(0.4, baseIntensity + pulseOffset);
+  // Draw cute sparkle burst particles (when eating food)
+  const crayonBurstColors = [COLORS.crayonPink, COLORS.crayonYellow, COLORS.crayonBlue, COLORS.crayonPurple, COLORS.crayonOrange];
+  for (let pi = 0; pi < burstParticles.length; pi++) {
+    const p = burstParticles[pi];
+    const burstColor = crayonBurstColors[pi % crayonBurstColors.length];
 
-    for (let i = 0; i < snake.length; i++) {
-      const seg = snake[i];
-      const cx = seg.x * CELL_SIZE + CELL_SIZE / 2;
-      const cy = seg.y * CELL_SIZE + CELL_SIZE / 2;
-      const fieldRadius = CELL_SIZE * (0.8 + energyFieldPulse * 0.6) + Math.sin(frameCount * 0.15 + i * 0.5) * 3;
-      const segmentHue = (hueOffset + i * 15) % 360;
-      const fieldColor = hslToRgb(segmentHue / 360, 0.7, 0.5);
-
-      ctx.fillStyle = fieldColor;
-      ctx.globalAlpha = fieldAlpha * 0.3;
-      ctx.beginPath();
-      ctx.arc(cx, cy, fieldRadius + 4, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.globalAlpha = fieldAlpha * 0.5;
-      ctx.beginPath();
-      ctx.arc(cx, cy, fieldRadius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  // Draw lightning bolts between segments
-  for (const bolt of lightningBolts) {
-    const boltColor = hslToRgb(bolt.hue / 360, 1, 0.7);
-    const coreColor = '#ffffff';
-
-    // Outer glow
-    ctx.strokeStyle = boltColor;
-    ctx.lineWidth = 6;
-    ctx.globalAlpha = bolt.life * bolt.intensity * 0.3;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(bolt.segments[0].x, bolt.segments[0].y);
-    for (let i = 1; i < bolt.segments.length; i++) {
-      ctx.lineTo(bolt.segments[i].x, bolt.segments[i].y);
-    }
-    ctx.stroke();
-
-    // Main bolt
-    ctx.strokeStyle = boltColor;
-    ctx.lineWidth = 3;
-    ctx.globalAlpha = bolt.life * bolt.intensity * 0.7;
-    ctx.beginPath();
-    ctx.moveTo(bolt.segments[0].x, bolt.segments[0].y);
-    for (let i = 1; i < bolt.segments.length; i++) {
-      ctx.lineTo(bolt.segments[i].x, bolt.segments[i].y);
-    }
-    ctx.stroke();
-
-    // White-hot core
-    ctx.strokeStyle = coreColor;
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = bolt.life * bolt.intensity * 0.9;
-    ctx.beginPath();
-    ctx.moveTo(bolt.segments[0].x, bolt.segments[0].y);
-    for (let i = 1; i < bolt.segments.length; i++) {
-      ctx.lineTo(bolt.segments[i].x, bolt.segments[i].y);
-    }
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-
-  // Draw scanline effect (subtle CRT aesthetic)
-  const scanGradient = ctx.createLinearGradient(0, scanlineY - 15, 0, scanlineY + 15);
-  scanGradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
-  scanGradient.addColorStop(0.4, 'rgba(200, 255, 255, 0.04)');
-  scanGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
-  scanGradient.addColorStop(0.6, 'rgba(200, 255, 255, 0.04)');
-  scanGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-  ctx.fillStyle = scanGradient;
-  ctx.fillRect(0, scanlineY - 15, width, 30);
-
-  // Draw burst particles
-  for (const p of burstParticles) {
-    const burstColor = hslToRgb(p.hue / 360, 1, 0.6);
-
-    // Draw trail
-    for (let i = 0; i < p.trail.length; i++) {
-      const t = p.trail[i];
-      const trailAlpha = p.life * 0.5 * (1 - i / p.trail.length);
-      const trailSize = p.size * p.life * (1 - i / p.trail.length);
-      ctx.fillStyle = burstColor;
-      ctx.globalAlpha = trailAlpha;
-      ctx.beginPath();
-      ctx.arc(t.x, t.y, trailSize, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Draw particle
+    // Draw as little hearts/stars
     ctx.fillStyle = burstColor;
     ctx.globalAlpha = p.life * 0.8;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
-    ctx.fill();
+    const size = p.size * p.life;
 
-    ctx.fillStyle = '#ffffff';
-    ctx.globalAlpha = p.life * 0.9;
+    // Draw a little star shape
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * p.life * 0.4, 0, Math.PI * 2);
+    for (let j = 0; j < 10; j++) {
+      const angle = (j / 10) * Math.PI * 2 - Math.PI / 2;
+      const r = j % 2 === 0 ? size : size * 0.4;
+      const sx = p.x + Math.cos(angle) * r;
+      const sy = p.y + Math.sin(angle) * r;
+      if (j === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    }
+    ctx.closePath();
     ctx.fill();
   }
   ctx.globalAlpha = 1;
-
-  // Draw chromatic aberration effect
-  if (chromaticIntensity > 0) {
-    const offset = chromaticIntensity * 3;
-    for (let i = 0; i < snake.length; i++) {
-      const seg = snake[i];
-      const cx = seg.x * CELL_SIZE + CELL_SIZE / 2;
-      const cy = seg.y * CELL_SIZE + CELL_SIZE / 2;
-      const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
-      const radius = (CELL_SIZE / 2 - 1) * (0.85 + t * 0.15);
-      const alpha = chromaticIntensity * 0.4 * (i === 0 ? 1 : 0.6);
-
-      // Red channel - offset left
-      ctx.fillStyle = '#ff0000';
-      ctx.globalAlpha = alpha;
-      ctx.beginPath();
-      ctx.arc(cx - offset, cy, radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Blue channel - offset right
-      ctx.fillStyle = '#0000ff';
-      ctx.beginPath();
-      ctx.arc(cx + offset, cy, radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Cyan channel - offset up
-      ctx.fillStyle = '#00ffff';
-      ctx.globalAlpha = alpha * 0.5;
-      ctx.beginPath();
-      ctx.arc(cx, cy - offset * 0.7, radius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
 
   // Draw death debris
   if (deathExplosionPhase > 0.7) {
@@ -1633,16 +1165,34 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   }
   ctx.globalAlpha = 1;
 
-  // Game over overlay
+  // Cute game over overlay
   if (gameState.gameOver) {
     ctx.fillStyle = COLORS.gameOverOverlay;
     ctx.fillRect(0, 0, width, height);
 
-    // Border glow effect
-    ctx.strokeStyle = '#ff3366';
-    ctx.lineWidth = 4;
-    ctx.globalAlpha = 0.5;
-    ctx.strokeRect(2, 2, width - 4, height - 4);
+    // Friendly wavy border
+    ctx.strokeStyle = COLORS.crayonPink;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    for (let i = 0; i <= 40; i++) {
+      const t = i / 40;
+      const wave = Math.sin(t * Math.PI * 8 + frameCount * 0.05) * 3;
+      const x = t * width;
+      if (i === 0) ctx.moveTo(x, 8 + wave);
+      else ctx.lineTo(x, 8 + wave);
+    }
+    ctx.stroke();
+    ctx.beginPath();
+    for (let i = 0; i <= 40; i++) {
+      const t = i / 40;
+      const wave = Math.sin(t * Math.PI * 8 + frameCount * 0.05) * 3;
+      const x = t * width;
+      if (i === 0) ctx.moveTo(x, height - 8 + wave);
+      else ctx.lineTo(x, height - 8 + wave);
+    }
+    ctx.stroke();
     ctx.globalAlpha = 1;
   }
 
