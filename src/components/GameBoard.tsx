@@ -243,6 +243,33 @@ interface InfernoParticle2D {
 }
 let infernoParticles: InfernoParticle2D[] = [];
 
+// Comet trail state - smooth glowing ribbon trail
+interface CometTrailSegment2D {
+  x: number;
+  y: number;
+  alpha: number;
+  size: number;
+  hue: number;
+}
+let cometTrail: CometTrailSegment2D[] = [];
+const MAX_COMET_TRAIL_LENGTH = 30;
+
+// Ethereal particle state - luminous drifting particles
+interface EtherealParticle2D {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  life: number;
+  maxLife: number;
+  hue: number;
+  brightness: number;
+  pulsePhase: number;
+}
+let etherealParticles: EtherealParticle2D[] = [];
+const MAX_ETHEREAL_PARTICLES = 50;
+
 function initArmageddonEffects(): void {
   if (effectsInitialized) return;
   effectsInitialized = true;
@@ -354,6 +381,203 @@ function spawnScreenCrack(x: number, y: number): void {
   }
 
   screenCracks.push({ x, y, segments, life: 1 });
+}
+
+function spawnEtherealParticle(x: number, y: number, hue: number): void {
+  if (etherealParticles.length >= MAX_ETHEREAL_PARTICLES) {
+    etherealParticles.shift();
+  }
+
+  const angle = Math.random() * Math.PI * 2;
+  const speed = 0.3 + Math.random() * 0.5;
+  const life = 0.8 + Math.random() * 0.4;
+
+  etherealParticles.push({
+    x: x + (Math.random() - 0.5) * 10,
+    y: y + (Math.random() - 0.5) * 10,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed - 0.3,
+    size: 3 + Math.random() * 4,
+    life,
+    maxLife: life,
+    hue: hue + (Math.random() - 0.5) * 30,
+    brightness: 0.5 + Math.random() * 0.3,
+    pulsePhase: Math.random() * Math.PI * 2,
+  });
+}
+
+function updateCometTrail(gameState: GameState): void {
+  if (gameState.gameOver) {
+    // Fade out trail on game over
+    for (const seg of cometTrail) {
+      seg.alpha *= 0.9;
+    }
+    cometTrail = cometTrail.filter(s => s.alpha > 0.01);
+    return;
+  }
+
+  const snake = gameState.snake;
+  if (snake.length === 0) return;
+
+  const head = snake[0];
+  const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+  const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+  // Add new trail segment at head position
+  if (frameCount % 2 === 0) {
+    const hue = 270 + Math.sin(frameCount * 0.05) * 20;
+    cometTrail.unshift({
+      x: headX,
+      y: headY,
+      alpha: 1,
+      size: CELL_SIZE / 2 + 2,
+      hue,
+    });
+
+    // Spawn ethereal particles from trail
+    if (Math.random() < 0.6) {
+      spawnEtherealParticle(headX, headY, hue);
+    }
+  }
+
+  // Limit trail length and fade segments
+  while (cometTrail.length > MAX_COMET_TRAIL_LENGTH) {
+    cometTrail.pop();
+  }
+
+  // Fade all segments
+  for (let i = 0; i < cometTrail.length; i++) {
+    const fadeRate = 0.06 + (i / cometTrail.length) * 0.04;
+    cometTrail[i].alpha -= fadeRate;
+    cometTrail[i].size *= 0.97;
+  }
+
+  // Remove fully faded segments
+  cometTrail = cometTrail.filter(s => s.alpha > 0);
+}
+
+function updateEtherealParticles(): void {
+  for (let i = etherealParticles.length - 1; i >= 0; i--) {
+    const p = etherealParticles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy -= 0.015;
+    p.vx *= 0.98;
+    p.size *= 0.985;
+    p.life -= 0.02;
+    p.pulsePhase += 0.15;
+
+    if (p.life <= 0 || p.size < 0.5) {
+      etherealParticles.splice(i, 1);
+    }
+  }
+}
+
+function drawCometTrail(ctx: CanvasRenderingContext2D): void {
+  if (cometTrail.length < 2) return;
+
+  // Draw outer glow layer
+  for (let i = 0; i < cometTrail.length; i++) {
+    const seg = cometTrail[i];
+    if (seg.alpha < 0.05) continue;
+
+    const progress = i / cometTrail.length;
+    const glowSize = seg.size * (1.5 + progress * 0.5);
+    const glowAlpha = seg.alpha * 0.15 * (1 - progress * 0.5);
+
+    // Outer ethereal glow
+    ctx.fillStyle = `hsla(${seg.hue}, 60%, 40%, ${glowAlpha})`;
+    ctx.beginPath();
+    ctx.arc(seg.x, seg.y, glowSize * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Mid glow
+    ctx.fillStyle = `hsla(${seg.hue}, 70%, 50%, ${glowAlpha * 1.5})`;
+    ctx.beginPath();
+    ctx.arc(seg.x, seg.y, glowSize, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw connecting ribbon between segments
+  for (let i = 0; i < cometTrail.length - 1; i++) {
+    const seg1 = cometTrail[i];
+    const seg2 = cometTrail[i + 1];
+    if (seg1.alpha < 0.1 || seg2.alpha < 0.1) continue;
+
+    const progress = i / cometTrail.length;
+    const ribbonAlpha = Math.min(seg1.alpha, seg2.alpha) * 0.4 * (1 - progress * 0.5);
+    const ribbonWidth = (seg1.size + seg2.size) / 2 * 0.6;
+
+    // Ribbon core
+    ctx.strokeStyle = `hsla(${seg1.hue}, 80%, 60%, ${ribbonAlpha})`;
+    ctx.lineWidth = ribbonWidth;
+    ctx.beginPath();
+    ctx.moveTo(seg1.x, seg1.y);
+    ctx.lineTo(seg2.x, seg2.y);
+    ctx.stroke();
+
+    // Bright inner ribbon
+    ctx.strokeStyle = `rgba(255, 255, 255, ${ribbonAlpha * 0.6})`;
+    ctx.lineWidth = ribbonWidth * 0.4;
+    ctx.beginPath();
+    ctx.moveTo(seg1.x, seg1.y);
+    ctx.lineTo(seg2.x, seg2.y);
+    ctx.stroke();
+  }
+
+  // Draw core particles at each segment
+  for (let i = 0; i < cometTrail.length; i++) {
+    const seg = cometTrail[i];
+    if (seg.alpha < 0.1) continue;
+
+    const progress = i / cometTrail.length;
+    const coreAlpha = seg.alpha * 0.6 * (1 - progress * 0.7);
+    const coreSize = seg.size * 0.5 * (1 - progress * 0.3);
+
+    // Core glow
+    ctx.fillStyle = `hsla(${seg.hue}, 90%, 70%, ${coreAlpha})`;
+    ctx.beginPath();
+    ctx.arc(seg.x, seg.y, coreSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bright white center
+    ctx.fillStyle = `rgba(255, 255, 255, ${coreAlpha * 0.5})`;
+    ctx.beginPath();
+    ctx.arc(seg.x, seg.y, coreSize * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawEtherealParticles(ctx: CanvasRenderingContext2D): void {
+  for (const p of etherealParticles) {
+    const lifeRatio = p.life / p.maxLife;
+    const pulse = 0.7 + Math.sin(p.pulsePhase) * 0.3;
+    const alpha = lifeRatio * pulse;
+
+    // Outer glow
+    ctx.fillStyle = `hsla(${p.hue}, 50%, 30%, ${alpha * 0.2})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Mid glow
+    ctx.fillStyle = `hsla(${p.hue}, 70%, 50%, ${alpha * 0.4})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core
+    ctx.fillStyle = `hsla(${p.hue}, 90%, 70%, ${alpha * 0.7})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bright center
+    ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.5})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function spawnInferno(snake: Position[]): void {
@@ -528,6 +752,8 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   }
 
   updateArmageddonEffects();
+  updateCometTrail(gameState);
+  updateEtherealParticles();
 
   ctx.save();
   ctx.scale(canvas.width / width, canvas.height / height);
@@ -644,6 +870,12 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
+
+  // Draw comet trail (glowing ribbon behind snake)
+  drawCometTrail(ctx);
+
+  // Draw ethereal particles (luminous drifting particles)
+  drawEtherealParticles(ctx);
 
   // Draw flame particles
   for (const p of flameParticles) {

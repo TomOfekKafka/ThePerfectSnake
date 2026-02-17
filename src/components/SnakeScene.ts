@@ -129,6 +129,31 @@ const NUM_METEORS = 8;
 const MAX_DEATH_DEBRIS = 24;
 const NUM_MONSTERS_PER_EDGE = 2;
 const MAX_FLAME_PARTICLES = 60;
+const MAX_COMET_TRAIL_LENGTH = 30;
+const MAX_ETHEREAL_PARTICLES = 50;
+
+// Comet trail segment - stores historical snake positions for smooth trail rendering
+interface CometTrailSegment {
+  x: number;
+  y: number;
+  alpha: number;
+  size: number;
+  hue: number;
+}
+
+// Ethereal trail particle - luminous particles that drift away from trail
+interface EtherealParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  life: number;
+  maxLife: number;
+  hue: number;
+  brightness: number;
+  pulsePhase: number;
+}
 
 // Meteor shower types
 interface Meteor {
@@ -258,6 +283,12 @@ export class SnakeScene extends Phaser.Scene {
   private monsterShadows: MonsterShadow[] = [];
   // Burning flame particles trailing behind snake
   private flameParticles: FlameParticle[] = [];
+  // Comet trail system - historical positions for smooth ribbon trail
+  private cometTrail: CometTrailSegment[] = [];
+  // Ethereal particles that drift away from the trail
+  private etherealParticles: EtherealParticle[] = [];
+  // Track last few head positions for smooth interpolation
+  private headHistory: { x: number; y: number; time: number }[] = [];
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -954,6 +985,8 @@ export class SnakeScene extends Phaser.Scene {
     this.updateParticles();
     this.updateSmokeParticles();
     this.updateFlameParticles();
+    this.updateCometTrail();
+    this.updateEtherealParticles();
 
     // Spawn flame particles along snake every few frames
     if (this.frameCount % 2 === 0) {
@@ -1009,6 +1042,12 @@ export class SnakeScene extends Phaser.Scene {
     this.drawMonsterShadows(g);
 
     if (!this.currentState) return;
+
+    // Draw comet trail (smooth ribbon trail behind snake)
+    this.drawCometTrail(g);
+
+    // Draw ethereal particles (luminous drifting particles)
+    this.drawEtherealParticles(g);
 
     // Draw trail particles (behind everything else)
     this.drawTrailParticles(g);
@@ -1595,6 +1634,197 @@ export class SnakeScene extends Phaser.Scene {
       g.fillCircle(p.x, p.y, p.size * 1.5 * p.life);
       g.fillStyle(COLORS.noirWhite, p.life * 0.5);
       g.fillCircle(p.x, p.y, p.size * p.life);
+    }
+  }
+
+  // Update comet trail - add new segments and fade old ones
+  private updateCometTrail(): void {
+    if (!this.currentState || this.currentState.gameOver) {
+      // Fade out trail on game over
+      for (const seg of this.cometTrail) {
+        seg.alpha *= 0.9;
+      }
+      this.cometTrail = this.cometTrail.filter(s => s.alpha > 0.01);
+      return;
+    }
+
+    const snake = this.currentState.snake;
+    if (snake.length === 0) return;
+
+    const head = snake[0];
+    const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Track head history for smooth interpolation
+    this.headHistory.unshift({ x: headX, y: headY, time: this.frameCount });
+    if (this.headHistory.length > 10) this.headHistory.pop();
+
+    // Add new trail segment at head position
+    if (this.frameCount % 2 === 0) {
+      const hue = 270 + Math.sin(this.frameCount * 0.05) * 20;
+      this.cometTrail.unshift({
+        x: headX,
+        y: headY,
+        alpha: 1,
+        size: CELL_SIZE / 2 + 2,
+        hue,
+      });
+
+      // Spawn ethereal particles from trail
+      if (Math.random() < 0.6) {
+        this.spawnEtherealParticle(headX, headY, hue);
+      }
+    }
+
+    // Limit trail length and fade segments
+    while (this.cometTrail.length > MAX_COMET_TRAIL_LENGTH) {
+      this.cometTrail.pop();
+    }
+
+    // Fade all segments
+    for (let i = 0; i < this.cometTrail.length; i++) {
+      const fadeRate = 0.06 + (i / this.cometTrail.length) * 0.04;
+      this.cometTrail[i].alpha -= fadeRate;
+      this.cometTrail[i].size *= 0.97;
+    }
+
+    // Remove fully faded segments
+    this.cometTrail = this.cometTrail.filter(s => s.alpha > 0);
+  }
+
+  // Spawn an ethereal particle that drifts away from the trail
+  private spawnEtherealParticle(x: number, y: number, hue: number): void {
+    if (this.etherealParticles.length >= MAX_ETHEREAL_PARTICLES) {
+      this.etherealParticles.shift();
+    }
+
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.3 + Math.random() * 0.5;
+    const life = 0.8 + Math.random() * 0.4;
+
+    this.etherealParticles.push({
+      x: x + (Math.random() - 0.5) * 10,
+      y: y + (Math.random() - 0.5) * 10,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 0.3,
+      size: 3 + Math.random() * 4,
+      life,
+      maxLife: life,
+      hue: hue + (Math.random() - 0.5) * 30,
+      brightness: 0.5 + Math.random() * 0.3,
+      pulsePhase: Math.random() * Math.PI * 2,
+    });
+  }
+
+  // Update ethereal particles
+  private updateEtherealParticles(): void {
+    for (let i = this.etherealParticles.length - 1; i >= 0; i--) {
+      const p = this.etherealParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy -= 0.015; // Slight upward drift
+      p.vx *= 0.98;
+      p.size *= 0.985;
+      p.life -= 0.02;
+      p.pulsePhase += 0.15;
+
+      if (p.life <= 0 || p.size < 0.5) {
+        this.etherealParticles.splice(i, 1);
+      }
+    }
+  }
+
+  // Draw the comet trail - smooth glowing ribbon
+  private drawCometTrail(g: Phaser.GameObjects.Graphics): void {
+    if (this.cometTrail.length < 2) return;
+
+    // Draw outer glow layer
+    for (let i = 0; i < this.cometTrail.length; i++) {
+      const seg = this.cometTrail[i];
+      if (seg.alpha < 0.05) continue;
+
+      const progress = i / this.cometTrail.length;
+      const glowSize = seg.size * (1.5 + progress * 0.5);
+      const glowAlpha = seg.alpha * 0.15 * (1 - progress * 0.5);
+
+      // Outer ethereal glow
+      const outerColor = this.hslToRgb(seg.hue / 360, 0.6, 0.4);
+      g.fillStyle(outerColor, glowAlpha);
+      g.fillCircle(seg.x, seg.y, glowSize * 1.5);
+
+      // Mid glow
+      const midColor = this.hslToRgb(seg.hue / 360, 0.7, 0.5);
+      g.fillStyle(midColor, glowAlpha * 1.5);
+      g.fillCircle(seg.x, seg.y, glowSize);
+    }
+
+    // Draw connecting ribbon between segments
+    if (this.cometTrail.length >= 2) {
+      for (let i = 0; i < this.cometTrail.length - 1; i++) {
+        const seg1 = this.cometTrail[i];
+        const seg2 = this.cometTrail[i + 1];
+        if (seg1.alpha < 0.1 || seg2.alpha < 0.1) continue;
+
+        const progress = i / this.cometTrail.length;
+        const ribbonAlpha = Math.min(seg1.alpha, seg2.alpha) * 0.4 * (1 - progress * 0.5);
+        const ribbonWidth = (seg1.size + seg2.size) / 2 * 0.6;
+
+        // Ribbon core
+        const ribbonColor = this.hslToRgb(seg1.hue / 360, 0.8, 0.6);
+        g.lineStyle(ribbonWidth, ribbonColor, ribbonAlpha);
+        g.lineBetween(seg1.x, seg1.y, seg2.x, seg2.y);
+
+        // Bright inner ribbon
+        g.lineStyle(ribbonWidth * 0.4, 0xffffff, ribbonAlpha * 0.6);
+        g.lineBetween(seg1.x, seg1.y, seg2.x, seg2.y);
+      }
+    }
+
+    // Draw core particles at each segment
+    for (let i = 0; i < this.cometTrail.length; i++) {
+      const seg = this.cometTrail[i];
+      if (seg.alpha < 0.1) continue;
+
+      const progress = i / this.cometTrail.length;
+      const coreAlpha = seg.alpha * 0.6 * (1 - progress * 0.7);
+      const coreSize = seg.size * 0.5 * (1 - progress * 0.3);
+
+      // Core glow
+      const coreColor = this.hslToRgb(seg.hue / 360, 0.9, 0.7);
+      g.fillStyle(coreColor, coreAlpha);
+      g.fillCircle(seg.x, seg.y, coreSize);
+
+      // Bright white center
+      g.fillStyle(0xffffff, coreAlpha * 0.5);
+      g.fillCircle(seg.x, seg.y, coreSize * 0.4);
+    }
+  }
+
+  // Draw ethereal particles - luminous drifting particles
+  private drawEtherealParticles(g: Phaser.GameObjects.Graphics): void {
+    for (const p of this.etherealParticles) {
+      const lifeRatio = p.life / p.maxLife;
+      const pulse = 0.7 + Math.sin(p.pulsePhase) * 0.3;
+      const alpha = lifeRatio * pulse;
+
+      // Outer glow
+      const glowColor = this.hslToRgb(p.hue / 360, 0.5, 0.3);
+      g.fillStyle(glowColor, alpha * 0.2);
+      g.fillCircle(p.x, p.y, p.size * 2.5);
+
+      // Mid glow
+      const midColor = this.hslToRgb(p.hue / 360, 0.7, 0.5);
+      g.fillStyle(midColor, alpha * 0.4);
+      g.fillCircle(p.x, p.y, p.size * 1.5);
+
+      // Core
+      const coreColor = this.hslToRgb(p.hue / 360, 0.9, 0.7);
+      g.fillStyle(coreColor, alpha * 0.7);
+      g.fillCircle(p.x, p.y, p.size);
+
+      // Bright center
+      g.fillStyle(0xffffff, alpha * 0.5);
+      g.fillCircle(p.x, p.y, p.size * 0.3);
     }
   }
 
