@@ -22,36 +22,36 @@ const CELL_SIZE = 20;
 
 const GRID_SIZE = 20;
 
-// Color palette - ARMAGEDDON theme: apocalyptic, fiery, volcanic destruction
+// Color palette - PURPLE INFERNO theme: mystical purple flames, dark sorcery
 const COLORS = {
-  bgDark: '#0a0505',
-  bgVolcanic: '#1a0a08',
-  gridLine: '#3d1515',
-  gridAccent: '#5a2020',
-  // Demonic snake colors (fire and brimstone)
-  snakeHead: '#ff4500',
-  snakeBody: '#dc143c',
-  snakeTail: '#8b0000',
-  snakeHighlight: '#ff6b35',
-  snakeEye: '#ffff00',
+  bgDark: '#050510',
+  bgVolcanic: '#0a0818',
+  gridLine: '#1a1530',
+  gridAccent: '#2a2050',
+  // Mystical snake colors (purple fire sorcery)
+  snakeHead: '#bf40ff',
+  snakeBody: '#9932cc',
+  snakeTail: '#6b238e',
+  snakeHighlight: '#e066ff',
+  snakeEye: '#00ffff',
   snakePupil: '#000000',
-  snakeHorn: '#2d2d2d',
-  // Food - burning meteor/fireball
-  food: '#ff6600',
-  foodCore: '#ffcc00',
-  foodGlow: '#ff3300',
-  gameOverOverlay: 'rgba(10, 5, 5, 0.95)',
-  // Armageddon accent colors
-  fireOrange: '#ff6600',
-  fireRed: '#ff3300',
-  fireYellow: '#ffcc00',
-  lavaRed: '#dc143c',
-  ashGray: '#4a4a4a',
-  smokeBlack: '#1a1a1a',
-  brimstoneYellow: '#ffdd00',
-  demonPurple: '#660066',
-  bloodRed: '#8b0000',
-  emberOrange: '#ff8c00',
+  snakeHorn: '#1a1a2e',
+  // Food - purple energy orb
+  food: '#9400d3',
+  foodCore: '#e066ff',
+  foodGlow: '#8b00ff',
+  gameOverOverlay: 'rgba(5, 5, 16, 0.95)',
+  // Purple inferno accent colors
+  fireOrange: '#9932cc',
+  fireRed: '#8b00ff',
+  fireYellow: '#e066ff',
+  lavaRed: '#bf40ff',
+  ashGray: '#3a3a5a',
+  smokeBlack: '#0a0a1a',
+  brimstoneYellow: '#cc99ff',
+  demonPurple: '#6600cc',
+  bloodRed: '#4b0082',
+  emberOrange: '#ba55d3',
 };
 
 function hslToRgb(h: number, s: number, l: number): string {
@@ -308,7 +308,7 @@ function spawnFlameParticle(x: number, y: number, intensity: number): void {
     size: 3 + Math.random() * 4 * intensity,
     life,
     maxLife: life,
-    hue: 15 + Math.random() * 30, // Orange to red
+    hue: 270 + Math.random() * 40, // Purple to magenta
   });
 }
 
@@ -320,7 +320,7 @@ function spawnExplosion(x: number, y: number): void {
       angle: (i / numParticles) * Math.PI * 2 + Math.random() * 0.3,
       dist: 0,
       size: 3 + Math.random() * 4,
-      hue: 10 + Math.random() * 40,
+      hue: 260 + Math.random() * 50,
     });
   }
 
@@ -379,7 +379,7 @@ function spawnInferno(snake: Position[]): void {
         vy: Math.sin(angle) * speed - 2,
         size: 4 + Math.random() * 6,
         life: 1,
-        hue: 10 + Math.random() * 40,
+        hue: 260 + Math.random() * 50,
       });
     }
   }
@@ -543,9 +543,9 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
 
   // Volcanic gradient overlay
   const volcanicGradient = ctx.createRadialGradient(width / 2, height, 0, width / 2, height / 2, width);
-  volcanicGradient.addColorStop(0, 'rgba(139, 0, 0, 0.3)');
-  volcanicGradient.addColorStop(0.5, 'rgba(50, 10, 10, 0.2)');
-  volcanicGradient.addColorStop(1, 'rgba(10, 5, 5, 0.1)');
+  volcanicGradient.addColorStop(0, 'rgba(75, 0, 130, 0.3)');
+  volcanicGradient.addColorStop(0.5, 'rgba(30, 10, 50, 0.2)');
+  volcanicGradient.addColorStop(1, 'rgba(10, 5, 20, 0.1)');
   ctx.fillStyle = volcanicGradient;
   ctx.fillRect(0, 0, width, height);
 
@@ -740,10 +740,10 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
 
   // Fireball glow
   const fireGlow = ctx.createRadialGradient(foodX, foodY, 0, foodX, foodY, CELL_SIZE);
-  fireGlow.addColorStop(0, 'rgba(255, 255, 0, 0.8)');
-  fireGlow.addColorStop(0.3, 'rgba(255, 150, 0, 0.6)');
-  fireGlow.addColorStop(0.6, 'rgba(255, 50, 0, 0.3)');
-  fireGlow.addColorStop(1, 'rgba(139, 0, 0, 0)');
+  fireGlow.addColorStop(0, 'rgba(224, 102, 255, 0.8)');
+  fireGlow.addColorStop(0.3, 'rgba(153, 50, 204, 0.6)');
+  fireGlow.addColorStop(0.6, 'rgba(139, 0, 255, 0.3)');
+  fireGlow.addColorStop(1, 'rgba(75, 0, 130, 0)');
   ctx.fillStyle = fireGlow;
   ctx.beginPath();
   ctx.arc(foodX, foodY, CELL_SIZE, 0, Math.PI * 2);
@@ -880,14 +880,14 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     } else {
       // Body segments with fire gradient
       const bodyGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius + 4);
-      bodyGlow.addColorStop(0, `rgba(255, 100, 0, ${fireIntensity * 0.3})`);
-      bodyGlow.addColorStop(1, 'rgba(139, 0, 0, 0)');
+      bodyGlow.addColorStop(0, `rgba(153, 50, 204, ${fireIntensity * 0.3})`);
+      bodyGlow.addColorStop(1, 'rgba(75, 0, 130, 0)');
       ctx.fillStyle = bodyGlow;
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius + 4, 0, Math.PI * 2);
       ctx.fill();
 
-      const segHue = 15 - t * 10;
+      const segHue = 280 - t * 20;
       const bodyGradient = ctx.createRadialGradient(centerX - 1, centerY - 1, 0, centerX, centerY, radius);
       bodyGradient.addColorStop(0, COLORS.snakeHighlight);
       bodyGradient.addColorStop(0.4, hslToRgb(segHue / 360, 0.9, 0.45 + t * 0.1));
@@ -899,7 +899,7 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
 
       // Scale pattern
       if (i % 2 === 0) {
-        ctx.fillStyle = 'rgba(139, 0, 0, 0.3)';
+        ctx.fillStyle = 'rgba(75, 0, 130, 0.3)';
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius * 0.7, 0, Math.PI * 2);
         ctx.fill();

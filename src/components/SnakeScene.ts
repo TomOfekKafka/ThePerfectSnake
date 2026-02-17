@@ -186,36 +186,36 @@ interface FlameParticle {
   brightness: number;
 }
 
-// Color palette - Film Noir theme: high contrast black/white with dramatic shadows
+// Color palette - PURPLE INFERNO theme: mystical purple flames, dark sorcery
 const COLORS = {
-  bgDark: 0x0a0a0a,
-  bgMid: 0x1a1a1a,
-  gridLine: 0x2a2a2a,
-  gridAccent: 0x404040,
-  snakeHead: 0xe8e8e8,
-  snakeBody: 0xc0c0c0,
-  snakeTail: 0x909090,
-  snakeHighlight: 0xffffff,
-  snakeScale: 0x707070,
-  snakeEye: 0xffffff,
+  bgDark: 0x050510,
+  bgMid: 0x0a0818,
+  gridLine: 0x1a1530,
+  gridAccent: 0x2a2050,
+  snakeHead: 0xbf40ff,
+  snakeBody: 0x9932cc,
+  snakeTail: 0x6b238e,
+  snakeHighlight: 0xe066ff,
+  snakeScale: 0x7a3090,
+  snakeEye: 0x00ffff,
   snakePupil: 0x000000,
-  snakeGlow: 0xd0d0d0,
-  food: 0xffffff,
-  foodCore: 0xffffff,
-  foodGlow: 0xcccccc,
-  foodParticle: 0xdddddd,
-  star: 0xffffff,
-  gameOverOverlay: 0x000000,
-  gameOverText: 0xffffff,
-  plasma1: 0x606060,
-  plasma2: 0x808080,
-  plasma3: 0x505050,
-  screenFlash: 0xffffff,
-  // Film noir specific colors
-  noirWhite: 0xf0f0f0,
-  noirGray: 0x808080,
-  noirDark: 0x303030,
-  spotlight: 0xffffee,
+  snakeGlow: 0xba55d3,
+  food: 0x9400d3,
+  foodCore: 0xe066ff,
+  foodGlow: 0x8b00ff,
+  foodParticle: 0xcc99ff,
+  star: 0xcc99ff,
+  gameOverOverlay: 0x050510,
+  gameOverText: 0xe066ff,
+  plasma1: 0x9932cc,
+  plasma2: 0xbf40ff,
+  plasma3: 0x6b238e,
+  screenFlash: 0xe066ff,
+  // Purple inferno specific colors
+  noirWhite: 0xe066ff,
+  noirGray: 0x6b238e,
+  noirDark: 0x1a1530,
+  spotlight: 0xcc99ff,
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -492,7 +492,7 @@ export class SnakeScene extends Phaser.Scene {
 
   private initPlasmaWaves(): void {
     this.plasmaWaves = [];
-    const hues = [280, 200, 320]; // Purple, cyan, magenta
+    const hues = [280, 300, 260]; // Purple variations
     for (let i = 0; i < NUM_PLASMA_WAVES; i++) {
       this.plasmaWaves.push({
         phase: Math.random() * Math.PI * 2,
@@ -508,7 +508,7 @@ export class SnakeScene extends Phaser.Scene {
     this.auroraWaves = [];
     const height = GRID_SIZE * CELL_SIZE;
     // Aurora hues: greens, cyans, magentas, purples
-    const auroraHues = [120, 160, 180, 280, 320];
+    const auroraHues = [270, 280, 290, 300, 260];
     for (let i = 0; i < NUM_AURORA_WAVES; i++) {
       this.auroraWaves.push({
         y: height * 0.2 + (height * 0.6 * i) / NUM_AURORA_WAVES,
@@ -526,7 +526,7 @@ export class SnakeScene extends Phaser.Scene {
     const width = GRID_SIZE * CELL_SIZE;
     const height = GRID_SIZE * CELL_SIZE;
     // Deep space nebula colors: purples, blues, magentas
-    const nebulaHues = [260, 220, 300, 180, 340, 240];
+    const nebulaHues = [260, 270, 280, 290, 300, 310];
     for (let i = 0; i < NUM_NEBULA_CLOUDS; i++) {
       this.nebulaClouds.push({
         x: Math.random() * width,
@@ -547,7 +547,7 @@ export class SnakeScene extends Phaser.Scene {
     this.vortexParticles = [];
 
     // Create concentric rings with different properties
-    const ringHues = [280, 200, 320, 180, 260];
+    const ringHues = [270, 280, 290, 300, 260];
     for (let i = 0; i < NUM_VORTEX_RINGS; i++) {
       const baseRadius = 25 + i * 18;
       this.vortexRings.push({
@@ -602,7 +602,7 @@ export class SnakeScene extends Phaser.Scene {
       vx: -Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       size: 2 + Math.random() * 3,
-      hue: Math.random() < 0.3 ? 30 + Math.random() * 30 : 180 + Math.random() * 60, // Orange or cyan
+      hue: Math.random() < 0.3 ? 270 + Math.random() * 40 : 280 + Math.random() * 60, // Purple or magenta
       alpha: 0.6 + Math.random() * 0.4,
       trail: [],
       life: 1,
@@ -1170,7 +1170,7 @@ export class SnakeScene extends Phaser.Scene {
       size: 3 + Math.random() * 4 * intensity,
       life,
       maxLife: life,
-      hue: 15 + Math.random() * 30,
+      hue: 270 + Math.random() * 40,
       brightness: 0.5 + Math.random() * 0.3,
     });
   }
