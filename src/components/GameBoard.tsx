@@ -22,36 +22,36 @@ const CELL_SIZE = 20;
 
 const GRID_SIZE = 20;
 
-// Color palette - PURPLE INFERNO theme: mystical purple flames, dark sorcery
+// Color palette - ICE CRYSTAL DRAGON theme: frozen arctic, crystalline beauty
 const COLORS = {
-  bgDark: '#050510',
-  bgVolcanic: '#0a0818',
-  gridLine: '#1a1530',
-  gridAccent: '#2a2050',
-  // Mystical snake colors (purple fire sorcery)
-  snakeHead: '#bf40ff',
-  snakeBody: '#9932cc',
-  snakeTail: '#6b238e',
-  snakeHighlight: '#e066ff',
-  snakeEye: '#00ffff',
-  snakePupil: '#000000',
-  snakeHorn: '#1a1a2e',
-  // Food - purple energy orb
-  food: '#9400d3',
-  foodCore: '#e066ff',
-  foodGlow: '#8b00ff',
-  gameOverOverlay: 'rgba(5, 5, 16, 0.95)',
-  // Purple inferno accent colors
-  fireOrange: '#9932cc',
-  fireRed: '#8b00ff',
-  fireYellow: '#e066ff',
-  lavaRed: '#bf40ff',
-  ashGray: '#3a3a5a',
-  smokeBlack: '#0a0a1a',
-  brimstoneYellow: '#cc99ff',
-  demonPurple: '#6600cc',
-  bloodRed: '#4b0082',
-  emberOrange: '#ba55d3',
+  bgDark: '#030818',
+  bgVolcanic: '#051020',
+  gridLine: '#102040',
+  gridAccent: '#1a3555',
+  // Ice dragon snake colors (crystalline frost)
+  snakeHead: '#40e0ff',
+  snakeBody: '#20b0d0',
+  snakeTail: '#1080a0',
+  snakeHighlight: '#80f0ff',
+  snakeEye: '#ff4080',
+  snakePupil: '#200010',
+  snakeHorn: '#e0f8ff',
+  // Food - frozen crystal gem
+  food: '#00d0ff',
+  foodCore: '#e0ffff',
+  foodGlow: '#40c0ff',
+  gameOverOverlay: 'rgba(3, 8, 24, 0.95)',
+  // Ice crystal accent colors
+  fireOrange: '#30a0c0',
+  fireRed: '#2080a0',
+  fireYellow: '#80e0ff',
+  lavaRed: '#40c0e0',
+  ashGray: '#4a6080',
+  smokeBlack: '#081020',
+  brimstoneYellow: '#a0e0ff',
+  demonPurple: '#0080b0',
+  bloodRed: '#006080',
+  emberOrange: '#60c0e0',
 };
 
 function hslToRgb(h: number, s: number, l: number): string {
@@ -79,8 +79,8 @@ function hslToRgb(h: number, s: number, l: number): string {
 // Animation frame counter
 let frameCount = 0;
 
-// Demon horns on the snake head
-function drawDemonHorns(
+// Ice crystal spikes on the dragon head
+function drawIceCrystals(
   ctx: CanvasRenderingContext2D,
   headX: number,
   headY: number,
@@ -90,68 +90,104 @@ function drawDemonHorns(
   perpY: number,
   frame: number
 ): void {
-  const hornOffset = -6;
-  const hornBaseX = headX - dx * hornOffset;
-  const hornBaseY = headY - dy * hornOffset;
+  const crystalOffset = -6;
+  const crystalBaseX = headX - dx * crystalOffset;
+  const crystalBaseY = headY - dy * crystalOffset;
 
-  // Animated horn flicker (fire effect)
-  const flicker = Math.sin(frame * 0.15) * 0.1;
+  // Crystal shimmer animation
+  const shimmer = 0.7 + Math.sin(frame * 0.12) * 0.3;
 
-  const hornSize = 10;
-  const hornSpread = 5;
+  const crystalSize = 12;
+  const crystalSpread = 5;
 
-  // Left horn
+  // Left ice crystal
   ctx.save();
-  ctx.translate(hornBaseX + perpX * hornSpread, hornBaseY + perpY * hornSpread);
-  ctx.rotate(Math.atan2(perpY, perpX) + 0.5 + flicker);
+  ctx.translate(crystalBaseX + perpX * crystalSpread, crystalBaseY + perpY * crystalSpread);
+  ctx.rotate(Math.atan2(perpY, perpX) + 0.4);
 
-  // Dark horn base
-  ctx.fillStyle = COLORS.snakeHorn;
+  // Crystal body - translucent ice
+  ctx.fillStyle = 'rgba(200, 240, 255, 0.8)';
   ctx.beginPath();
-  ctx.moveTo(0, hornSize * 0.4);
-  ctx.lineTo(-hornSize * 0.4, -hornSize * 0.2);
-  ctx.lineTo(0, -hornSize);
-  ctx.lineTo(hornSize * 0.4, -hornSize * 0.2);
+  ctx.moveTo(0, crystalSize * 0.3);
+  ctx.lineTo(-crystalSize * 0.25, 0);
+  ctx.lineTo(-crystalSize * 0.15, -crystalSize * 0.6);
+  ctx.lineTo(0, -crystalSize);
+  ctx.lineTo(crystalSize * 0.15, -crystalSize * 0.6);
+  ctx.lineTo(crystalSize * 0.25, 0);
   ctx.closePath();
   ctx.fill();
 
-  // Fiery tip
-  ctx.fillStyle = COLORS.fireOrange;
-  ctx.globalAlpha = 0.6 + Math.sin(frame * 0.2) * 0.3;
+  // Crystal highlight
+  ctx.fillStyle = `rgba(255, 255, 255, ${shimmer * 0.9})`;
   ctx.beginPath();
-  ctx.moveTo(0, -hornSize * 0.5);
-  ctx.lineTo(-hornSize * 0.2, -hornSize * 0.8);
-  ctx.lineTo(0, -hornSize - 3);
-  ctx.lineTo(hornSize * 0.2, -hornSize * 0.8);
+  ctx.moveTo(-crystalSize * 0.1, -crystalSize * 0.3);
+  ctx.lineTo(0, -crystalSize * 0.8);
+  ctx.lineTo(crystalSize * 0.05, -crystalSize * 0.3);
   ctx.closePath();
   ctx.fill();
-  ctx.globalAlpha = 1;
+
+  // Crystal glow
+  ctx.fillStyle = `rgba(100, 200, 255, ${shimmer * 0.4})`;
+  ctx.beginPath();
+  ctx.arc(0, -crystalSize * 0.4, crystalSize * 0.4, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 
-  // Right horn
+  // Right ice crystal
   ctx.save();
-  ctx.translate(hornBaseX - perpX * hornSpread, hornBaseY - perpY * hornSpread);
-  ctx.rotate(Math.atan2(-perpY, -perpX) + 0.5 - flicker);
+  ctx.translate(crystalBaseX - perpX * crystalSpread, crystalBaseY - perpY * crystalSpread);
+  ctx.rotate(Math.atan2(-perpY, -perpX) + 0.4);
 
-  ctx.fillStyle = COLORS.snakeHorn;
+  ctx.fillStyle = 'rgba(200, 240, 255, 0.8)';
   ctx.beginPath();
-  ctx.moveTo(0, hornSize * 0.4);
-  ctx.lineTo(-hornSize * 0.4, -hornSize * 0.2);
-  ctx.lineTo(0, -hornSize);
-  ctx.lineTo(hornSize * 0.4, -hornSize * 0.2);
+  ctx.moveTo(0, crystalSize * 0.3);
+  ctx.lineTo(-crystalSize * 0.25, 0);
+  ctx.lineTo(-crystalSize * 0.15, -crystalSize * 0.6);
+  ctx.lineTo(0, -crystalSize);
+  ctx.lineTo(crystalSize * 0.15, -crystalSize * 0.6);
+  ctx.lineTo(crystalSize * 0.25, 0);
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = COLORS.fireOrange;
-  ctx.globalAlpha = 0.6 + Math.sin(frame * 0.2 + 1) * 0.3;
+  ctx.fillStyle = `rgba(255, 255, 255, ${shimmer * 0.9})`;
   ctx.beginPath();
-  ctx.moveTo(0, -hornSize * 0.5);
-  ctx.lineTo(-hornSize * 0.2, -hornSize * 0.8);
-  ctx.lineTo(0, -hornSize - 3);
-  ctx.lineTo(hornSize * 0.2, -hornSize * 0.8);
+  ctx.moveTo(-crystalSize * 0.1, -crystalSize * 0.3);
+  ctx.lineTo(0, -crystalSize * 0.8);
+  ctx.lineTo(crystalSize * 0.05, -crystalSize * 0.3);
   ctx.closePath();
   ctx.fill();
-  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = `rgba(100, 200, 255, ${shimmer * 0.4})`;
+  ctx.beginPath();
+  ctx.arc(0, -crystalSize * 0.4, crystalSize * 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Center crown crystal
+  ctx.save();
+  ctx.translate(crystalBaseX, crystalBaseY);
+  ctx.rotate(Math.atan2(dy, dx) + Math.PI);
+
+  const centerSize = crystalSize * 1.2;
+  ctx.fillStyle = 'rgba(180, 230, 255, 0.85)';
+  ctx.beginPath();
+  ctx.moveTo(0, centerSize * 0.2);
+  ctx.lineTo(-centerSize * 0.2, 0);
+  ctx.lineTo(-centerSize * 0.1, -centerSize * 0.7);
+  ctx.lineTo(0, -centerSize);
+  ctx.lineTo(centerSize * 0.1, -centerSize * 0.7);
+  ctx.lineTo(centerSize * 0.2, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = `rgba(255, 255, 255, ${shimmer})`;
+  ctx.beginPath();
+  ctx.moveTo(0, -centerSize * 0.5);
+  ctx.lineTo(-centerSize * 0.05, -centerSize * 0.8);
+  ctx.lineTo(0, -centerSize * 0.95);
+  ctx.lineTo(centerSize * 0.05, -centerSize * 0.8);
+  ctx.closePath();
+  ctx.fill();
   ctx.restore();
 }
 
@@ -835,28 +871,28 @@ function spawnMeteor(width: number, height: number, initial: boolean): void {
   });
 }
 
-function spawnFlameParticle(x: number, y: number, intensity: number): void {
+function spawnFrostParticle(x: number, y: number, intensity: number): void {
   if (flameParticles.length >= MAX_FLAME_PARTICLES) {
     flameParticles.shift();
   }
 
   const angle = Math.random() * Math.PI * 2;
-  const speed = 0.3 + Math.random() * 0.5;
-  const life = 0.4 + Math.random() * 0.4;
+  const speed = 0.2 + Math.random() * 0.4;
+  const life = 0.5 + Math.random() * 0.5;
 
   flameParticles.push({
     x: x + (Math.random() - 0.5) * 6,
     y: y + (Math.random() - 0.5) * 6,
-    vx: Math.cos(angle) * speed * 0.3,
-    vy: -0.8 - Math.random() * 1.2 * intensity,
-    size: 3 + Math.random() * 4 * intensity,
+    vx: Math.cos(angle) * speed * 0.5,
+    vy: -0.3 - Math.random() * 0.8 * intensity,
+    size: 2 + Math.random() * 3 * intensity,
     life,
     maxLife: life,
-    hue: 270 + Math.random() * 40, // Purple to magenta
+    hue: 185 + Math.random() * 30, // Cyan to light blue
   });
 }
 
-function spawnExplosion(x: number, y: number): void {
+function spawnIceShatter(x: number, y: number): void {
   const particles: { angle: number; dist: number; size: number; hue: number }[] = [];
   const numParticles = 10;
   for (let i = 0; i < numParticles; i++) {
@@ -864,7 +900,7 @@ function spawnExplosion(x: number, y: number): void {
       angle: (i / numParticles) * Math.PI * 2 + Math.random() * 0.3,
       dist: 0,
       size: 3 + Math.random() * 4,
-      hue: 260 + Math.random() * 50,
+      hue: 185 + Math.random() * 25, // Ice blue to cyan
     });
   }
 
@@ -877,7 +913,7 @@ function spawnExplosion(x: number, y: number): void {
     particles,
   });
 
-  screenShakeIntensity = 10;
+  screenShakeIntensity = 8;
 }
 
 function spawnScreenCrack(x: number, y: number): void {
@@ -900,25 +936,25 @@ function spawnScreenCrack(x: number, y: number): void {
   screenCracks.push({ x, y, segments, life: 1 });
 }
 
-function spawnEtherealParticle(x: number, y: number, hue: number): void {
+function spawnEtherealParticle(x: number, y: number, _hue: number): void {
   if (etherealParticles.length >= MAX_ETHEREAL_PARTICLES) {
     etherealParticles.shift();
   }
 
   const angle = Math.random() * Math.PI * 2;
-  const speed = 0.3 + Math.random() * 0.5;
-  const life = 0.8 + Math.random() * 0.4;
+  const speed = 0.2 + Math.random() * 0.4;
+  const life = 0.9 + Math.random() * 0.5;
 
   etherealParticles.push({
     x: x + (Math.random() - 0.5) * 10,
     y: y + (Math.random() - 0.5) * 10,
     vx: Math.cos(angle) * speed,
-    vy: Math.sin(angle) * speed - 0.3,
-    size: 3 + Math.random() * 4,
+    vy: Math.sin(angle) * speed - 0.2,
+    size: 2 + Math.random() * 3,
     life,
     maxLife: life,
-    hue: hue + (Math.random() - 0.5) * 30,
-    brightness: 0.5 + Math.random() * 0.3,
+    hue: 190 + Math.random() * 20, // Ice blue range
+    brightness: 0.6 + Math.random() * 0.3,
     pulsePhase: Math.random() * Math.PI * 2,
   });
 }
@@ -942,7 +978,7 @@ function updateCometTrail(gameState: GameState): void {
 
   // Add new trail segment at head position
   if (frameCount % 2 === 0) {
-    const hue = 270 + Math.sin(frameCount * 0.05) * 20;
+    const hue = 190 + Math.sin(frameCount * 0.05) * 15; // Ice blue range
     cometTrail.unshift({
       x: headX,
       y: headY,
@@ -952,7 +988,7 @@ function updateCometTrail(gameState: GameState): void {
     });
 
     // Spawn ethereal particles from trail
-    if (Math.random() < 0.6) {
+    if (Math.random() < 0.5) {
       spawnEtherealParticle(headX, headY, hue);
     }
   }
@@ -1097,7 +1133,7 @@ function drawEtherealParticles(ctx: CanvasRenderingContext2D): void {
   }
 }
 
-function spawnInferno(snake: Position[]): void {
+function spawnFreezeShatter(snake: Position[]): void {
   infernoParticles = [];
   const maxParticles = 30;
   const particlesPerSeg = Math.min(4, Math.floor(maxParticles / snake.length));
@@ -1111,16 +1147,16 @@ function spawnInferno(snake: Position[]): void {
       if (infernoParticles.length >= maxParticles) break;
 
       const angle = Math.random() * Math.PI * 2;
-      const speed = 2 + Math.random() * 4;
+      const speed = 2 + Math.random() * 3;
 
       infernoParticles.push({
         x: cx + (Math.random() - 0.5) * 8,
         y: cy + (Math.random() - 0.5) * 8,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 2,
-        size: 4 + Math.random() * 6,
+        vy: Math.sin(angle) * speed,
+        size: 3 + Math.random() * 5,
         life: 1,
-        hue: 260 + Math.random() * 50,
+        hue: 185 + Math.random() * 30, // Ice blue
       });
     }
   }
@@ -1243,7 +1279,7 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     const head = gameState.snake[0];
     const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
     const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
-    spawnExplosion(headX, headY);
+    spawnIceShatter(headX, headY);
     spawnScreenCrack(headX, headY);
   }
   lastSnakeLength = gameState.snake.length;
@@ -1251,7 +1287,7 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   // Detect game over
   if (gameState.gameOver && !wasGameOver) {
     screenShakeIntensity = 20;
-    spawnInferno(gameState.snake);
+    spawnFreezeShatter(gameState.snake);
   }
   wasGameOver = gameState.gameOver;
 
@@ -1263,7 +1299,7 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       const segY = seg.y * CELL_SIZE + CELL_SIZE / 2;
       const intensity = 1 - (i / gameState.snake.length) * 0.5;
       if (Math.random() < 0.35 * intensity) {
-        spawnFlameParticle(segX, segY, intensity);
+        spawnFrostParticle(segX, segY, intensity);
       }
     }
   }
@@ -1280,98 +1316,101 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.translate(screenShakeX, screenShakeY);
   }
 
-  // Apocalyptic dark background
+  // Frozen arctic background
   ctx.fillStyle = COLORS.bgDark;
   ctx.fillRect(0, 0, width, height);
 
-  // Volcanic gradient overlay
-  const volcanicGradient = ctx.createRadialGradient(width / 2, height, 0, width / 2, height / 2, width);
-  volcanicGradient.addColorStop(0, 'rgba(75, 0, 130, 0.3)');
-  volcanicGradient.addColorStop(0.5, 'rgba(30, 10, 50, 0.2)');
-  volcanicGradient.addColorStop(1, 'rgba(10, 5, 20, 0.1)');
-  ctx.fillStyle = volcanicGradient;
+  // Aurora borealis gradient overlay
+  const auroraGradient = ctx.createRadialGradient(width / 2, 0, 0, width / 2, height / 2, width);
+  auroraGradient.addColorStop(0, 'rgba(0, 100, 150, 0.25)');
+  auroraGradient.addColorStop(0.5, 'rgba(0, 60, 100, 0.15)');
+  auroraGradient.addColorStop(1, 'rgba(5, 20, 40, 0.1)');
+  ctx.fillStyle = auroraGradient;
   ctx.fillRect(0, 0, width, height);
 
-  // Lava cracks in the ground
+  // Ice crystal veins in the ground
   ctx.strokeStyle = COLORS.lavaRed;
-  ctx.lineWidth = 2;
-  ctx.globalAlpha = 0.3 + Math.sin(lavaPhase) * 0.1;
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.25 + Math.sin(lavaPhase) * 0.08;
   for (let i = 0; i < 4; i++) {
-    const startX = (i * width / 3) + Math.sin(lavaPhase + i) * 20;
+    const startX = (i * width / 3) + Math.sin(lavaPhase + i) * 15;
     ctx.beginPath();
     ctx.moveTo(startX, height);
     let cx = startX, cy = height;
     for (let j = 0; j < 4; j++) {
-      cx += (Math.random() - 0.5) * 40 + Math.sin(lavaPhase * 2 + j) * 10;
-      cy -= 30 + Math.random() * 20;
+      cx += (Math.random() - 0.5) * 30 + Math.sin(lavaPhase * 2 + j) * 8;
+      cy -= 25 + Math.random() * 15;
       ctx.lineTo(cx, cy);
     }
     ctx.stroke();
 
-    // Glow around lava cracks
-    ctx.strokeStyle = COLORS.fireOrange;
-    ctx.lineWidth = 4;
-    ctx.globalAlpha = 0.1 + Math.sin(lavaPhase + i) * 0.05;
+    // Glow around ice veins
+    ctx.strokeStyle = 'rgba(100, 200, 255, 0.15)';
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.08 + Math.sin(lavaPhase + i) * 0.04;
     ctx.stroke();
     ctx.strokeStyle = COLORS.lavaRed;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
   }
   ctx.globalAlpha = 1;
 
-  // Draw ash particles
-  ctx.fillStyle = COLORS.ashGray;
+  // Draw snowflake particles
+  ctx.fillStyle = 'rgba(200, 230, 255, 0.6)';
   for (const ash of ashParticles) {
     ctx.save();
     ctx.translate(ash.x, ash.y);
     ctx.rotate(ash.rotation);
-    ctx.globalAlpha = ash.alpha;
-    ctx.fillRect(-ash.size / 2, -ash.size / 2, ash.size, ash.size);
+    ctx.globalAlpha = ash.alpha * 0.8;
+    // Draw small snowflake shape
+    const s = ash.size * 0.5;
+    ctx.fillRect(-s, -0.5, s * 2, 1);
+    ctx.fillRect(-0.5, -s, 1, s * 2);
     ctx.restore();
   }
   ctx.globalAlpha = 1;
 
-  // Draw meteors with fiery trails
+  // Draw falling ice shards with shimmer trails
   for (const m of meteors) {
     // Trail
     for (let i = 0; i < m.trail.length; i++) {
       const t = m.trail[i];
-      const trailAlpha = (1 - i / m.trail.length) * 0.6;
-      const trailSize = m.size * (1 - i / m.trail.length) * 0.8;
+      const trailAlpha = (1 - i / m.trail.length) * 0.5;
+      const trailSize = m.size * (1 - i / m.trail.length) * 0.7;
 
-      ctx.fillStyle = COLORS.fireOrange;
+      ctx.fillStyle = 'rgba(100, 180, 220, 0.3)';
       ctx.globalAlpha = trailAlpha * 0.3;
       ctx.beginPath();
-      ctx.arc(t.x, t.y, trailSize * 2, 0, Math.PI * 2);
+      ctx.arc(t.x, t.y, trailSize * 1.5, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = COLORS.fireYellow;
+      ctx.fillStyle = 'rgba(180, 230, 255, 0.5)';
       ctx.globalAlpha = trailAlpha * 0.5;
       ctx.beginPath();
       ctx.arc(t.x, t.y, trailSize, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Meteor core
-    ctx.fillStyle = COLORS.fireYellow;
+    // Ice shard core
+    ctx.fillStyle = 'rgba(200, 240, 255, 0.9)';
     ctx.globalAlpha = 0.9;
     ctx.beginPath();
     ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
     ctx.fill();
 
-    // White hot center
+    // Bright center
     ctx.fillStyle = '#ffffff';
-    ctx.globalAlpha = 0.7;
+    ctx.globalAlpha = 0.8;
     ctx.beginPath();
-    ctx.arc(m.x, m.y, m.size * 0.4, 0, Math.PI * 2);
+    ctx.arc(m.x, m.y, m.size * 0.35, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
 
-  // Draw screen cracks (apocalyptic fissures)
+  // Draw ice fracture lines
   for (const crack of screenCracks) {
-    ctx.strokeStyle = COLORS.fireOrange;
-    ctx.lineWidth = 3;
-    ctx.globalAlpha = crack.life * 0.6;
+    ctx.strokeStyle = 'rgba(150, 220, 255, 0.7)';
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = crack.life * 0.5;
 
     ctx.beginPath();
     ctx.moveTo(crack.segments[0].x, crack.segments[0].y);
@@ -1380,106 +1419,108 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     }
     ctx.stroke();
 
-    // Inner glow
-    ctx.strokeStyle = COLORS.fireYellow;
+    // Inner glow - icy white
+    ctx.strokeStyle = 'rgba(220, 250, 255, 0.9)';
     ctx.lineWidth = 1;
-    ctx.globalAlpha = crack.life * 0.8;
+    ctx.globalAlpha = crack.life * 0.7;
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
 
-  // Draw comet trail (glowing ribbon behind snake)
+  // Draw comet trail (glowing frost ribbon behind snake)
   drawCometTrail(ctx);
 
-  // Draw ethereal particles (luminous drifting particles)
+  // Draw ethereal particles (frost crystals drifting)
   drawEtherealParticles(ctx);
 
-  // Draw flame particles
+  // Draw frost particles
   for (const p of flameParticles) {
     const lifeRatio = p.life / p.maxLife;
 
-    const hue = p.hue + (1 - lifeRatio) * 10;
-    const saturation = 100;
-    const lightness = 50 + lifeRatio * 20;
+    const hue = p.hue;
+    const saturation = 60;
+    const lightness = 60 + lifeRatio * 25;
 
-    // Outer glow
-    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness - 20}%, ${lifeRatio * 0.3})`;
+    // Outer frost glow
+    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness - 15}%, ${lifeRatio * 0.25})`;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, p.size * 1.8, 0, Math.PI * 2);
     ctx.fill();
 
-    // Core flame
-    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${lifeRatio * 0.6})`;
+    // Core frost crystal
+    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${lifeRatio * 0.5})`;
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
     ctx.fill();
 
-    // Hot center
-    ctx.fillStyle = `hsla(${hue + 15}, ${saturation - 20}%, ${lightness + 30}%, ${lifeRatio * 0.8})`;
+    // Bright ice center
+    ctx.fillStyle = `rgba(255, 255, 255, ${lifeRatio * 0.7})`;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, p.size * 0.35, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Draw explosions
+  // Draw ice shatter waves
   for (const exp of explosions) {
-    // Shockwave ring
-    ctx.strokeStyle = COLORS.fireOrange;
-    ctx.lineWidth = 4 * exp.life;
-    ctx.globalAlpha = exp.life * 0.5;
+    // Frost shockwave ring
+    ctx.strokeStyle = 'rgba(100, 200, 230, 0.6)';
+    ctx.lineWidth = 3 * exp.life;
+    ctx.globalAlpha = exp.life * 0.45;
     ctx.beginPath();
     ctx.arc(exp.x, exp.y, exp.radius, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Inner bright ring
-    ctx.strokeStyle = COLORS.fireYellow;
-    ctx.lineWidth = 2 * exp.life;
-    ctx.globalAlpha = exp.life * 0.7;
+    // Inner crystalline ring
+    ctx.strokeStyle = 'rgba(200, 240, 255, 0.8)';
+    ctx.lineWidth = 1.5 * exp.life;
+    ctx.globalAlpha = exp.life * 0.6;
     ctx.beginPath();
     ctx.arc(exp.x, exp.y, exp.radius * 0.7, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Explosion particles
+    // Ice shard particles
     for (const particle of exp.particles) {
       const px = exp.x + Math.cos(particle.angle) * particle.dist;
       const py = exp.y + Math.sin(particle.angle) * particle.dist;
       const pSize = particle.size * exp.life;
 
-      ctx.fillStyle = `hsl(${particle.hue}, 100%, 60%)`;
-      ctx.globalAlpha = exp.life * 0.8;
+      ctx.fillStyle = `hsl(${particle.hue}, 50%, 70%)`;
+      ctx.globalAlpha = exp.life * 0.7;
       ctx.beginPath();
       ctx.arc(px, py, pSize, 0, Math.PI * 2);
       ctx.fill();
 
-      // Particle glow
-      ctx.fillStyle = COLORS.fireYellow;
-      ctx.globalAlpha = exp.life * 0.4;
+      // Bright shard center
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.globalAlpha = exp.life * 0.5;
       ctx.beginPath();
-      ctx.arc(px, py, pSize * 0.5, 0, Math.PI * 2);
+      ctx.arc(px, py, pSize * 0.4, 0, Math.PI * 2);
       ctx.fill();
     }
   }
   ctx.globalAlpha = 1;
 
-  // Draw food - burning meteor/fireball
+  // Draw food - frozen crystal gem
   const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
   const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
 
-  // Fire ring around food
+  // Crystalline rings around food
   for (let ring = 0; ring < 3; ring++) {
-    const ringRadius = CELL_SIZE * 0.6 + ring * 5;
-    const ringAlpha = 0.3 - ring * 0.08;
+    const ringRadius = CELL_SIZE * 0.55 + ring * 4;
+    const ringAlpha = 0.25 - ring * 0.06;
 
-    ctx.strokeStyle = COLORS.fireOrange;
-    ctx.lineWidth = 3 - ring;
-    ctx.globalAlpha = ringAlpha + Math.sin(foodFirePhase + ring) * 0.1;
+    ctx.strokeStyle = 'rgba(100, 200, 255, 0.6)';
+    ctx.lineWidth = 2 - ring * 0.5;
+    ctx.globalAlpha = ringAlpha + Math.sin(foodFirePhase + ring) * 0.08;
 
     ctx.beginPath();
-    for (let a = 0; a < Math.PI * 2; a += 0.2) {
-      const wobble = Math.sin(a * 4 + foodFirePhase * 2) * 3;
-      const rx = foodX + Math.cos(a) * (ringRadius + wobble);
-      const ry = foodY + Math.sin(a) * (ringRadius + wobble);
-      if (a === 0) ctx.moveTo(rx, ry);
+    // Draw hexagonal crystal shape
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 + foodFirePhase * 0.3;
+      const shimmer = 1 + Math.sin(angle * 3 + foodFirePhase * 2) * 0.1;
+      const rx = foodX + Math.cos(angle) * ringRadius * shimmer;
+      const ry = foodY + Math.sin(angle) * ringRadius * shimmer;
+      if (i === 0) ctx.moveTo(rx, ry);
       else ctx.lineTo(rx, ry);
     }
     ctx.closePath();
@@ -1487,28 +1528,33 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   }
   ctx.globalAlpha = 1;
 
-  // Fireball glow
-  const fireGlow = ctx.createRadialGradient(foodX, foodY, 0, foodX, foodY, CELL_SIZE);
-  fireGlow.addColorStop(0, 'rgba(224, 102, 255, 0.8)');
-  fireGlow.addColorStop(0.3, 'rgba(153, 50, 204, 0.6)');
-  fireGlow.addColorStop(0.6, 'rgba(139, 0, 255, 0.3)');
-  fireGlow.addColorStop(1, 'rgba(75, 0, 130, 0)');
-  ctx.fillStyle = fireGlow;
+  // Crystal gem glow
+  const gemGlow = ctx.createRadialGradient(foodX, foodY, 0, foodX, foodY, CELL_SIZE);
+  gemGlow.addColorStop(0, 'rgba(200, 250, 255, 0.85)');
+  gemGlow.addColorStop(0.3, 'rgba(80, 180, 220, 0.6)');
+  gemGlow.addColorStop(0.6, 'rgba(40, 120, 180, 0.3)');
+  gemGlow.addColorStop(1, 'rgba(20, 60, 100, 0)');
+  ctx.fillStyle = gemGlow;
   ctx.beginPath();
   ctx.arc(foodX, foodY, CELL_SIZE, 0, Math.PI * 2);
   ctx.fill();
 
-  // Fireball core
+  // Crystal gem faceted core
   ctx.fillStyle = COLORS.foodCore;
   ctx.beginPath();
-  ctx.arc(foodX, foodY, CELL_SIZE / 3, 0, Math.PI * 2);
+  // Draw diamond shape
+  ctx.moveTo(foodX, foodY - CELL_SIZE / 2.5);
+  ctx.lineTo(foodX + CELL_SIZE / 3, foodY);
+  ctx.lineTo(foodX, foodY + CELL_SIZE / 2.5);
+  ctx.lineTo(foodX - CELL_SIZE / 3, foodY);
+  ctx.closePath();
   ctx.fill();
 
-  // White hot center
+  // Bright highlight
   ctx.fillStyle = '#ffffff';
-  ctx.globalAlpha = 0.9;
+  ctx.globalAlpha = 0.95;
   ctx.beginPath();
-  ctx.arc(foodX, foodY, CELL_SIZE / 6, 0, Math.PI * 2);
+  ctx.arc(foodX - 2, foodY - 3, CELL_SIZE / 7, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
 
@@ -1601,7 +1647,7 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.fill();
 
       // Draw demon horns
-      drawDemonHorns(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
+      drawIceCrystals(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
 
       // Menacing mouth
       ctx.strokeStyle = '#000000';
