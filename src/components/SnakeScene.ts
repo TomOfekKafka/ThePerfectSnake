@@ -155,6 +155,23 @@ interface EtherealParticle {
   pulsePhase: number;
 }
 
+// Thrown food animation - food launched onto screen with arc trajectory
+interface ThrownFood {
+  startX: number;
+  startY: number;
+  targetX: number;
+  targetY: number;
+  x: number;
+  y: number;
+  progress: number; // 0 to 1
+  rotation: number;
+  rotationSpeed: number;
+  trail: { x: number; y: number; alpha: number; rotation: number }[];
+  landed: boolean;
+  landingParticles: { x: number; y: number; vx: number; vy: number; life: number; size: number }[];
+  impactRings: { radius: number; alpha: number }[];
+}
+
 // Meteor shower types
 interface Meteor {
   x: number;
@@ -289,6 +306,9 @@ export class SnakeScene extends Phaser.Scene {
   private etherealParticles: EtherealParticle[] = [];
   // Track last few head positions for smooth interpolation
   private headHistory: { x: number; y: number; time: number }[] = [];
+  // Thrown food animation system
+  private thrownFood: ThrownFood | null = null;
+  private lastFoodPos: Position | null = null;
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -872,6 +892,16 @@ export class SnakeScene extends Phaser.Scene {
     }
     this.lastSnakeLength = state.snake.length;
 
+    // Detect food position change - trigger thrown food animation
+    const newFood = state.food;
+    if (this.lastFoodPos && (newFood.x !== this.lastFoodPos.x || newFood.y !== this.lastFoodPos.y)) {
+      this.spawnThrownFood(newFood.x, newFood.y);
+    } else if (!this.lastFoodPos && !state.gameOver) {
+      // First food spawn
+      this.spawnThrownFood(newFood.x, newFood.y);
+    }
+    this.lastFoodPos = { x: newFood.x, y: newFood.y };
+
     // Create afterimage when snake moves
     if (this.currentState && state.snake.length > 0) {
       const oldHead = this.currentState.snake[0];
@@ -978,12 +1008,221 @@ export class SnakeScene extends Phaser.Scene {
     }
   }
 
+  private spawnThrownFood(targetGridX: number, targetGridY: number): void {
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+    const targetX = targetGridX * CELL_SIZE + CELL_SIZE / 2;
+    const targetY = targetGridY * CELL_SIZE + CELL_SIZE / 2;
+
+    // Choose random edge to throw from
+    const edge = Math.floor(Math.random() * 4);
+    let startX: number, startY: number;
+
+    switch (edge) {
+      case 0: // top
+        startX = Math.random() * width;
+        startY = -40;
+        break;
+      case 1: // right
+        startX = width + 40;
+        startY = Math.random() * height;
+        break;
+      case 2: // bottom
+        startX = Math.random() * width;
+        startY = height + 40;
+        break;
+      default: // left
+        startX = -40;
+        startY = Math.random() * height;
+        break;
+    }
+
+    this.thrownFood = {
+      startX,
+      startY,
+      targetX,
+      targetY,
+      x: startX,
+      y: startY,
+      progress: 0,
+      rotation: 0,
+      rotationSpeed: (Math.random() - 0.5) * 0.6,
+      trail: [],
+      landed: false,
+      landingParticles: [],
+      impactRings: [],
+    };
+  }
+
+  private updateThrownFood(): void {
+    if (!this.thrownFood) return;
+
+    const tf = this.thrownFood;
+
+    if (!tf.landed) {
+      // Update progress
+      tf.progress += 0.04;
+
+      // Store trail
+      if (this.frameCount % 2 === 0) {
+        tf.trail.unshift({ x: tf.x, y: tf.y, alpha: 1, rotation: tf.rotation });
+        if (tf.trail.length > 12) tf.trail.pop();
+      }
+
+      // Fade trail
+      for (const t of tf.trail) {
+        t.alpha *= 0.85;
+      }
+      tf.trail = tf.trail.filter(t => t.alpha > 0.05);
+
+      // Calculate position with parabolic arc
+      const t = tf.progress;
+      const arcHeight = 80;
+      const arc = 4 * arcHeight * t * (1 - t);
+      tf.x = tf.startX + (tf.targetX - tf.startX) * t;
+      tf.y = tf.startY + (tf.targetY - tf.startY) * t - arc;
+
+      // Rotation
+      tf.rotation += tf.rotationSpeed;
+
+      // Check if landed
+      if (tf.progress >= 1) {
+        tf.landed = true;
+        tf.x = tf.targetX;
+        tf.y = tf.targetY;
+
+        // Spawn landing effects
+        this.screenShakeIntensity = Math.max(this.screenShakeIntensity, 6);
+
+        // Impact rings
+        tf.impactRings = [
+          { radius: 5, alpha: 1 },
+          { radius: 3, alpha: 0.8 },
+        ];
+
+        // Landing particles
+        for (let i = 0; i < 10; i++) {
+          const angle = (i / 10) * Math.PI * 2 + Math.random() * 0.3;
+          const speed = 2 + Math.random() * 3;
+          tf.landingParticles.push({
+            x: tf.targetX,
+            y: tf.targetY,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 1,
+            life: 1,
+            size: 2 + Math.random() * 3,
+          });
+        }
+      }
+    } else {
+      // Update landing effects
+      for (const ring of tf.impactRings) {
+        ring.radius += 3;
+        ring.alpha *= 0.9;
+      }
+      tf.impactRings = tf.impactRings.filter(r => r.alpha > 0.05);
+
+      for (let i = tf.landingParticles.length - 1; i >= 0; i--) {
+        const p = tf.landingParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.15;
+        p.vx *= 0.98;
+        p.life -= 0.04;
+        if (p.life <= 0) {
+          tf.landingParticles.splice(i, 1);
+        }
+      }
+
+      // Fade trail
+      for (const t of tf.trail) {
+        t.alpha *= 0.8;
+      }
+      tf.trail = tf.trail.filter(t => t.alpha > 0.05);
+
+      // Clear thrown food when effects are done
+      if (tf.impactRings.length === 0 && tf.landingParticles.length === 0 && tf.trail.length === 0) {
+        this.thrownFood = null;
+      }
+    }
+  }
+
+  private drawThrownFood(g: Phaser.GameObjects.Graphics): void {
+    if (!this.thrownFood) return;
+
+    const tf = this.thrownFood;
+
+    // Draw trail
+    for (let i = 0; i < tf.trail.length; i++) {
+      const t = tf.trail[i];
+      const trailProgress = i / tf.trail.length;
+      const trailSize = (CELL_SIZE / 2) * (1 - trailProgress * 0.5) * t.alpha;
+
+      // Trail glow
+      g.fillStyle(COLORS.foodGlow, t.alpha * 0.3);
+      g.fillCircle(t.x, t.y, trailSize * 1.5);
+
+      // Trail core
+      g.fillStyle(COLORS.food, t.alpha * 0.6);
+      g.fillCircle(t.x, t.y, trailSize);
+    }
+
+    // Draw impact rings
+    for (const ring of tf.impactRings) {
+      g.lineStyle(3, COLORS.foodGlow, ring.alpha * 0.5);
+      g.strokeCircle(tf.targetX, tf.targetY, ring.radius);
+      g.lineStyle(1.5, COLORS.noirWhite, ring.alpha * 0.7);
+      g.strokeCircle(tf.targetX, tf.targetY, ring.radius);
+    }
+
+    // Draw landing particles
+    for (const p of tf.landingParticles) {
+      g.fillStyle(COLORS.foodGlow, p.life * 0.6);
+      g.fillCircle(p.x, p.y, p.size * 1.3 * p.life);
+      g.fillStyle(COLORS.noirWhite, p.life * 0.9);
+      g.fillCircle(p.x, p.y, p.size * p.life);
+    }
+
+    // Draw the flying food if not landed
+    if (!tf.landed) {
+      const scale = 0.8 + tf.progress * 0.4;
+      const foodSize = (CELL_SIZE / 2) * scale;
+
+      // Motion blur glow
+      g.fillStyle(COLORS.foodGlow, 0.3);
+      g.fillCircle(tf.x, tf.y, foodSize * 2);
+
+      // Outer glow
+      g.fillStyle(COLORS.noirWhite, 0.4);
+      g.fillCircle(tf.x, tf.y, foodSize * 1.5);
+
+      // Main food body
+      g.fillStyle(COLORS.food, 0.95);
+      g.fillCircle(tf.x, tf.y, foodSize);
+
+      // Spinning highlight
+      const highlightAngle = tf.rotation;
+      const highlightX = tf.x + Math.cos(highlightAngle) * foodSize * 0.3;
+      const highlightY = tf.y + Math.sin(highlightAngle) * foodSize * 0.3;
+      g.fillStyle(0xffffff, 0.9);
+      g.fillCircle(highlightX, highlightY, foodSize * 0.25);
+
+      // Secondary sparkle
+      const sparkleAngle = tf.rotation + Math.PI * 0.7;
+      const sparkleX = tf.x + Math.cos(sparkleAngle) * foodSize * 0.4;
+      const sparkleY = tf.y + Math.sin(sparkleAngle) * foodSize * 0.4;
+      g.fillStyle(0xffffff, 0.6);
+      g.fillCircle(sparkleX, sparkleY, foodSize * 0.15);
+    }
+  }
+
   update(): void {
     this.frameCount++;
     this.hueOffset = (this.hueOffset + 0.5) % 360;
     this.venetianPhase += 0.008;
     this.updateParticles();
     this.updateSmokeParticles();
+    this.updateThrownFood();
     this.updateFlameParticles();
     this.updateCometTrail();
     this.updateEtherealParticles();
@@ -1061,7 +1300,10 @@ export class SnakeScene extends Phaser.Scene {
     // Draw flame particles (burning trail behind snake)
     this.drawFlameParticles(g);
 
-    // Food with enhanced glow, particles and energy tendrils
+    // Draw thrown food animation (flying food)
+    this.drawThrownFood(g);
+
+    // Food with enhanced glow, particles and energy tendrils (only if landed or no animation)
     this.drawFood(g);
 
     // Snake with trail and scale effects
@@ -1951,6 +2193,9 @@ export class SnakeScene extends Phaser.Scene {
 
   private drawFood(g: Phaser.GameObjects.Graphics): void {
     if (!this.currentState) return;
+
+    // Don't draw food if it's still being thrown
+    if (this.thrownFood && !this.thrownFood.landed) return;
 
     const food = this.currentState.food;
     const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;

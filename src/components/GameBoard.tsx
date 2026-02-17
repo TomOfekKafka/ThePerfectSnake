@@ -270,6 +270,251 @@ interface EtherealParticle2D {
 let etherealParticles: EtherealParticle2D[] = [];
 const MAX_ETHEREAL_PARTICLES = 50;
 
+// Thrown food animation state
+interface ThrownFood2D {
+  startX: number;
+  startY: number;
+  targetX: number;
+  targetY: number;
+  x: number;
+  y: number;
+  progress: number;
+  rotation: number;
+  rotationSpeed: number;
+  trail: { x: number; y: number; alpha: number }[];
+  landed: boolean;
+  landingParticles: { x: number; y: number; vx: number; vy: number; life: number; size: number }[];
+  impactRings: { radius: number; alpha: number }[];
+}
+let thrownFood: ThrownFood2D | null = null;
+let lastFoodX = -1;
+let lastFoodY = -1;
+
+function spawnThrownFood2D(targetGridX: number, targetGridY: number): void {
+  const width = GRID_SIZE * CELL_SIZE;
+  const height = GRID_SIZE * CELL_SIZE;
+  const targetX = targetGridX * CELL_SIZE + CELL_SIZE / 2;
+  const targetY = targetGridY * CELL_SIZE + CELL_SIZE / 2;
+
+  const edge = Math.floor(Math.random() * 4);
+  let startX: number, startY: number;
+
+  switch (edge) {
+    case 0:
+      startX = Math.random() * width;
+      startY = -40;
+      break;
+    case 1:
+      startX = width + 40;
+      startY = Math.random() * height;
+      break;
+    case 2:
+      startX = Math.random() * width;
+      startY = height + 40;
+      break;
+    default:
+      startX = -40;
+      startY = Math.random() * height;
+      break;
+  }
+
+  thrownFood = {
+    startX,
+    startY,
+    targetX,
+    targetY,
+    x: startX,
+    y: startY,
+    progress: 0,
+    rotation: 0,
+    rotationSpeed: (Math.random() - 0.5) * 0.6,
+    trail: [],
+    landed: false,
+    landingParticles: [],
+    impactRings: [],
+  };
+}
+
+function updateThrownFood2D(): void {
+  if (!thrownFood) return;
+
+  const tf = thrownFood;
+
+  if (!tf.landed) {
+    tf.progress += 0.04;
+
+    if (frameCount % 2 === 0) {
+      tf.trail.unshift({ x: tf.x, y: tf.y, alpha: 1 });
+      if (tf.trail.length > 12) tf.trail.pop();
+    }
+
+    for (const t of tf.trail) {
+      t.alpha *= 0.85;
+    }
+    tf.trail = tf.trail.filter(t => t.alpha > 0.05);
+
+    const t = tf.progress;
+    const arcHeight = 80;
+    const arc = 4 * arcHeight * t * (1 - t);
+    tf.x = tf.startX + (tf.targetX - tf.startX) * t;
+    tf.y = tf.startY + (tf.targetY - tf.startY) * t - arc;
+
+    tf.rotation += tf.rotationSpeed;
+
+    if (tf.progress >= 1) {
+      tf.landed = true;
+      tf.x = tf.targetX;
+      tf.y = tf.targetY;
+
+      screenShakeIntensity = Math.max(screenShakeIntensity, 6);
+
+      tf.impactRings = [
+        { radius: 5, alpha: 1 },
+        { radius: 3, alpha: 0.8 },
+      ];
+
+      for (let i = 0; i < 10; i++) {
+        const angle = (i / 10) * Math.PI * 2 + Math.random() * 0.3;
+        const speed = 2 + Math.random() * 3;
+        tf.landingParticles.push({
+          x: tf.targetX,
+          y: tf.targetY,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 1,
+          life: 1,
+          size: 2 + Math.random() * 3,
+        });
+      }
+    }
+  } else {
+    for (const ring of tf.impactRings) {
+      ring.radius += 3;
+      ring.alpha *= 0.9;
+    }
+    tf.impactRings = tf.impactRings.filter(r => r.alpha > 0.05);
+
+    for (let i = tf.landingParticles.length - 1; i >= 0; i--) {
+      const p = tf.landingParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.15;
+      p.vx *= 0.98;
+      p.life -= 0.04;
+      if (p.life <= 0) {
+        tf.landingParticles.splice(i, 1);
+      }
+    }
+
+    for (const t of tf.trail) {
+      t.alpha *= 0.8;
+    }
+    tf.trail = tf.trail.filter(t => t.alpha > 0.05);
+
+    if (tf.impactRings.length === 0 && tf.landingParticles.length === 0 && tf.trail.length === 0) {
+      thrownFood = null;
+    }
+  }
+}
+
+function drawThrownFood2D(ctx: CanvasRenderingContext2D): void {
+  if (!thrownFood) return;
+
+  const tf = thrownFood;
+
+  // Draw trail
+  for (let i = 0; i < tf.trail.length; i++) {
+    const t = tf.trail[i];
+    const trailProgress = i / tf.trail.length;
+    const trailSize = (CELL_SIZE / 2) * (1 - trailProgress * 0.5) * t.alpha;
+
+    ctx.fillStyle = `rgba(139, 0, 255, ${t.alpha * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, trailSize * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = `rgba(148, 0, 211, ${t.alpha * 0.6})`;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, trailSize, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw impact rings
+  for (const ring of tf.impactRings) {
+    ctx.strokeStyle = `rgba(139, 0, 255, ${ring.alpha * 0.5})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(tf.targetX, tf.targetY, ring.radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = `rgba(224, 102, 255, ${ring.alpha * 0.7})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(tf.targetX, tf.targetY, ring.radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Draw landing particles
+  for (const p of tf.landingParticles) {
+    ctx.fillStyle = `rgba(139, 0, 255, ${p.life * 0.6})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * 1.3 * p.life, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = `rgba(224, 102, 255, ${p.life * 0.9})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw the flying food if not landed
+  if (!tf.landed) {
+    const scale = 0.8 + tf.progress * 0.4;
+    const foodSize = (CELL_SIZE / 2) * scale;
+
+    // Motion blur glow
+    ctx.fillStyle = 'rgba(139, 0, 255, 0.3)';
+    ctx.beginPath();
+    ctx.arc(tf.x, tf.y, foodSize * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Outer glow
+    ctx.fillStyle = 'rgba(224, 102, 255, 0.4)';
+    ctx.beginPath();
+    ctx.arc(tf.x, tf.y, foodSize * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Main food body
+    ctx.fillStyle = COLORS.food;
+    ctx.globalAlpha = 0.95;
+    ctx.beginPath();
+    ctx.arc(tf.x, tf.y, foodSize, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Spinning highlight
+    const highlightAngle = tf.rotation;
+    const highlightX = tf.x + Math.cos(highlightAngle) * foodSize * 0.3;
+    const highlightY = tf.y + Math.sin(highlightAngle) * foodSize * 0.3;
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.arc(highlightX, highlightY, foodSize * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Secondary sparkle
+    const sparkleAngle = tf.rotation + Math.PI * 0.7;
+    const sparkleX = tf.x + Math.cos(sparkleAngle) * foodSize * 0.4;
+    const sparkleY = tf.y + Math.sin(sparkleAngle) * foodSize * 0.4;
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(sparkleX, sparkleY, foodSize * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
 function initArmageddonEffects(): void {
   if (effectsInitialized) return;
   effectsInitialized = true;
