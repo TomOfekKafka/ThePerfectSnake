@@ -291,6 +291,25 @@ let venetianPhase = 0;
 let spotlightX = 200;
 let spotlightY = 200;
 
+// Monster shadow state - lurking creatures at the edges
+interface MonsterShadow2D {
+  x: number;
+  y: number;
+  baseX: number;
+  baseY: number;
+  size: number;
+  phase: number;
+  speed: number;
+  eyePhase: number;
+  tentaclePhase: number;
+  edge: 'top' | 'bottom' | 'left' | 'right';
+  active: boolean;
+  targetAlpha: number;
+  currentAlpha: number;
+}
+let monsterShadows: MonsterShadow2D[] = [];
+let monstersInitialized = false;
+
 // Meteor shower state
 interface Meteor2D {
   x: number;
@@ -334,6 +353,236 @@ interface FoodOrbitParticle2D {
 let foodOrbitParticles: FoodOrbitParticle2D[] = [];
 let foodOrbPhase = 0;
 let foodOrbInitialized = false;
+
+function initMonsterShadows(): void {
+  if (monstersInitialized) return;
+  monstersInitialized = true;
+
+  const width = GRID_SIZE * CELL_SIZE;
+  const height = GRID_SIZE * CELL_SIZE;
+  monsterShadows = [];
+
+  // Create monsters on each edge
+  const edges: ('top' | 'bottom' | 'left' | 'right')[] = ['top', 'bottom', 'left', 'right'];
+  for (const edge of edges) {
+    // 2 monsters per edge
+    for (let i = 0; i < 2; i++) {
+      let x = 0, y = 0;
+      const offset = (i + 0.5) / 2;
+
+      switch (edge) {
+        case 'top':
+          x = width * offset;
+          y = -15;
+          break;
+        case 'bottom':
+          x = width * offset;
+          y = height + 15;
+          break;
+        case 'left':
+          x = -15;
+          y = height * offset;
+          break;
+        case 'right':
+          x = width + 15;
+          y = height * offset;
+          break;
+      }
+
+      monsterShadows.push({
+        x,
+        y,
+        baseX: x,
+        baseY: y,
+        size: 25 + Math.random() * 15,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.02 + Math.random() * 0.015,
+        eyePhase: Math.random() * Math.PI * 2,
+        tentaclePhase: Math.random() * Math.PI * 2,
+        edge,
+        active: true,
+        targetAlpha: 0.3 + Math.random() * 0.2,
+        currentAlpha: 0,
+      });
+    }
+  }
+}
+
+function updateMonsterShadows(snakeHead: { x: number; y: number } | null, gameOver: boolean): void {
+  const width = GRID_SIZE * CELL_SIZE;
+  const height = GRID_SIZE * CELL_SIZE;
+
+  for (const monster of monsterShadows) {
+    monster.phase += monster.speed;
+    monster.eyePhase += 0.05;
+    monster.tentaclePhase += 0.03;
+
+    // Monsters creep toward the game area slightly
+    const creepAmount = gameOver ? 25 : 8;
+    const breathAmount = 3;
+
+    // Calculate base position with breathing
+    let targetX = monster.baseX;
+    let targetY = monster.baseY;
+
+    const breath = Math.sin(monster.phase) * breathAmount;
+
+    switch (monster.edge) {
+      case 'top':
+        targetY = monster.baseY + creepAmount + breath;
+        targetX = monster.baseX + Math.sin(monster.phase * 0.5) * 10;
+        break;
+      case 'bottom':
+        targetY = monster.baseY - creepAmount - breath;
+        targetX = monster.baseX + Math.sin(monster.phase * 0.5) * 10;
+        break;
+      case 'left':
+        targetX = monster.baseX + creepAmount + breath;
+        targetY = monster.baseY + Math.sin(monster.phase * 0.5) * 10;
+        break;
+      case 'right':
+        targetX = monster.baseX - creepAmount - breath;
+        targetY = monster.baseY + Math.sin(monster.phase * 0.5) * 10;
+        break;
+    }
+
+    // If snake is nearby, monster recoils slightly
+    if (snakeHead) {
+      const headX = snakeHead.x * CELL_SIZE + CELL_SIZE / 2;
+      const headY = snakeHead.y * CELL_SIZE + CELL_SIZE / 2;
+      const dx = monster.x - headX;
+      const dy = monster.y - headY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 100 && !gameOver) {
+        // Recoil away from snake
+        const recoil = (100 - dist) / 100 * 20;
+        targetX += (dx / dist) * recoil;
+        targetY += (dy / dist) * recoil;
+      }
+    }
+
+    // Smooth movement
+    monster.x += (targetX - monster.x) * 0.05;
+    monster.y += (targetY - monster.y) * 0.05;
+
+    // Clamp to reasonable bounds
+    monster.x = Math.max(-50, Math.min(width + 50, monster.x));
+    monster.y = Math.max(-50, Math.min(height + 50, monster.y));
+
+    // Fade alpha - more visible during game over
+    const baseAlpha = gameOver ? 0.6 : monster.targetAlpha;
+    monster.currentAlpha += (baseAlpha - monster.currentAlpha) * 0.05;
+  }
+}
+
+function drawMonsterShadow(ctx: CanvasRenderingContext2D, monster: MonsterShadow2D): void {
+  const { x, y, size, phase, eyePhase, tentaclePhase, currentAlpha } = monster;
+
+  if (currentAlpha < 0.01) return;
+
+  ctx.save();
+
+  // Main body - amorphous blob
+  const bodyPulse = 1 + Math.sin(phase * 2) * 0.1;
+  const bodySize = size * bodyPulse;
+
+  // Outer shadow/glow
+  ctx.fillStyle = `rgba(0, 0, 0, ${currentAlpha * 0.3})`;
+  ctx.beginPath();
+  ctx.arc(x, y, bodySize * 1.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Draw tentacles extending from body
+  const numTentacles = 5;
+  for (let i = 0; i < numTentacles; i++) {
+    const angle = (i / numTentacles) * Math.PI * 2 + tentaclePhase;
+    const tentacleLength = bodySize * (0.8 + Math.sin(phase + i) * 0.3);
+    const wave = Math.sin(tentaclePhase * 2 + i * 0.7) * 8;
+
+    const startX = x + Math.cos(angle) * bodySize * 0.5;
+    const startY = y + Math.sin(angle) * bodySize * 0.5;
+    const midX = x + Math.cos(angle) * tentacleLength * 0.7 + wave;
+    const midY = y + Math.sin(angle) * tentacleLength * 0.7 + wave * 0.5;
+    const endX = x + Math.cos(angle + Math.sin(phase) * 0.3) * tentacleLength;
+    const endY = y + Math.sin(angle + Math.sin(phase) * 0.3) * tentacleLength;
+
+    ctx.strokeStyle = `rgba(10, 10, 10, ${currentAlpha * 0.7})`;
+    ctx.lineWidth = 4 - i * 0.3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.quadraticCurveTo(midX, midY, endX, endY);
+    ctx.stroke();
+
+    // Tentacle tip glow
+    ctx.fillStyle = `rgba(30, 0, 30, ${currentAlpha * 0.5})`;
+    ctx.beginPath();
+    ctx.arc(endX, endY, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Main body
+  ctx.fillStyle = `rgba(5, 5, 10, ${currentAlpha * 0.9})`;
+  ctx.beginPath();
+  // Draw irregular blob shape
+  for (let i = 0; i <= 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    const wobble = Math.sin(phase * 3 + i * 0.8) * size * 0.15;
+    const r = bodySize * 0.6 + wobble;
+    const px = x + Math.cos(angle) * r;
+    const py = y + Math.sin(angle) * r;
+    if (i === 0) {
+      ctx.moveTo(px, py);
+    } else {
+      ctx.lineTo(px, py);
+    }
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Inner darker core
+  ctx.fillStyle = `rgba(0, 0, 0, ${currentAlpha})`;
+  ctx.beginPath();
+  ctx.arc(x, y, bodySize * 0.35, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Glowing eyes (2-3 eyes)
+  const numEyes = 2 + Math.floor(Math.sin(phase * 0.1) + 1);
+  for (let i = 0; i < numEyes; i++) {
+    const eyeAngle = (i / numEyes) * Math.PI * 0.8 - Math.PI * 0.4 + Math.sin(eyePhase) * 0.2;
+    const eyeDist = bodySize * 0.2;
+    const eyeX = x + Math.cos(eyeAngle) * eyeDist;
+    const eyeY = y + Math.sin(eyeAngle) * eyeDist - size * 0.1;
+    const eyeSize = 3 + Math.sin(eyePhase + i) * 1;
+
+    // Eye glow
+    ctx.fillStyle = `rgba(80, 0, 40, ${currentAlpha * 0.6})`;
+    ctx.beginPath();
+    ctx.arc(eyeX, eyeY, eyeSize * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye core - menacing red
+    ctx.fillStyle = `rgba(180, 20, 60, ${currentAlpha})`;
+    ctx.beginPath();
+    ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye pupil
+    ctx.fillStyle = `rgba(0, 0, 0, ${currentAlpha})`;
+    ctx.beginPath();
+    ctx.arc(eyeX + Math.sin(eyePhase) * 1, eyeY, eyeSize * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye glint
+    ctx.fillStyle = `rgba(255, 100, 100, ${currentAlpha * 0.8})`;
+    ctx.beginPath();
+    ctx.arc(eyeX - 1, eyeY - 1, eyeSize * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
 
 function initCanvas2DEffects(): void {
   if (effectsInitialized) return;
@@ -409,6 +658,9 @@ function initCanvas2DEffects(): void {
 
   // Initialize food orb particles
   initFoodOrbParticles();
+
+  // Initialize monster shadows
+  initMonsterShadows();
 }
 
 function initFoodOrbParticles(): void {
@@ -805,6 +1057,13 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.strokeRect(inset - 30, inset - 30, width - inset * 2 + 60, height - inset * 2 + 60);
   }
   ctx.globalAlpha = 1;
+
+  // Update and draw monster shadows lurking at the edges
+  const snakeHead = gameState.snake.length > 0 ? gameState.snake[0] : null;
+  updateMonsterShadows(snakeHead, gameState.gameOver);
+  for (const monster of monsterShadows) {
+    drawMonsterShadow(ctx, monster);
+  }
 
   // Dramatic pulsing orb food effect
   const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;

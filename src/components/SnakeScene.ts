@@ -127,6 +127,7 @@ const NUM_VORTEX_RINGS = 5;
 const NUM_VORTEX_PARTICLES = 20;
 const NUM_METEORS = 8;
 const MAX_DEATH_DEBRIS = 24;
+const NUM_MONSTERS_PER_EDGE = 2;
 
 // Meteor shower types
 interface Meteor {
@@ -153,6 +154,22 @@ interface DeathDebris {
   rotationSpeed: number;
   life: number;
   type: 'shard' | 'spark' | 'ember';
+}
+
+// Monster shadow lurking at edges
+interface MonsterShadow {
+  x: number;
+  y: number;
+  baseX: number;
+  baseY: number;
+  size: number;
+  phase: number;
+  speed: number;
+  eyePhase: number;
+  tentaclePhase: number;
+  edge: 'top' | 'bottom' | 'left' | 'right';
+  targetAlpha: number;
+  currentAlpha: number;
 }
 
 // Color palette - Film Noir theme: high contrast black/white with dramatic shadows
@@ -224,6 +241,7 @@ export class SnakeScene extends Phaser.Scene {
   private spotlightX = 0;
   private spotlightY = 0;
   private smokeParticles: { x: number; y: number; vx: number; vy: number; size: number; alpha: number; life: number }[] = [];
+  private monsterShadows: MonsterShadow[] = [];
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -238,6 +256,7 @@ export class SnakeScene extends Phaser.Scene {
     this.initVortex();
     this.initMeteors();
     this.initSmokeParticles();
+    this.initMonsterShadows();
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -258,6 +277,185 @@ export class SnakeScene extends Phaser.Scene {
         alpha: 0.02 + Math.random() * 0.03,
         life: Math.random(),
       });
+    }
+  }
+
+  private initMonsterShadows(): void {
+    this.monsterShadows = [];
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+
+    const edges: ('top' | 'bottom' | 'left' | 'right')[] = ['top', 'bottom', 'left', 'right'];
+    for (const edge of edges) {
+      for (let i = 0; i < NUM_MONSTERS_PER_EDGE; i++) {
+        let x = 0, y = 0;
+        const offset = (i + 0.5) / NUM_MONSTERS_PER_EDGE;
+
+        switch (edge) {
+          case 'top':
+            x = width * offset;
+            y = -15;
+            break;
+          case 'bottom':
+            x = width * offset;
+            y = height + 15;
+            break;
+          case 'left':
+            x = -15;
+            y = height * offset;
+            break;
+          case 'right':
+            x = width + 15;
+            y = height * offset;
+            break;
+        }
+
+        this.monsterShadows.push({
+          x,
+          y,
+          baseX: x,
+          baseY: y,
+          size: 25 + Math.random() * 15,
+          phase: Math.random() * Math.PI * 2,
+          speed: 0.02 + Math.random() * 0.015,
+          eyePhase: Math.random() * Math.PI * 2,
+          tentaclePhase: Math.random() * Math.PI * 2,
+          edge,
+          targetAlpha: 0.3 + Math.random() * 0.2,
+          currentAlpha: 0,
+        });
+      }
+    }
+  }
+
+  private updateMonsterShadows(): void {
+    if (!this.currentState) return;
+
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+    const gameOver = this.currentState.gameOver;
+    const snakeHead = this.currentState.snake.length > 0 ? this.currentState.snake[0] : null;
+
+    for (const monster of this.monsterShadows) {
+      monster.phase += monster.speed;
+      monster.eyePhase += 0.05;
+      monster.tentaclePhase += 0.03;
+
+      const creepAmount = gameOver ? 25 : 8;
+      const breathAmount = 3;
+      const breath = Math.sin(monster.phase) * breathAmount;
+
+      let targetX = monster.baseX;
+      let targetY = monster.baseY;
+
+      switch (monster.edge) {
+        case 'top':
+          targetY = monster.baseY + creepAmount + breath;
+          targetX = monster.baseX + Math.sin(monster.phase * 0.5) * 10;
+          break;
+        case 'bottom':
+          targetY = monster.baseY - creepAmount - breath;
+          targetX = monster.baseX + Math.sin(monster.phase * 0.5) * 10;
+          break;
+        case 'left':
+          targetX = monster.baseX + creepAmount + breath;
+          targetY = monster.baseY + Math.sin(monster.phase * 0.5) * 10;
+          break;
+        case 'right':
+          targetX = monster.baseX - creepAmount - breath;
+          targetY = monster.baseY + Math.sin(monster.phase * 0.5) * 10;
+          break;
+      }
+
+      // Recoil from snake head
+      if (snakeHead && !gameOver) {
+        const headX = snakeHead.x * CELL_SIZE + CELL_SIZE / 2;
+        const headY = snakeHead.y * CELL_SIZE + CELL_SIZE / 2;
+        const dx = monster.x - headX;
+        const dy = monster.y - headY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 100) {
+          const recoil = (100 - dist) / 100 * 20;
+          targetX += (dx / dist) * recoil;
+          targetY += (dy / dist) * recoil;
+        }
+      }
+
+      monster.x += (targetX - monster.x) * 0.05;
+      monster.y += (targetY - monster.y) * 0.05;
+      monster.x = Math.max(-50, Math.min(width + 50, monster.x));
+      monster.y = Math.max(-50, Math.min(height + 50, monster.y));
+
+      const baseAlpha = gameOver ? 0.6 : monster.targetAlpha;
+      monster.currentAlpha += (baseAlpha - monster.currentAlpha) * 0.05;
+    }
+  }
+
+  private drawMonsterShadows(g: Phaser.GameObjects.Graphics): void {
+    for (const monster of this.monsterShadows) {
+      if (monster.currentAlpha < 0.01) continue;
+
+      const { x, y, size, phase, eyePhase, tentaclePhase, currentAlpha } = monster;
+      const bodyPulse = 1 + Math.sin(phase * 2) * 0.1;
+      const bodySize = size * bodyPulse;
+
+      // Outer shadow
+      g.fillStyle(0x000000, currentAlpha * 0.3);
+      g.fillCircle(x, y, bodySize * 1.4);
+
+      // Tentacles
+      const numTentacles = 5;
+      for (let i = 0; i < numTentacles; i++) {
+        const angle = (i / numTentacles) * Math.PI * 2 + tentaclePhase;
+        const tentacleLength = bodySize * (0.8 + Math.sin(phase + i) * 0.3);
+        const wave = Math.sin(tentaclePhase * 2 + i * 0.7) * 8;
+
+        const startX = x + Math.cos(angle) * bodySize * 0.5;
+        const startY = y + Math.sin(angle) * bodySize * 0.5;
+        const endX = x + Math.cos(angle + Math.sin(phase) * 0.3) * tentacleLength + wave * 0.3;
+        const endY = y + Math.sin(angle + Math.sin(phase) * 0.3) * tentacleLength + wave * 0.3;
+
+        g.lineStyle(4 - i * 0.3, 0x0a0a0a, currentAlpha * 0.7);
+        g.lineBetween(startX, startY, endX, endY);
+
+        g.fillStyle(0x1e001e, currentAlpha * 0.5);
+        g.fillCircle(endX, endY, 3);
+      }
+
+      // Main body blob
+      g.fillStyle(0x05050a, currentAlpha * 0.9);
+      g.fillCircle(x, y, bodySize * 0.6);
+
+      // Inner dark core
+      g.fillStyle(0x000000, currentAlpha);
+      g.fillCircle(x, y, bodySize * 0.35);
+
+      // Glowing eyes
+      const numEyes = 2 + Math.floor(Math.sin(phase * 0.1) + 1);
+      for (let i = 0; i < numEyes; i++) {
+        const eyeAngle = (i / numEyes) * Math.PI * 0.8 - Math.PI * 0.4 + Math.sin(eyePhase) * 0.2;
+        const eyeDist = bodySize * 0.2;
+        const eyeX = x + Math.cos(eyeAngle) * eyeDist;
+        const eyeY = y + Math.sin(eyeAngle) * eyeDist - size * 0.1;
+        const eyeSize = 3 + Math.sin(eyePhase + i) * 1;
+
+        // Eye glow
+        g.fillStyle(0x50002a, currentAlpha * 0.6);
+        g.fillCircle(eyeX, eyeY, eyeSize * 2);
+
+        // Eye core - menacing red
+        g.fillStyle(0xb4143c, currentAlpha);
+        g.fillCircle(eyeX, eyeY, eyeSize);
+
+        // Eye pupil
+        g.fillStyle(0x000000, currentAlpha);
+        g.fillCircle(eyeX + Math.sin(eyePhase) * 1, eyeY, eyeSize * 0.5);
+
+        // Eye glint
+        g.fillStyle(0xff6464, currentAlpha * 0.8);
+        g.fillCircle(eyeX - 1, eyeY - 1, eyeSize * 0.25);
+      }
     }
   }
 
@@ -783,6 +981,10 @@ export class SnakeScene extends Phaser.Scene {
 
     // Grid with noir styling
     this.drawGrid(g, width, height);
+
+    // Update and draw monster shadows at the edges
+    this.updateMonsterShadows();
+    this.drawMonsterShadows(g);
 
     if (!this.currentState) return;
 
