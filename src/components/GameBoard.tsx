@@ -349,7 +349,7 @@ let bees2D: Bee2D[] = [];
 const MAX_BEES_2D = 8;
 const BEE_SPAWN_CHANCE_2D = 0.02;
 
-// Ghost snake - spectral AI companion snake that roams the board
+// Ghost snake - spectral AI companion that guides player to food
 interface GhostSnake2D {
   segments: { x: number; y: number }[];
   direction: { dx: number; dy: number };
@@ -361,10 +361,14 @@ interface GhostSnake2D {
   glowIntensity: number;
   hue: number;
   trail: { x: number; y: number; alpha: number }[];
+  nearFood: boolean;
+  foodProximity: number;
+  orbitAngle: number;
+  guidingBeam: { x: number; y: number; alpha: number }[];
 }
 let ghostSnake: GhostSnake2D | null = null;
 const GHOST_SNAKE_LENGTH = 8;
-const GHOST_MOVE_INTERVAL = 12;
+const GHOST_MOVE_INTERVAL = 10;
 
 function spawnBee2D(): void {
   if (bees2D.length >= MAX_BEES_2D) return;
@@ -423,7 +427,6 @@ function initGhostSnake(): void {
   const width = GRID_SIZE * CELL_SIZE;
   const height = GRID_SIZE * CELL_SIZE;
 
-  // Start from a random position
   const startX = 50 + Math.random() * (width - 100);
   const startY = 50 + Math.random() * (height - 100);
 
@@ -444,8 +447,12 @@ function initGhostSnake(): void {
     moveInterval: GHOST_MOVE_INTERVAL,
     pulsePhase: 0,
     glowIntensity: 0.6,
-    hue: 260, // Purple/violet spectral color
+    hue: 260,
     trail: [],
+    nearFood: false,
+    foodProximity: 0,
+    orbitAngle: 0,
+    guidingBeam: [],
   };
 }
 
@@ -459,13 +466,24 @@ function updateGhostSnake(gameState: GameState): void {
   const width = GRID_SIZE * CELL_SIZE;
   const height = GRID_SIZE * CELL_SIZE;
 
-  // Update visual effects
-  gs.pulsePhase += 0.08;
-  gs.glowIntensity = 0.5 + Math.sin(gs.pulsePhase) * 0.2;
+  // Food position
+  const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
+  const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
+  const head = gs.segments[0];
+  const distToFood = Math.sqrt((head.x - foodX) ** 2 + (head.y - foodY) ** 2);
+
+  // Update proximity tracking
+  gs.foodProximity = Math.max(0, 1 - distToFood / 150);
+  gs.nearFood = distToFood < 50;
+  gs.orbitAngle += gs.nearFood ? 0.08 : 0.02;
+
+  // Update visual effects - brighter when near food
+  gs.pulsePhase += gs.nearFood ? 0.15 : 0.08;
+  gs.glowIntensity = 0.5 + Math.sin(gs.pulsePhase) * 0.2 + gs.foodProximity * 0.4;
 
   // Add to trail
   if (gs.segments.length > 0) {
-    gs.trail.unshift({ x: gs.segments[0].x, y: gs.segments[0].y, alpha: 0.5 });
+    gs.trail.unshift({ x: head.x, y: head.y, alpha: 0.5 + gs.foodProximity * 0.3 });
     if (gs.trail.length > 15) gs.trail.pop();
   }
 
@@ -475,42 +493,47 @@ function updateGhostSnake(gameState: GameState): void {
   }
   gs.trail = gs.trail.filter(t => t.alpha > 0.02);
 
-  // Movement logic
+  // Update guiding beam - luminous connection to food
+  if (frameCount % 3 === 0 && !gameState.gameOver) {
+    const beamAlpha = 0.3 + gs.foodProximity * 0.5;
+    gs.guidingBeam.unshift({ x: head.x, y: head.y, alpha: beamAlpha });
+    if (gs.guidingBeam.length > 20) gs.guidingBeam.pop();
+  }
+  for (const b of gs.guidingBeam) {
+    b.alpha *= 0.88;
+  }
+  gs.guidingBeam = gs.guidingBeam.filter(b => b.alpha > 0.02);
+
+  // Movement logic - ALWAYS target food
   gs.moveTimer++;
   if (gs.moveTimer >= gs.moveInterval) {
     gs.moveTimer = 0;
 
-    // Pick a new target occasionally
-    if (Math.random() < 0.15) {
-      // Sometimes target the food area (but offset so we don't overlap)
-      if (Math.random() < 0.3) {
-        const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
-        const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
-        const angle = Math.random() * Math.PI * 2;
-        gs.targetX = foodX + Math.cos(angle) * 60;
-        gs.targetY = foodY + Math.sin(angle) * 60;
-      } else {
-        gs.targetX = 40 + Math.random() * (width - 80);
-        gs.targetY = 40 + Math.random() * (height - 80);
-      }
+    if (gs.nearFood) {
+      // Orbit around food when close
+      const orbitDist = 35 + Math.sin(gs.pulsePhase * 0.5) * 10;
+      gs.targetX = foodX + Math.cos(gs.orbitAngle) * orbitDist;
+      gs.targetY = foodY + Math.sin(gs.orbitAngle) * orbitDist;
+    } else {
+      // Head directly toward food
+      gs.targetX = foodX;
+      gs.targetY = foodY;
     }
 
     // Calculate direction toward target
-    const head = gs.segments[0];
     const dx = gs.targetX - head.x;
     const dy = gs.targetY - head.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist > 5) {
-      // Smooth direction change
       const targetDx = dx / dist;
       const targetDy = dy / dist;
 
-      // Interpolate toward target direction
-      gs.direction.dx = gs.direction.dx * 0.7 + targetDx * 0.3;
-      gs.direction.dy = gs.direction.dy * 0.7 + targetDy * 0.3;
+      // Faster tracking when far from food
+      const trackingSpeed = gs.nearFood ? 0.25 : 0.4;
+      gs.direction.dx = gs.direction.dx * (1 - trackingSpeed) + targetDx * trackingSpeed;
+      gs.direction.dy = gs.direction.dy * (1 - trackingSpeed) + targetDy * trackingSpeed;
 
-      // Normalize
       const len = Math.sqrt(gs.direction.dx * gs.direction.dx + gs.direction.dy * gs.direction.dy);
       if (len > 0) {
         gs.direction.dx /= len;
@@ -518,8 +541,8 @@ function updateGhostSnake(gameState: GameState): void {
       }
     }
 
-    // Move head
-    const moveSpeed = CELL_SIZE * 0.5;
+    // Move head - faster when far from food
+    const moveSpeed = gs.nearFood ? CELL_SIZE * 0.3 : CELL_SIZE * 0.6;
     const newHead = {
       x: head.x + gs.direction.dx * moveSpeed,
       y: head.y + gs.direction.dy * moveSpeed,
@@ -531,48 +554,81 @@ function updateGhostSnake(gameState: GameState): void {
     if (newHead.y < -20) newHead.y = height + 20;
     if (newHead.y > height + 20) newHead.y = -20;
 
-    // Shift segments
     gs.segments.unshift(newHead);
     gs.segments.pop();
   } else {
-    // Smooth interpolation between moves
-    const t = gs.moveTimer / gs.moveInterval;
-    const head = gs.segments[0];
-    const moveSpeed = CELL_SIZE * 0.5;
-
-    // Slight continuous movement for smoothness
+    const moveSpeed = gs.nearFood ? CELL_SIZE * 0.3 : CELL_SIZE * 0.5;
     head.x += gs.direction.dx * moveSpeed * 0.05;
     head.y += gs.direction.dy * moveSpeed * 0.05;
 
-    // Pull body segments toward their predecessor
     for (let i = 1; i < gs.segments.length; i++) {
       const seg = gs.segments[i];
       const prev = gs.segments[i - 1];
-      const pullStrength = 0.15;
+      const pullStrength = 0.15 + gs.foodProximity * 0.1;
       seg.x += (prev.x - seg.x) * pullStrength;
       seg.y += (prev.y - seg.y) * pullStrength;
     }
   }
 
-  // Color shift based on game state
+  // Color shift - golden glow near food, purple when searching
   if (gameState.gameOver) {
-    gs.hue = 0; // Turn red on game over
+    gs.hue = 0;
     gs.glowIntensity *= 0.95;
+  } else if (gs.nearFood) {
+    gs.hue = 45 + Math.sin(gs.pulsePhase) * 15; // Golden when orbiting food
   } else {
-    gs.hue = 260 + Math.sin(gs.pulsePhase * 0.5) * 20; // Purple to blue shift
+    gs.hue = 260 + Math.sin(gs.pulsePhase * 0.5) * 20 - gs.foodProximity * 80; // Purple->gold gradient
   }
 }
 
-function drawGhostSnake(ctx: CanvasRenderingContext2D): void {
+function drawGhostSnake(ctx: CanvasRenderingContext2D, gameState: GameState): void {
   if (!ghostSnake || ghostSnake.segments.length === 0) return;
 
   const gs = ghostSnake;
   const pulse = gs.glowIntensity;
+  const head = gs.segments[0];
+
+  // Food position for guiding beam
+  const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
+  const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
+
+  // Draw guiding beam - luminous trail pointing to food
+  if (gs.guidingBeam.length > 1 && !gameState.gameOver) {
+    // Draw ethereal connection line from ghost to food
+    const beamAlpha = gs.foodProximity * 0.4;
+    if (beamAlpha > 0.05) {
+      ctx.strokeStyle = `hsla(${gs.hue}, 80%, 70%, ${beamAlpha})`;
+      ctx.lineWidth = 2 + gs.foodProximity * 3;
+      ctx.lineCap = 'round';
+      ctx.setLineDash([8, 12]);
+      ctx.beginPath();
+      ctx.moveTo(head.x, head.y);
+      ctx.lineTo(foodX, foodY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Pulsing particles along the beam
+      const beamDist = Math.sqrt((foodX - head.x) ** 2 + (foodY - head.y) ** 2);
+      const numParticles = Math.min(6, Math.floor(beamDist / 30));
+      for (let i = 0; i < numParticles; i++) {
+        const t = (i + 0.5 + Math.sin(frameCount * 0.1 + i) * 0.3) / numParticles;
+        const px = head.x + (foodX - head.x) * t;
+        const py = head.y + (foodY - head.y) * t;
+        const particleAlpha = beamAlpha * (0.5 + Math.sin(frameCount * 0.15 + i * 2) * 0.5);
+        const particleSize = 2 + gs.foodProximity * 2;
+
+        ctx.fillStyle = `hsla(${gs.hue + 20}, 90%, 75%, ${particleAlpha})`;
+        ctx.beginPath();
+        ctx.arc(px, py, particleSize, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
 
   // Draw trail first (behind everything)
   for (let i = 0; i < gs.trail.length; i++) {
     const t = gs.trail[i];
-    const trailSize = 4 * (1 - i / gs.trail.length);
+    const trailSize = 4 * (1 - i / gs.trail.length) * (1 + gs.foodProximity * 0.5);
 
     ctx.fillStyle = `hsla(${gs.hue}, 70%, 60%, ${t.alpha * 0.3})`;
     ctx.beginPath();
@@ -582,7 +638,7 @@ function drawGhostSnake(ctx: CanvasRenderingContext2D): void {
 
   // Draw connecting ethereal ribbon between segments
   ctx.strokeStyle = `hsla(${gs.hue}, 60%, 50%, ${0.15 * pulse})`;
-  ctx.lineWidth = 12;
+  ctx.lineWidth = 12 + gs.foodProximity * 4;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.beginPath();
@@ -592,9 +648,9 @@ function drawGhostSnake(ctx: CanvasRenderingContext2D): void {
   }
   ctx.stroke();
 
-  // Inner ribbon
-  ctx.strokeStyle = `hsla(${gs.hue}, 70%, 65%, ${0.25 * pulse})`;
-  ctx.lineWidth = 6;
+  // Inner ribbon - brighter when near food
+  ctx.strokeStyle = `hsla(${gs.hue}, 70%, 65%, ${(0.25 + gs.foodProximity * 0.2) * pulse})`;
+  ctx.lineWidth = 6 + gs.foodProximity * 2;
   ctx.stroke();
 
   // Draw segments from tail to head
@@ -603,43 +659,41 @@ function drawGhostSnake(ctx: CanvasRenderingContext2D): void {
     const t = gs.segments.length > 1 ? i / (gs.segments.length - 1) : 1;
     const segmentPulse = pulse * (0.7 + Math.sin(gs.pulsePhase + i * 0.5) * 0.3);
 
-    // Size varies from tail to head
-    const baseSize = 6 + t * 4;
+    // Size varies from tail to head - bigger when near food
+    const baseSize = 6 + t * 4 + gs.foodProximity * 2;
     const size = baseSize * (0.9 + segmentPulse * 0.2);
 
-    // Outer spectral glow
-    ctx.fillStyle = `hsla(${gs.hue}, 50%, 40%, ${0.1 * segmentPulse})`;
+    // Outer spectral glow - enhanced near food
+    ctx.fillStyle = `hsla(${gs.hue}, 50%, 40%, ${(0.1 + gs.foodProximity * 0.1) * segmentPulse})`;
     ctx.beginPath();
     ctx.arc(seg.x, seg.y, size * 2.5, 0, Math.PI * 2);
     ctx.fill();
 
     // Mid glow
-    ctx.fillStyle = `hsla(${gs.hue}, 60%, 55%, ${0.2 * segmentPulse})`;
+    ctx.fillStyle = `hsla(${gs.hue}, 60%, 55%, ${(0.2 + gs.foodProximity * 0.15) * segmentPulse})`;
     ctx.beginPath();
     ctx.arc(seg.x, seg.y, size * 1.5, 0, Math.PI * 2);
     ctx.fill();
 
     // Core
-    ctx.fillStyle = `hsla(${gs.hue}, 70%, 70%, ${0.5 * segmentPulse})`;
+    ctx.fillStyle = `hsla(${gs.hue}, 70%, 70%, ${(0.5 + gs.foodProximity * 0.2) * segmentPulse})`;
     ctx.beginPath();
     ctx.arc(seg.x, seg.y, size, 0, Math.PI * 2);
     ctx.fill();
 
     // Bright inner core
-    ctx.fillStyle = `hsla(${gs.hue + 30}, 50%, 85%, ${0.4 * segmentPulse})`;
+    ctx.fillStyle = `hsla(${gs.hue + 30}, 50%, 85%, ${(0.4 + gs.foodProximity * 0.3) * segmentPulse})`;
     ctx.beginPath();
     ctx.arc(seg.x, seg.y, size * 0.4, 0, Math.PI * 2);
     ctx.fill();
 
     // Head has special features
     if (i === 0) {
-      // Direction for eyes
       const dx = gs.direction.dx;
       const dy = gs.direction.dy;
       const perpX = -dy;
       const perpY = dx;
 
-      // Ghostly eyes
       const eyeOffset = 3;
       const eyeForward = 4;
       const leftEyeX = seg.x + perpX * eyeOffset + dx * eyeForward;
@@ -647,19 +701,19 @@ function drawGhostSnake(ctx: CanvasRenderingContext2D): void {
       const rightEyeX = seg.x - perpX * eyeOffset + dx * eyeForward;
       const rightEyeY = seg.y - perpY * eyeOffset + dy * eyeForward;
 
-      // Eye glow
-      ctx.fillStyle = `hsla(${gs.hue + 60}, 80%, 80%, ${0.7 * segmentPulse})`;
+      // Eye glow - more intense near food
+      const eyeGlow = gs.nearFood ? 1 : 0.7;
+      ctx.fillStyle = `hsla(${gs.hue + 60}, 80%, 80%, ${eyeGlow * segmentPulse})`;
       ctx.shadowColor = `hsl(${gs.hue + 60}, 100%, 70%)`;
-      ctx.shadowBlur = 6;
+      ctx.shadowBlur = 6 + gs.foodProximity * 6;
       ctx.beginPath();
-      ctx.arc(leftEyeX, leftEyeY, 2.5, 0, Math.PI * 2);
+      ctx.arc(leftEyeX, leftEyeY, 2.5 + gs.foodProximity, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(rightEyeX, rightEyeY, 2.5, 0, Math.PI * 2);
+      ctx.arc(rightEyeX, rightEyeY, 2.5 + gs.foodProximity, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // Bright eye centers
       ctx.fillStyle = '#ffffff';
       ctx.globalAlpha = 0.8 * segmentPulse;
       ctx.beginPath();
@@ -669,6 +723,22 @@ function drawGhostSnake(ctx: CanvasRenderingContext2D): void {
       ctx.arc(rightEyeX, rightEyeY, 1, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
+
+      // Draw excitement sparkles when near food
+      if (gs.nearFood) {
+        const sparkleCount = 4;
+        for (let s = 0; s < sparkleCount; s++) {
+          const sparkleAngle = gs.orbitAngle * 2 + (s / sparkleCount) * Math.PI * 2;
+          const sparkleDist = 12 + Math.sin(frameCount * 0.2 + s) * 4;
+          const sparkleX = seg.x + Math.cos(sparkleAngle) * sparkleDist;
+          const sparkleY = seg.y + Math.sin(sparkleAngle) * sparkleDist;
+
+          ctx.fillStyle = `hsla(${gs.hue + 40}, 100%, 80%, ${0.6 * pulse})`;
+          ctx.beginPath();
+          ctx.arc(sparkleX, sparkleY, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
     }
   }
 }
@@ -1707,8 +1777,8 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   // Draw ethereal particles (frost crystals drifting)
   drawEtherealParticles(ctx);
 
-  // Draw ghost snake (spectral companion)
-  drawGhostSnake(ctx);
+  // Draw ghost snake (spectral guide to food)
+  drawGhostSnake(ctx, gameState);
 
   // Draw frost particles
   for (const p of flameParticles) {
