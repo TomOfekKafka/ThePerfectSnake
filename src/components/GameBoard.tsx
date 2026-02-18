@@ -25,6 +25,8 @@ interface GameState {
   snake: Position[];
   food: Position;
   gameOver: boolean;
+  gameStarted: boolean;
+  score: number;
   powerUp?: PowerUp | null;
   activePowerUps?: ActivePowerUp[];
   tickCount?: number;
@@ -1669,6 +1671,266 @@ function updateArmageddonEffects(): void {
   foodFirePhase += 0.1;
 }
 
+// HUD state
+let hudPulsePhase = 0;
+let lastHudScore = 0;
+let scoreFlashIntensity = 0;
+
+// Draw the HUD overlay with score, length, and power-up indicators
+function drawHUD(
+  ctx: CanvasRenderingContext2D,
+  gameState: GameState,
+  width: number,
+  height: number
+): void {
+  if (!gameState.gameStarted) return;
+
+  hudPulsePhase += 0.08;
+
+  // Detect score change for flash effect
+  if (gameState.score > lastHudScore) {
+    scoreFlashIntensity = 1;
+  }
+  lastHudScore = gameState.score;
+  scoreFlashIntensity *= 0.92;
+
+  const padding = 12;
+  const pulse = Math.sin(hudPulsePhase) * 0.15 + 0.85;
+
+  // Top-left: Score display with ice crystal effect
+  ctx.save();
+
+  // Score panel background - frosted glass effect
+  const scorePanelWidth = 120;
+  const scorePanelHeight = 50;
+  const scoreGradient = ctx.createLinearGradient(padding, padding, padding + scorePanelWidth, padding + scorePanelHeight);
+  scoreGradient.addColorStop(0, 'rgba(20, 60, 100, 0.7)');
+  scoreGradient.addColorStop(0.5, 'rgba(40, 100, 140, 0.5)');
+  scoreGradient.addColorStop(1, 'rgba(20, 60, 100, 0.7)');
+
+  // Panel with rounded corners
+  ctx.fillStyle = scoreGradient;
+  ctx.beginPath();
+  ctx.roundRect(padding, padding, scorePanelWidth, scorePanelHeight, 8);
+  ctx.fill();
+
+  // Ice crystal border
+  ctx.strokeStyle = `rgba(150, 220, 255, ${0.6 + scoreFlashIntensity * 0.4})`;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Inner glow when score flashes
+  if (scoreFlashIntensity > 0.1) {
+    ctx.strokeStyle = `rgba(255, 255, 255, ${scoreFlashIntensity * 0.5})`;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  }
+
+  // Score label
+  ctx.font = 'bold 10px monospace';
+  ctx.fillStyle = 'rgba(150, 200, 230, 0.9)';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('SCORE', padding + 10, padding + 8);
+
+  // Score value with glow
+  ctx.font = 'bold 22px monospace';
+  const scoreGlow = scoreFlashIntensity * 15;
+  if (scoreGlow > 0) {
+    ctx.shadowColor = 'rgba(150, 230, 255, 0.9)';
+    ctx.shadowBlur = scoreGlow;
+  }
+  ctx.fillStyle = `rgba(${200 + scoreFlashIntensity * 55}, ${240 + scoreFlashIntensity * 15}, 255, 1)`;
+  ctx.fillText(String(gameState.score).padStart(5, '0'), padding + 10, padding + 22);
+  ctx.shadowBlur = 0;
+
+  // Top-right: Snake length indicator
+  const lengthPanelWidth = 80;
+  const lengthPanelHeight = 50;
+  const lengthX = width - padding - lengthPanelWidth;
+
+  // Length panel background
+  const lengthGradient = ctx.createLinearGradient(lengthX, padding, lengthX + lengthPanelWidth, padding + lengthPanelHeight);
+  lengthGradient.addColorStop(0, 'rgba(60, 20, 100, 0.7)');
+  lengthGradient.addColorStop(0.5, 'rgba(100, 40, 140, 0.5)');
+  lengthGradient.addColorStop(1, 'rgba(60, 20, 100, 0.7)');
+
+  ctx.fillStyle = lengthGradient;
+  ctx.beginPath();
+  ctx.roundRect(lengthX, padding, lengthPanelWidth, lengthPanelHeight, 8);
+  ctx.fill();
+
+  // Ice border
+  ctx.strokeStyle = 'rgba(200, 150, 255, 0.6)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Length label with dragon icon
+  ctx.font = 'bold 10px monospace';
+  ctx.fillStyle = 'rgba(200, 170, 230, 0.9)';
+  ctx.textAlign = 'left';
+  ctx.fillText('LENGTH', lengthX + 10, padding + 8);
+
+  // Snake length value
+  ctx.font = 'bold 22px monospace';
+  ctx.fillStyle = 'rgba(230, 200, 255, 1)';
+  ctx.fillText(String(gameState.snake.length), lengthX + 10, padding + 22);
+
+  // Draw small snake segments as visual indicator
+  const maxVisualSegments = 10;
+  const segmentSize = 4;
+  const segmentSpacing = 6;
+  const segmentsToShow = Math.min(gameState.snake.length, maxVisualSegments);
+  for (let i = 0; i < segmentsToShow; i++) {
+    const segX = lengthX + 50 + (i % 5) * segmentSpacing;
+    const segY = padding + 24 + Math.floor(i / 5) * segmentSpacing;
+    const segAlpha = 0.5 + (i / segmentsToShow) * 0.5;
+    const segHue = 260 + (i / segmentsToShow) * 40;
+    ctx.fillStyle = `hsla(${segHue}, 70%, 60%, ${segAlpha})`;
+    ctx.beginPath();
+    ctx.arc(segX, segY, segmentSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Bottom: Active power-up indicators
+  const activePowerUps = gameState.activePowerUps || [];
+  if (activePowerUps.length > 0) {
+    const powerUpY = height - padding - 40;
+    const powerUpSpacing = 70;
+    const startX = width / 2 - ((activePowerUps.length - 1) * powerUpSpacing) / 2;
+
+    for (let i = 0; i < activePowerUps.length; i++) {
+      const powerUp = activePowerUps[i];
+      const px = startX + i * powerUpSpacing;
+      const colors = POWERUP_COLORS[powerUp.type];
+
+      // Calculate remaining time (approximate based on tick count)
+      const tickCount = gameState.tickCount || 0;
+      const remainingTicks = Math.max(0, powerUp.endTime - tickCount);
+      const remainingSeconds = Math.ceil(remainingTicks / 10);
+
+      // Power-up panel with pulsing glow
+      const puPulse = Math.sin(hudPulsePhase * 2 + i) * 0.2 + 0.8;
+
+      // Outer glow
+      ctx.fillStyle = colors.glow;
+      ctx.globalAlpha = 0.3 * puPulse;
+      ctx.beginPath();
+      ctx.arc(px, powerUpY, 25, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Panel background
+      const puGradient = ctx.createRadialGradient(px, powerUpY, 0, px, powerUpY, 22);
+      puGradient.addColorStop(0, colors.main);
+      puGradient.addColorStop(0.6, colors.glow);
+      puGradient.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+
+      ctx.fillStyle = puGradient;
+      ctx.beginPath();
+      ctx.arc(px, powerUpY, 18 * puPulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Border ring
+      ctx.strokeStyle = colors.main;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(px, powerUpY, 20, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Timer arc (shows remaining time as arc)
+      const timerProgress = remainingTicks / 100;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(px, powerUpY, 23, -Math.PI / 2, -Math.PI / 2 + timerProgress * Math.PI * 2);
+      ctx.stroke();
+
+      // Power-up symbol
+      ctx.font = 'bold 14px monospace';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(colors.symbol, px, powerUpY - 1);
+
+      // Timer text
+      ctx.font = 'bold 10px monospace';
+      ctx.fillStyle = remainingSeconds <= 3 ? '#ff6060' : '#ffffff';
+      ctx.fillText(`${remainingSeconds}s`, px, powerUpY + 30);
+    }
+  }
+
+  // Top center: Game status indicator (subtle)
+  if (gameState.gameStarted && !gameState.gameOver) {
+    const statusY = padding + 5;
+    const statusPulse = Math.sin(hudPulsePhase * 0.5) * 0.3 + 0.7;
+
+    // Subtle pulsing dot to show game is active
+    ctx.fillStyle = `rgba(100, 255, 150, ${statusPulse * 0.8})`;
+    ctx.beginPath();
+    ctx.arc(width / 2, statusY + 5, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Outer glow
+    ctx.fillStyle = `rgba(100, 255, 150, ${statusPulse * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(width / 2, statusY + 5, 8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Corner ice crystal decorations
+  drawHUDCornerCrystals(ctx, width, height, pulse);
+
+  ctx.restore();
+}
+
+// Draw decorative ice crystals in HUD corners
+function drawHUDCornerCrystals(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  pulse: number
+): void {
+  const crystalSize = 15;
+  const offset = 6;
+
+  // Helper to draw a small crystal cluster
+  const drawCrystal = (x: number, y: number, angle: number, size: number) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+
+    // Crystal body
+    ctx.fillStyle = `rgba(150, 220, 255, ${0.4 * pulse})`;
+    ctx.beginPath();
+    ctx.moveTo(0, -size);
+    ctx.lineTo(size * 0.3, 0);
+    ctx.lineTo(0, size * 0.3);
+    ctx.lineTo(-size * 0.3, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // Crystal highlight
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.6 * pulse})`;
+    ctx.beginPath();
+    ctx.moveTo(0, -size * 0.7);
+    ctx.lineTo(size * 0.1, -size * 0.2);
+    ctx.lineTo(-size * 0.1, -size * 0.2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  };
+
+  // Bottom-left crystal cluster
+  drawCrystal(offset + 5, height - offset - 5, -0.3, crystalSize * 0.7);
+  drawCrystal(offset + 15, height - offset - 10, 0.2, crystalSize * 0.5);
+
+  // Bottom-right crystal cluster
+  drawCrystal(width - offset - 5, height - offset - 5, 0.3, crystalSize * 0.7);
+  drawCrystal(width - offset - 15, height - offset - 10, -0.2, crystalSize * 0.5);
+}
+
 function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -2142,6 +2404,9 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.arc(p.x, p.y, pSize * 0.4, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  // Draw HUD overlay (score, length, power-ups)
+  drawHUD(ctx, gameState, width, height);
 
   // Game over overlay - Apocalyptic end
   if (gameState.gameOver) {
