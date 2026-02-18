@@ -41,45 +41,45 @@ const CELL_SIZE = 20;
 
 const GRID_SIZE = 20;
 
-// Color palette - ICE CRYSTAL DRAGON theme: frozen arctic, crystalline beauty
+// Color palette - NEON SYNTHWAVE theme: retro 80s arcade, hot neon glow
 const COLORS = {
-  bgDark: '#030818',
-  bgVolcanic: '#051020',
-  gridLine: '#102040',
-  gridAccent: '#1a3555',
-  // Ice dragon snake colors (crystalline frost)
-  snakeHead: '#40e0ff',
-  snakeBody: '#20b0d0',
-  snakeTail: '#1080a0',
-  snakeHighlight: '#80f0ff',
-  snakeEye: '#ff4080',
-  snakePupil: '#200010',
-  snakeHorn: '#e0f8ff',
-  // Food - frozen crystal gem
-  food: '#00d0ff',
-  foodCore: '#e0ffff',
-  foodGlow: '#40c0ff',
-  gameOverOverlay: 'rgba(3, 8, 24, 0.95)',
-  // Ice crystal accent colors
-  fireOrange: '#30a0c0',
-  fireRed: '#2080a0',
-  fireYellow: '#80e0ff',
-  lavaRed: '#40c0e0',
-  ashGray: '#4a6080',
-  smokeBlack: '#081020',
-  brimstoneYellow: '#a0e0ff',
-  demonPurple: '#0080b0',
-  bloodRed: '#006080',
-  emberOrange: '#60c0e0',
+  bgDark: '#0a0015',
+  bgVolcanic: '#120020',
+  gridLine: '#2a1040',
+  gridAccent: '#4a2060',
+  // Neon snake colors (hot pink to electric cyan gradient)
+  snakeHead: '#ff0080',
+  snakeBody: '#ff00ff',
+  snakeTail: '#8000ff',
+  snakeHighlight: '#ff80c0',
+  snakeEye: '#00ffff',
+  snakePupil: '#001020',
+  snakeHorn: '#ff40ff',
+  // Food - pulsing neon orb
+  food: '#00ff88',
+  foodCore: '#80ffcc',
+  foodGlow: '#00ff44',
+  gameOverOverlay: 'rgba(10, 0, 20, 0.92)',
+  // Synthwave accent colors
+  fireOrange: '#ff6600',
+  fireRed: '#ff0066',
+  fireYellow: '#ffff00',
+  lavaRed: '#ff0044',
+  ashGray: '#604080',
+  smokeBlack: '#100818',
+  brimstoneYellow: '#ffcc00',
+  demonPurple: '#aa00ff',
+  bloodRed: '#ff0040',
+  emberOrange: '#ff8800',
   // Power-up colors
   powerUpSpeed: '#ffff00',
-  powerUpSpeedGlow: '#ffa500',
+  powerUpSpeedGlow: '#ff8800',
   powerUpInvincibility: '#00ffff',
   powerUpInvincibilityGlow: '#0088ff',
   powerUpMultiplier: '#ff00ff',
-  powerUpMultiplierGlow: '#8800ff',
+  powerUpMultiplierGlow: '#aa00ff',
   powerUpMagnet: '#00ff88',
-  powerUpMagnetGlow: '#00ff00',
+  powerUpMagnetGlow: '#00ff44',
 };
 
 const POWERUP_COLORS: Record<PowerUpType, { main: string; glow: string; symbol: string }> = {
@@ -114,8 +114,8 @@ function hslToRgb(h: number, s: number, l: number): string {
 // Animation frame counter
 let frameCount = 0;
 
-// Ice crystal spikes on the dragon head
-function drawIceCrystals(
+// Neon electric spikes on the snake head
+function drawNeonSpikes(
   ctx: CanvasRenderingContext2D,
   headX: number,
   headY: number,
@@ -125,104 +125,106 @@ function drawIceCrystals(
   perpY: number,
   frame: number
 ): void {
-  const crystalOffset = -6;
-  const crystalBaseX = headX - dx * crystalOffset;
-  const crystalBaseY = headY - dy * crystalOffset;
+  const spikeOffset = -6;
+  const spikeBaseX = headX - dx * spikeOffset;
+  const spikeBaseY = headY - dy * spikeOffset;
 
-  // Crystal shimmer animation
-  const shimmer = 0.7 + Math.sin(frame * 0.12) * 0.3;
+  // Neon pulse animation
+  const pulse = 0.6 + Math.sin(frame * 0.15) * 0.4;
+  const flicker = Math.random() > 0.95 ? 0.3 : 1;
 
-  const crystalSize = 12;
-  const crystalSpread = 5;
+  const spikeSize = 14;
+  const spikeSpread = 6;
 
-  // Left ice crystal
+  // Left neon spike
   ctx.save();
-  ctx.translate(crystalBaseX + perpX * crystalSpread, crystalBaseY + perpY * crystalSpread);
-  ctx.rotate(Math.atan2(perpY, perpX) + 0.4);
+  ctx.translate(spikeBaseX + perpX * spikeSpread, spikeBaseY + perpY * spikeSpread);
+  ctx.rotate(Math.atan2(perpY, perpX) + 0.5);
 
-  // Crystal body - translucent ice
-  ctx.fillStyle = 'rgba(200, 240, 255, 0.8)';
+  // Outer glow
+  ctx.shadowColor = '#ff00ff';
+  ctx.shadowBlur = 12 * pulse * flicker;
+
+  // Spike body - hot pink neon
+  ctx.fillStyle = `rgba(255, 0, 128, ${0.9 * flicker})`;
   ctx.beginPath();
-  ctx.moveTo(0, crystalSize * 0.3);
-  ctx.lineTo(-crystalSize * 0.25, 0);
-  ctx.lineTo(-crystalSize * 0.15, -crystalSize * 0.6);
-  ctx.lineTo(0, -crystalSize);
-  ctx.lineTo(crystalSize * 0.15, -crystalSize * 0.6);
-  ctx.lineTo(crystalSize * 0.25, 0);
+  ctx.moveTo(0, spikeSize * 0.2);
+  ctx.lineTo(-spikeSize * 0.2, 0);
+  ctx.lineTo(0, -spikeSize);
+  ctx.lineTo(spikeSize * 0.2, 0);
   ctx.closePath();
   ctx.fill();
 
-  // Crystal highlight
-  ctx.fillStyle = `rgba(255, 255, 255, ${shimmer * 0.9})`;
+  // Inner bright core
+  ctx.fillStyle = `rgba(255, 150, 200, ${pulse * flicker})`;
   ctx.beginPath();
-  ctx.moveTo(-crystalSize * 0.1, -crystalSize * 0.3);
-  ctx.lineTo(0, -crystalSize * 0.8);
-  ctx.lineTo(crystalSize * 0.05, -crystalSize * 0.3);
+  ctx.moveTo(0, spikeSize * 0.1);
+  ctx.lineTo(-spikeSize * 0.08, 0);
+  ctx.lineTo(0, -spikeSize * 0.7);
+  ctx.lineTo(spikeSize * 0.08, 0);
   ctx.closePath();
   ctx.fill();
 
-  // Crystal glow
-  ctx.fillStyle = `rgba(100, 200, 255, ${shimmer * 0.4})`;
-  ctx.beginPath();
-  ctx.arc(0, -crystalSize * 0.4, crystalSize * 0.4, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.shadowBlur = 0;
   ctx.restore();
 
-  // Right ice crystal
+  // Right neon spike
   ctx.save();
-  ctx.translate(crystalBaseX - perpX * crystalSpread, crystalBaseY - perpY * crystalSpread);
-  ctx.rotate(Math.atan2(-perpY, -perpX) + 0.4);
+  ctx.translate(spikeBaseX - perpX * spikeSpread, spikeBaseY - perpY * spikeSpread);
+  ctx.rotate(Math.atan2(-perpY, -perpX) + 0.5);
 
-  ctx.fillStyle = 'rgba(200, 240, 255, 0.8)';
+  ctx.shadowColor = '#00ffff';
+  ctx.shadowBlur = 12 * pulse * flicker;
+
+  ctx.fillStyle = `rgba(0, 255, 255, ${0.9 * flicker})`;
   ctx.beginPath();
-  ctx.moveTo(0, crystalSize * 0.3);
-  ctx.lineTo(-crystalSize * 0.25, 0);
-  ctx.lineTo(-crystalSize * 0.15, -crystalSize * 0.6);
-  ctx.lineTo(0, -crystalSize);
-  ctx.lineTo(crystalSize * 0.15, -crystalSize * 0.6);
-  ctx.lineTo(crystalSize * 0.25, 0);
+  ctx.moveTo(0, spikeSize * 0.2);
+  ctx.lineTo(-spikeSize * 0.2, 0);
+  ctx.lineTo(0, -spikeSize);
+  ctx.lineTo(spikeSize * 0.2, 0);
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = `rgba(255, 255, 255, ${shimmer * 0.9})`;
+  ctx.fillStyle = `rgba(150, 255, 255, ${pulse * flicker})`;
   ctx.beginPath();
-  ctx.moveTo(-crystalSize * 0.1, -crystalSize * 0.3);
-  ctx.lineTo(0, -crystalSize * 0.8);
-  ctx.lineTo(crystalSize * 0.05, -crystalSize * 0.3);
+  ctx.moveTo(0, spikeSize * 0.1);
+  ctx.lineTo(-spikeSize * 0.08, 0);
+  ctx.lineTo(0, -spikeSize * 0.7);
+  ctx.lineTo(spikeSize * 0.08, 0);
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = `rgba(100, 200, 255, ${shimmer * 0.4})`;
-  ctx.beginPath();
-  ctx.arc(0, -crystalSize * 0.4, crystalSize * 0.4, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.shadowBlur = 0;
   ctx.restore();
 
-  // Center crown crystal
+  // Center crown spike - electric yellow
   ctx.save();
-  ctx.translate(crystalBaseX, crystalBaseY);
+  ctx.translate(spikeBaseX, spikeBaseY);
   ctx.rotate(Math.atan2(dy, dx) + Math.PI);
 
-  const centerSize = crystalSize * 1.2;
-  ctx.fillStyle = 'rgba(180, 230, 255, 0.85)';
+  const centerSize = spikeSize * 1.3;
+  ctx.shadowColor = '#ffff00';
+  ctx.shadowBlur = 15 * pulse * flicker;
+
+  ctx.fillStyle = `rgba(255, 255, 0, ${0.95 * flicker})`;
   ctx.beginPath();
-  ctx.moveTo(0, centerSize * 0.2);
-  ctx.lineTo(-centerSize * 0.2, 0);
-  ctx.lineTo(-centerSize * 0.1, -centerSize * 0.7);
+  ctx.moveTo(0, centerSize * 0.15);
+  ctx.lineTo(-centerSize * 0.15, 0);
   ctx.lineTo(0, -centerSize);
-  ctx.lineTo(centerSize * 0.1, -centerSize * 0.7);
-  ctx.lineTo(centerSize * 0.2, 0);
+  ctx.lineTo(centerSize * 0.15, 0);
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = `rgba(255, 255, 255, ${shimmer})`;
+  ctx.fillStyle = `rgba(255, 255, 200, ${pulse * flicker})`;
   ctx.beginPath();
-  ctx.moveTo(0, -centerSize * 0.5);
-  ctx.lineTo(-centerSize * 0.05, -centerSize * 0.8);
-  ctx.lineTo(0, -centerSize * 0.95);
-  ctx.lineTo(centerSize * 0.05, -centerSize * 0.8);
+  ctx.moveTo(0, centerSize * 0.05);
+  ctx.lineTo(-centerSize * 0.06, 0);
+  ctx.lineTo(0, -centerSize * 0.75);
+  ctx.lineTo(centerSize * 0.06, 0);
   ctx.closePath();
   ctx.fill();
+
+  ctx.shadowBlur = 0;
   ctx.restore();
 }
 
@@ -2011,16 +2013,16 @@ function drawHUD(
   const padding = 12;
   const pulse = Math.sin(hudPulsePhase) * 0.15 + 0.85;
 
-  // Top-left: Score display with ice crystal effect
+  // Top-left: Score display with neon synthwave effect
   ctx.save();
 
-  // Score panel background - frosted glass effect
+  // Score panel background - dark with neon border
   const scorePanelWidth = 120;
   const scorePanelHeight = 50;
   const scoreGradient = ctx.createLinearGradient(padding, padding, padding + scorePanelWidth, padding + scorePanelHeight);
-  scoreGradient.addColorStop(0, 'rgba(20, 60, 100, 0.7)');
-  scoreGradient.addColorStop(0.5, 'rgba(40, 100, 140, 0.5)');
-  scoreGradient.addColorStop(1, 'rgba(20, 60, 100, 0.7)');
+  scoreGradient.addColorStop(0, 'rgba(20, 0, 40, 0.85)');
+  scoreGradient.addColorStop(0.5, 'rgba(40, 0, 60, 0.75)');
+  scoreGradient.addColorStop(1, 'rgba(20, 0, 40, 0.85)');
 
   // Panel with rounded corners
   ctx.fillStyle = scoreGradient;
@@ -2028,33 +2030,33 @@ function drawHUD(
   ctx.roundRect(padding, padding, scorePanelWidth, scorePanelHeight, 8);
   ctx.fill();
 
-  // Ice crystal border
-  ctx.strokeStyle = `rgba(150, 220, 255, ${0.6 + scoreFlashIntensity * 0.4})`;
+  // Neon magenta border
+  ctx.strokeStyle = `rgba(255, 0, 128, ${0.7 + scoreFlashIntensity * 0.3})`;
   ctx.lineWidth = 2;
+  ctx.shadowColor = '#ff0080';
+  ctx.shadowBlur = 8 + scoreFlashIntensity * 10;
   ctx.stroke();
 
   // Inner glow when score flashes
   if (scoreFlashIntensity > 0.1) {
-    ctx.strokeStyle = `rgba(255, 255, 255, ${scoreFlashIntensity * 0.5})`;
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = `rgba(255, 255, 255, ${scoreFlashIntensity * 0.6})`;
+    ctx.lineWidth = 3;
     ctx.stroke();
   }
+  ctx.shadowBlur = 0;
 
-  // Score label
+  // Score label - cyan
   ctx.font = 'bold 10px monospace';
-  ctx.fillStyle = 'rgba(150, 200, 230, 0.9)';
+  ctx.fillStyle = '#00ffff';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText('SCORE', padding + 10, padding + 8);
 
-  // Score value with glow
+  // Score value with neon glow
   ctx.font = 'bold 22px monospace';
-  const scoreGlow = scoreFlashIntensity * 15;
-  if (scoreGlow > 0) {
-    ctx.shadowColor = 'rgba(150, 230, 255, 0.9)';
-    ctx.shadowBlur = scoreGlow;
-  }
-  ctx.fillStyle = `rgba(${200 + scoreFlashIntensity * 55}, ${240 + scoreFlashIntensity * 15}, 255, 1)`;
+  ctx.shadowColor = '#00ff88';
+  ctx.shadowBlur = 8 + scoreFlashIntensity * 12;
+  ctx.fillStyle = `rgb(${Math.round(200 + scoreFlashIntensity * 55)}, 255, ${Math.round(136 + scoreFlashIntensity * 119)})`;
   ctx.fillText(String(gameState.score).padStart(5, '0'), padding + 10, padding + 22);
   ctx.shadowBlur = 0;
 
@@ -2065,30 +2067,36 @@ function drawHUD(
 
   // Length panel background
   const lengthGradient = ctx.createLinearGradient(lengthX, padding, lengthX + lengthPanelWidth, padding + lengthPanelHeight);
-  lengthGradient.addColorStop(0, 'rgba(60, 20, 100, 0.7)');
-  lengthGradient.addColorStop(0.5, 'rgba(100, 40, 140, 0.5)');
-  lengthGradient.addColorStop(1, 'rgba(60, 20, 100, 0.7)');
+  lengthGradient.addColorStop(0, 'rgba(40, 0, 60, 0.85)');
+  lengthGradient.addColorStop(0.5, 'rgba(60, 0, 80, 0.75)');
+  lengthGradient.addColorStop(1, 'rgba(40, 0, 60, 0.85)');
 
   ctx.fillStyle = lengthGradient;
   ctx.beginPath();
   ctx.roundRect(lengthX, padding, lengthPanelWidth, lengthPanelHeight, 8);
   ctx.fill();
 
-  // Ice border
-  ctx.strokeStyle = 'rgba(200, 150, 255, 0.6)';
+  // Cyan neon border
+  ctx.strokeStyle = 'rgba(0, 255, 255, 0.7)';
   ctx.lineWidth = 2;
+  ctx.shadowColor = '#00ffff';
+  ctx.shadowBlur = 8;
   ctx.stroke();
+  ctx.shadowBlur = 0;
 
-  // Length label with dragon icon
+  // Length label - magenta
   ctx.font = 'bold 10px monospace';
-  ctx.fillStyle = 'rgba(200, 170, 230, 0.9)';
+  ctx.fillStyle = '#ff00ff';
   ctx.textAlign = 'left';
   ctx.fillText('LENGTH', lengthX + 10, padding + 8);
 
-  // Snake length value
+  // Snake length value - yellow neon
   ctx.font = 'bold 22px monospace';
-  ctx.fillStyle = 'rgba(230, 200, 255, 1)';
+  ctx.shadowColor = '#ffff00';
+  ctx.shadowBlur = 6;
+  ctx.fillStyle = '#ffff00';
   ctx.fillText(String(gameState.snake.length), lengthX + 10, padding + 22);
+  ctx.shadowBlur = 0;
 
   // Draw small snake segments as visual indicator
   const maxVisualSegments = 10;
@@ -2198,51 +2206,55 @@ function drawHUD(
   ctx.restore();
 }
 
-// Draw decorative ice crystals in HUD corners
+// Draw decorative neon corner accents
 function drawHUDCornerCrystals(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   pulse: number
 ): void {
-  const crystalSize = 15;
-  const offset = 6;
+  const cornerSize = 20;
+  const offset = 4;
 
-  // Helper to draw a small crystal cluster
-  const drawCrystal = (x: number, y: number, angle: number, size: number) => {
+  // Helper to draw neon corner bracket
+  const drawNeonCorner = (x: number, y: number, flipX: boolean, flipY: boolean, hue: number) => {
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(angle);
+    ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
 
-    // Crystal body
-    ctx.fillStyle = `rgba(150, 220, 255, ${0.4 * pulse})`;
+    // Outer glow
+    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${0.5 * pulse})`;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
+    ctx.shadowBlur = 8 * pulse;
+    ctx.lineCap = 'round';
+
     ctx.beginPath();
-    ctx.moveTo(0, -size);
-    ctx.lineTo(size * 0.3, 0);
-    ctx.lineTo(0, size * 0.3);
-    ctx.lineTo(-size * 0.3, 0);
-    ctx.closePath();
-    ctx.fill();
+    ctx.moveTo(0, cornerSize);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(cornerSize, 0);
+    ctx.stroke();
 
-    // Crystal highlight
-    ctx.fillStyle = `rgba(255, 255, 255, ${0.6 * pulse})`;
-    ctx.beginPath();
-    ctx.moveTo(0, -size * 0.7);
-    ctx.lineTo(size * 0.1, -size * 0.2);
-    ctx.lineTo(-size * 0.1, -size * 0.2);
-    ctx.closePath();
-    ctx.fill();
+    // Inner bright line
+    ctx.strokeStyle = `hsla(${hue}, 100%, 80%, ${0.8 * pulse})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
+    ctx.shadowBlur = 0;
     ctx.restore();
   };
 
-  // Bottom-left crystal cluster
-  drawCrystal(offset + 5, height - offset - 5, -0.3, crystalSize * 0.7);
-  drawCrystal(offset + 15, height - offset - 10, 0.2, crystalSize * 0.5);
+  // Bottom-left corner - magenta
+  drawNeonCorner(offset, height - offset, false, true, 320);
 
-  // Bottom-right crystal cluster
-  drawCrystal(width - offset - 5, height - offset - 5, 0.3, crystalSize * 0.7);
-  drawCrystal(width - offset - 15, height - offset - 10, -0.2, crystalSize * 0.5);
+  // Bottom-right corner - cyan
+  drawNeonCorner(width - offset, height - offset, true, true, 180);
+
+  // Top corners subtle
+  ctx.globalAlpha = 0.3;
+  drawNeonCorner(offset, offset, false, false, 60);
+  drawNeonCorner(width - offset, offset, true, false, 280);
+  ctx.globalAlpha = 1;
 }
 
 function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
@@ -2299,101 +2311,162 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.translate(screenShakeX, screenShakeY);
   }
 
-  // Frozen arctic background
-  ctx.fillStyle = COLORS.bgDark;
+  // Synthwave sunset gradient background
+  const sunsetGradient = ctx.createLinearGradient(0, 0, 0, height);
+  sunsetGradient.addColorStop(0, '#0a0015');
+  sunsetGradient.addColorStop(0.3, '#1a0030');
+  sunsetGradient.addColorStop(0.5, '#2a0050');
+  sunsetGradient.addColorStop(0.7, '#400060');
+  sunsetGradient.addColorStop(0.85, '#600040');
+  sunsetGradient.addColorStop(1, '#200020');
+  ctx.fillStyle = sunsetGradient;
   ctx.fillRect(0, 0, width, height);
 
-  // Aurora borealis gradient overlay
-  const auroraGradient = ctx.createRadialGradient(width / 2, 0, 0, width / 2, height / 2, width);
-  auroraGradient.addColorStop(0, 'rgba(0, 100, 150, 0.25)');
-  auroraGradient.addColorStop(0.5, 'rgba(0, 60, 100, 0.15)');
-  auroraGradient.addColorStop(1, 'rgba(5, 20, 40, 0.1)');
-  ctx.fillStyle = auroraGradient;
-  ctx.fillRect(0, 0, width, height);
+  // Synthwave sun at horizon
+  const sunY = height * 0.75;
+  const sunRadius = 60;
+  const sunPulse = 0.9 + Math.sin(lavaPhase * 0.5) * 0.1;
 
-  // Ice crystal veins in the ground
-  ctx.strokeStyle = COLORS.lavaRed;
-  ctx.lineWidth = 1.5;
-  ctx.globalAlpha = 0.25 + Math.sin(lavaPhase) * 0.08;
-  for (let i = 0; i < 4; i++) {
-    const startX = (i * width / 3) + Math.sin(lavaPhase + i) * 15;
+  // Sun outer glow
+  const sunGlow = ctx.createRadialGradient(width / 2, sunY, 0, width / 2, sunY, sunRadius * 2);
+  sunGlow.addColorStop(0, 'rgba(255, 100, 0, 0.4)');
+  sunGlow.addColorStop(0.5, 'rgba(255, 0, 100, 0.2)');
+  sunGlow.addColorStop(1, 'rgba(150, 0, 150, 0)');
+  ctx.fillStyle = sunGlow;
+  ctx.beginPath();
+  ctx.arc(width / 2, sunY, sunRadius * 2 * sunPulse, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sun body with horizontal scan lines
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(width / 2, sunY, sunRadius * sunPulse, 0, Math.PI * 2);
+  ctx.clip();
+
+  const sunBodyGrad = ctx.createLinearGradient(0, sunY - sunRadius, 0, sunY + sunRadius);
+  sunBodyGrad.addColorStop(0, '#ffff00');
+  sunBodyGrad.addColorStop(0.3, '#ff8800');
+  sunBodyGrad.addColorStop(0.6, '#ff0066');
+  sunBodyGrad.addColorStop(1, '#aa0066');
+  ctx.fillStyle = sunBodyGrad;
+  ctx.fillRect(width / 2 - sunRadius, sunY - sunRadius, sunRadius * 2, sunRadius * 2);
+
+  // Sun scan lines
+  ctx.fillStyle = 'rgba(10, 0, 20, 0.4)';
+  for (let line = 0; line < 8; line++) {
+    const lineY = sunY - sunRadius + line * (sunRadius * 2 / 8) + 5;
+    const lineHeight = 3 + line * 0.5;
+    ctx.fillRect(width / 2 - sunRadius, lineY, sunRadius * 2, lineHeight);
+  }
+  ctx.restore();
+
+  // Neon perspective grid
+  ctx.strokeStyle = '#ff00ff';
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.4;
+
+  // Horizontal grid lines (perspective)
+  const horizonY = height * 0.65;
+  for (let i = 0; i < 15; i++) {
+    const t = i / 14;
+    const y = horizonY + (height - horizonY) * Math.pow(t, 1.5);
+    const alpha = 0.2 + t * 0.4;
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = i % 3 === 0 ? '#ff00ff' : '#8800aa';
+    ctx.lineWidth = i % 3 === 0 ? 1.5 : 0.8;
     ctx.beginPath();
-    ctx.moveTo(startX, height);
-    let cx = startX, cy = height;
-    for (let j = 0; j < 4; j++) {
-      cx += (Math.random() - 0.5) * 30 + Math.sin(lavaPhase * 2 + j) * 8;
-      cy -= 25 + Math.random() * 15;
-      ctx.lineTo(cx, cy);
-    }
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
     ctx.stroke();
+  }
 
-    // Glow around ice veins
-    ctx.strokeStyle = 'rgba(100, 200, 255, 0.15)';
-    ctx.lineWidth = 3;
-    ctx.globalAlpha = 0.08 + Math.sin(lavaPhase + i) * 0.04;
+  // Vertical grid lines (perspective convergence)
+  const vanishX = width / 2;
+  ctx.globalAlpha = 0.35;
+  for (let i = -8; i <= 8; i++) {
+    const bottomX = vanishX + i * 30;
+    ctx.strokeStyle = Math.abs(i) % 2 === 0 ? '#00ffff' : '#0088aa';
+    ctx.lineWidth = Math.abs(i) % 2 === 0 ? 1.2 : 0.6;
+    ctx.beginPath();
+    ctx.moveTo(vanishX, horizonY);
+    ctx.lineTo(bottomX, height);
     ctx.stroke();
-    ctx.strokeStyle = COLORS.lavaRed;
-    ctx.lineWidth = 1.5;
   }
   ctx.globalAlpha = 1;
 
-  // Draw snowflake particles
-  ctx.fillStyle = 'rgba(200, 230, 255, 0.6)';
+  // Draw neon floating particles (stars/pixels)
   for (const ash of ashParticles) {
     ctx.save();
     ctx.translate(ash.x, ash.y);
     ctx.rotate(ash.rotation);
-    ctx.globalAlpha = ash.alpha * 0.8;
-    // Draw small snowflake shape
-    const s = ash.size * 0.5;
-    ctx.fillRect(-s, -0.5, s * 2, 1);
-    ctx.fillRect(-0.5, -s, 1, s * 2);
+    ctx.globalAlpha = ash.alpha * 0.9;
+
+    // Random neon colors for each particle
+    const hue = (ash.x * 0.5 + ash.y * 0.3 + frameCount * 0.5) % 360;
+    ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = `hsl(${hue}, 100%, 70%)`;
+
+    // Draw small diamond shape
+    const s = ash.size * 0.6;
+    ctx.beginPath();
+    ctx.moveTo(0, -s);
+    ctx.lineTo(s * 0.6, 0);
+    ctx.lineTo(0, s);
+    ctx.lineTo(-s * 0.6, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
     ctx.restore();
   }
   ctx.globalAlpha = 1;
 
-  // Draw falling ice shards with shimmer trails
+  // Draw neon shooting stars with rainbow trails
   for (const m of meteors) {
-    // Trail
+    // Trail with gradient colors
     for (let i = 0; i < m.trail.length; i++) {
       const t = m.trail[i];
-      const trailAlpha = (1 - i / m.trail.length) * 0.5;
-      const trailSize = m.size * (1 - i / m.trail.length) * 0.7;
+      const trailAlpha = (1 - i / m.trail.length) * 0.7;
+      const trailSize = m.size * (1 - i / m.trail.length) * 0.8;
+      const trailHue = (frameCount * 2 + i * 20) % 360;
 
-      ctx.fillStyle = 'rgba(100, 180, 220, 0.3)';
-      ctx.globalAlpha = trailAlpha * 0.3;
+      ctx.fillStyle = `hsla(${trailHue}, 100%, 50%, ${trailAlpha * 0.4})`;
       ctx.beginPath();
-      ctx.arc(t.x, t.y, trailSize * 1.5, 0, Math.PI * 2);
+      ctx.arc(t.x, t.y, trailSize * 1.8, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = 'rgba(180, 230, 255, 0.5)';
-      ctx.globalAlpha = trailAlpha * 0.5;
+      ctx.fillStyle = `hsla(${trailHue}, 100%, 70%, ${trailAlpha * 0.7})`;
       ctx.beginPath();
       ctx.arc(t.x, t.y, trailSize, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Ice shard core
-    ctx.fillStyle = 'rgba(200, 240, 255, 0.9)';
-    ctx.globalAlpha = 0.9;
+    // Shooting star core with glow
+    const starHue = (frameCount * 3 + m.x) % 360;
+    ctx.shadowColor = `hsl(${starHue}, 100%, 60%)`;
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = `hsl(${starHue}, 100%, 80%)`;
     ctx.beginPath();
     ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
     ctx.fill();
 
-    // Bright center
+    // White hot center
     ctx.fillStyle = '#ffffff';
-    ctx.globalAlpha = 0.8;
     ctx.beginPath();
-    ctx.arc(m.x, m.y, m.size * 0.35, 0, Math.PI * 2);
+    ctx.arc(m.x, m.y, m.size * 0.4, 0, Math.PI * 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
   }
   ctx.globalAlpha = 1;
 
-  // Draw ice fracture lines
+  // Draw electric lightning fractures
   for (const crack of screenCracks) {
-    ctx.strokeStyle = 'rgba(150, 220, 255, 0.7)';
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = crack.life * 0.5;
+    // Outer glow - hot pink
+    ctx.strokeStyle = 'rgba(255, 0, 128, 0.8)';
+    ctx.lineWidth = 4;
+    ctx.globalAlpha = crack.life * 0.4;
+    ctx.shadowColor = '#ff0080';
+    ctx.shadowBlur = 10;
 
     ctx.beginPath();
     ctx.moveTo(crack.segments[0].x, crack.segments[0].y);
@@ -2402,11 +2475,13 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     }
     ctx.stroke();
 
-    // Inner glow - icy white
-    ctx.strokeStyle = 'rgba(220, 250, 255, 0.9)';
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = crack.life * 0.7;
+    // Inner core - bright cyan
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.95)';
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = crack.life * 0.9;
     ctx.stroke();
+
+    ctx.shadowBlur = 0;
   }
   ctx.globalAlpha = 1;
 
@@ -2419,130 +2494,159 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   // Draw ghost snake (spectral guide to food)
   drawGhostSnake(ctx, gameState);
 
-  // Draw frost particles
+  // Draw neon trail particles
   for (const p of flameParticles) {
     const lifeRatio = p.life / p.maxLife;
 
-    const hue = p.hue;
-    const saturation = 60;
-    const lightness = 60 + lifeRatio * 25;
+    // Cycling neon hue based on particle position
+    const hue = (p.hue + frameCount * 2) % 360;
+    const saturation = 100;
+    const lightness = 55 + lifeRatio * 20;
 
-    // Outer frost glow
-    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness - 15}%, ${lifeRatio * 0.25})`;
+    // Outer neon glow
+    ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
+    ctx.shadowBlur = 8 * lifeRatio;
+    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness - 20}%, ${lifeRatio * 0.4})`;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * 1.8, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Core frost crystal
-    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${lifeRatio * 0.5})`;
+    // Core neon particle
+    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${lifeRatio * 0.7})`;
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
     ctx.fill();
 
-    // Bright ice center
-    ctx.fillStyle = `rgba(255, 255, 255, ${lifeRatio * 0.7})`;
+    // White hot center
+    ctx.fillStyle = `rgba(255, 255, 255, ${lifeRatio * 0.9})`;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * 0.35, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, p.size * 0.3, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.shadowBlur = 0;
   }
 
-  // Draw ice shatter waves
+  // Draw neon shockwave bursts
   for (const exp of explosions) {
-    // Frost shockwave ring
-    ctx.strokeStyle = 'rgba(100, 200, 230, 0.6)';
-    ctx.lineWidth = 3 * exp.life;
-    ctx.globalAlpha = exp.life * 0.45;
+    // Outer neon ring - magenta
+    ctx.strokeStyle = 'rgba(255, 0, 255, 0.8)';
+    ctx.lineWidth = 4 * exp.life;
+    ctx.globalAlpha = exp.life * 0.6;
+    ctx.shadowColor = '#ff00ff';
+    ctx.shadowBlur = 15 * exp.life;
     ctx.beginPath();
     ctx.arc(exp.x, exp.y, exp.radius, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Inner crystalline ring
-    ctx.strokeStyle = 'rgba(200, 240, 255, 0.8)';
-    ctx.lineWidth = 1.5 * exp.life;
-    ctx.globalAlpha = exp.life * 0.6;
+    // Inner ring - cyan
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.9)';
+    ctx.lineWidth = 2 * exp.life;
+    ctx.globalAlpha = exp.life * 0.7;
+    ctx.shadowColor = '#00ffff';
     ctx.beginPath();
-    ctx.arc(exp.x, exp.y, exp.radius * 0.7, 0, Math.PI * 2);
+    ctx.arc(exp.x, exp.y, exp.radius * 0.6, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Ice shard particles
+    ctx.shadowBlur = 0;
+
+    // Neon particle burst
     for (const particle of exp.particles) {
       const px = exp.x + Math.cos(particle.angle) * particle.dist;
       const py = exp.y + Math.sin(particle.angle) * particle.dist;
       const pSize = particle.size * exp.life;
+      const particleHue = (particle.hue + frameCount * 3) % 360;
 
-      ctx.fillStyle = `hsl(${particle.hue}, 50%, 70%)`;
-      ctx.globalAlpha = exp.life * 0.7;
+      // Particle glow
+      ctx.fillStyle = `hsla(${particleHue}, 100%, 50%, ${exp.life * 0.5})`;
+      ctx.beginPath();
+      ctx.arc(px, py, pSize * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Particle core
+      ctx.fillStyle = `hsla(${particleHue}, 100%, 70%, ${exp.life * 0.8})`;
+      ctx.globalAlpha = exp.life * 0.9;
       ctx.beginPath();
       ctx.arc(px, py, pSize, 0, Math.PI * 2);
       ctx.fill();
 
-      // Bright shard center
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.globalAlpha = exp.life * 0.5;
+      // Hot center
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = exp.life * 0.7;
       ctx.beginPath();
-      ctx.arc(px, py, pSize * 0.4, 0, Math.PI * 2);
+      ctx.arc(px, py, pSize * 0.35, 0, Math.PI * 2);
       ctx.fill();
     }
   }
   ctx.globalAlpha = 1;
 
-  // Draw food - frozen crystal gem
+  // Draw food - pulsing neon power orb
   const foodX = gameState.food.x * CELL_SIZE + CELL_SIZE / 2;
   const foodY = gameState.food.y * CELL_SIZE + CELL_SIZE / 2;
 
-  // Crystalline rings around food
-  for (let ring = 0; ring < 3; ring++) {
-    const ringRadius = CELL_SIZE * 0.55 + ring * 4;
-    const ringAlpha = 0.25 - ring * 0.06;
+  // Pulsing animation
+  const foodPulse = 0.8 + Math.sin(foodFirePhase * 1.5) * 0.2;
+  const foodHue = (frameCount * 2) % 360;
 
-    ctx.strokeStyle = 'rgba(100, 200, 255, 0.6)';
-    ctx.lineWidth = 2 - ring * 0.5;
-    ctx.globalAlpha = ringAlpha + Math.sin(foodFirePhase + ring) * 0.08;
+  // Rotating neon rings around food
+  for (let ring = 0; ring < 3; ring++) {
+    const ringRadius = (CELL_SIZE * 0.6 + ring * 5) * foodPulse;
+    const ringRotation = foodFirePhase * (ring % 2 === 0 ? 1 : -1) * 0.8;
+
+    ctx.strokeStyle = ring === 0 ? '#00ff88' : ring === 1 ? '#00ffcc' : '#00ffff';
+    ctx.lineWidth = 2.5 - ring * 0.5;
+    ctx.globalAlpha = (0.8 - ring * 0.2) * foodPulse;
 
     ctx.beginPath();
-    // Draw hexagonal crystal shape
-    for (let i = 0; i < 6; i++) {
-      const angle = (i / 6) * Math.PI * 2 + foodFirePhase * 0.3;
-      const shimmer = 1 + Math.sin(angle * 3 + foodFirePhase * 2) * 0.1;
-      const rx = foodX + Math.cos(angle) * ringRadius * shimmer;
-      const ry = foodY + Math.sin(angle) * ringRadius * shimmer;
-      if (i === 0) ctx.moveTo(rx, ry);
-      else ctx.lineTo(rx, ry);
-    }
-    ctx.closePath();
+    ctx.arc(foodX, foodY, ringRadius, ringRotation, ringRotation + Math.PI * 1.2);
+    ctx.stroke();
+
+    // Second arc opposite side
+    ctx.beginPath();
+    ctx.arc(foodX, foodY, ringRadius, ringRotation + Math.PI, ringRotation + Math.PI * 2.2);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
 
-  // Crystal gem glow
-  const gemGlow = ctx.createRadialGradient(foodX, foodY, 0, foodX, foodY, CELL_SIZE);
-  gemGlow.addColorStop(0, 'rgba(200, 250, 255, 0.85)');
-  gemGlow.addColorStop(0.3, 'rgba(80, 180, 220, 0.6)');
-  gemGlow.addColorStop(0.6, 'rgba(40, 120, 180, 0.3)');
-  gemGlow.addColorStop(1, 'rgba(20, 60, 100, 0)');
+  // Outer neon glow
+  ctx.shadowColor = '#00ff88';
+  ctx.shadowBlur = 20 * foodPulse;
+  const gemGlow = ctx.createRadialGradient(foodX, foodY, 0, foodX, foodY, CELL_SIZE * 1.2);
+  gemGlow.addColorStop(0, 'rgba(0, 255, 136, 0.9)');
+  gemGlow.addColorStop(0.3, 'rgba(0, 255, 200, 0.6)');
+  gemGlow.addColorStop(0.6, 'rgba(0, 200, 255, 0.3)');
+  gemGlow.addColorStop(1, 'rgba(0, 100, 150, 0)');
   ctx.fillStyle = gemGlow;
   ctx.beginPath();
-  ctx.arc(foodX, foodY, CELL_SIZE, 0, Math.PI * 2);
+  ctx.arc(foodX, foodY, CELL_SIZE * foodPulse, 0, Math.PI * 2);
   ctx.fill();
 
-  // Crystal gem faceted core
-  ctx.fillStyle = COLORS.foodCore;
+  // Inner core - bright neon green
+  ctx.fillStyle = '#00ff88';
   ctx.beginPath();
-  // Draw diamond shape
-  ctx.moveTo(foodX, foodY - CELL_SIZE / 2.5);
-  ctx.lineTo(foodX + CELL_SIZE / 3, foodY);
-  ctx.lineTo(foodX, foodY + CELL_SIZE / 2.5);
-  ctx.lineTo(foodX - CELL_SIZE / 3, foodY);
-  ctx.closePath();
+  ctx.arc(foodX, foodY, CELL_SIZE * 0.35 * foodPulse, 0, Math.PI * 2);
   ctx.fill();
 
-  // Bright highlight
+  // Hot white center
   ctx.fillStyle = '#ffffff';
-  ctx.globalAlpha = 0.95;
   ctx.beginPath();
-  ctx.arc(foodX - 2, foodY - 3, CELL_SIZE / 7, 0, Math.PI * 2);
+  ctx.arc(foodX, foodY, CELL_SIZE * 0.15 * foodPulse, 0, Math.PI * 2);
   ctx.fill();
+
+  // Sparkle effect
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.8 * foodPulse;
+  const sparkleAngle = foodFirePhase * 2;
+  for (let i = 0; i < 4; i++) {
+    const angle = sparkleAngle + (i * Math.PI / 2);
+    const dist = CELL_SIZE * 0.45 * foodPulse;
+    const sx = foodX + Math.cos(angle) * dist;
+    const sy = foodY + Math.sin(angle) * dist;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
 
   // Draw tail orbs (behind the snake)
   drawTailOrbs(ctx, gameState);
@@ -2636,7 +2740,7 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.fill();
 
       // Draw demon horns
-      drawIceCrystals(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
+      drawNeonSpikes(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
 
       // Menacing mouth
       ctx.strokeStyle = '#000000';
@@ -2662,40 +2766,46 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
       ctx.fill();
 
     } else {
-      // Body segments with fire gradient
-      const bodyGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius + 4);
-      bodyGlow.addColorStop(0, `rgba(153, 50, 204, ${fireIntensity * 0.3})`);
-      bodyGlow.addColorStop(1, 'rgba(75, 0, 130, 0)');
+      // Body segments with neon gradient - from hot pink to purple to blue
+      const segHue = 320 - t * 80; // Pink (320) to purple (280) to blue (240)
+
+      // Outer neon glow
+      ctx.shadowColor = `hsl(${segHue}, 100%, 60%)`;
+      ctx.shadowBlur = 8 * fireIntensity;
+      const bodyGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius + 5);
+      bodyGlow.addColorStop(0, `hsla(${segHue}, 100%, 60%, ${fireIntensity * 0.5})`);
+      bodyGlow.addColorStop(1, `hsla(${segHue}, 100%, 50%, 0)`);
       ctx.fillStyle = bodyGlow;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, radius + 4, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, radius + 5, 0, Math.PI * 2);
       ctx.fill();
 
-      const segHue = 280 - t * 20;
+      // Main body with neon gradient
       const bodyGradient = ctx.createRadialGradient(centerX - 1, centerY - 1, 0, centerX, centerY, radius);
-      bodyGradient.addColorStop(0, COLORS.snakeHighlight);
-      bodyGradient.addColorStop(0.4, hslToRgb(segHue / 360, 0.9, 0.45 + t * 0.1));
-      bodyGradient.addColorStop(1, hslToRgb(segHue / 360, 0.85, 0.35 + t * 0.1));
+      bodyGradient.addColorStop(0, `hsl(${segHue + 20}, 100%, 75%)`);
+      bodyGradient.addColorStop(0.4, `hsl(${segHue}, 100%, 55%)`);
+      bodyGradient.addColorStop(1, `hsl(${segHue - 10}, 90%, 40%)`);
       ctx.fillStyle = bodyGradient;
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Scale pattern
+      // Inner dark ring pattern
       if (i % 2 === 0) {
-        ctx.fillStyle = 'rgba(75, 0, 130, 0.3)';
+        ctx.fillStyle = `hsla(${segHue - 20}, 80%, 20%, 0.4)`;
         ctx.beginPath();
-        ctx.arc(centerX, centerY, radius * 0.7, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY, radius * 0.65, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Highlight
+      // Highlight sparkle
       ctx.fillStyle = '#ffffff';
-      ctx.globalAlpha = 0.2;
+      ctx.globalAlpha = 0.4;
       ctx.beginPath();
-      ctx.arc(centerX - 2, centerY - 2, radius * 0.25, 0, Math.PI * 2);
+      ctx.arc(centerX - 2, centerY - 2, radius * 0.2, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
     }
   }
 
@@ -2726,95 +2836,130 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   // Draw HUD overlay (score, length, power-ups)
   drawHUD(ctx, gameState, width, height);
 
-  // Game over overlay - Apocalyptic end
+  // Game over overlay - Synthwave glitch effect
   if (gameState.gameOver) {
-    // Dark hellish overlay
+    // Dark purple overlay
     ctx.fillStyle = COLORS.gameOverOverlay;
     ctx.fillRect(0, 0, width, height);
 
-    // Fiery vortex
-    ctx.globalAlpha = 0.2;
+    // Neon rotating rings
+    ctx.globalAlpha = 0.4;
     for (let ring = 0; ring < 5; ring++) {
-      const ringRadius = 30 + ring * 30;
-      const rotation = frameCount * 0.03 * (ring % 2 === 0 ? 1 : -1);
-      ctx.strokeStyle = ring % 2 === 0 ? COLORS.fireOrange : COLORS.fireRed;
-      ctx.lineWidth = 4;
+      const ringRadius = 35 + ring * 28;
+      const rotation = frameCount * 0.04 * (ring % 2 === 0 ? 1 : -1);
+      const ringHue = (frameCount * 2 + ring * 60) % 360;
+
+      ctx.strokeStyle = `hsl(${ringHue}, 100%, 60%)`;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = `hsl(${ringHue}, 100%, 60%)`;
+      ctx.shadowBlur = 10;
       ctx.beginPath();
-      ctx.arc(width / 2, height / 2, ringRadius, rotation, rotation + Math.PI * 1.5);
+      ctx.arc(width / 2, height / 2, ringRadius, rotation, rotation + Math.PI * 1.4);
       ctx.stroke();
     }
+    ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
 
-    // Falling embers around the edges
-    ctx.globalAlpha = 0.5;
-    const numEmbers = 12;
-    for (let e = 0; e < numEmbers; e++) {
-      const angle = (e / numEmbers) * Math.PI * 2 + frameCount * 0.02;
-      const dist = 140 + Math.sin(frameCount * 0.05 + e) * 20;
+    // Orbiting neon particles
+    ctx.globalAlpha = 0.7;
+    const numParticles = 16;
+    for (let e = 0; e < numParticles; e++) {
+      const angle = (e / numParticles) * Math.PI * 2 + frameCount * 0.025;
+      const dist = 130 + Math.sin(frameCount * 0.06 + e * 0.5) * 25;
       const ex = width / 2 + Math.cos(angle) * dist;
       const ey = height / 2 + Math.sin(angle) * dist;
+      const particleHue = (e * 22.5 + frameCount * 3) % 360;
 
-      ctx.fillStyle = e % 2 === 0 ? COLORS.fireOrange : COLORS.fireYellow;
+      ctx.shadowColor = `hsl(${particleHue}, 100%, 60%)`;
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = `hsl(${particleHue}, 100%, 70%)`;
       ctx.beginPath();
       ctx.arc(ex, ey, 4, 0, Math.PI * 2);
       ctx.fill();
 
-      // Ember glow
-      ctx.fillStyle = COLORS.fireRed;
-      ctx.globalAlpha = 0.2;
+      // Particle core
+      ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(ex, ey, 8, 0, Math.PI * 2);
+      ctx.arc(ex, ey, 1.5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.globalAlpha = 0.5;
     }
+    ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
 
-    // Skull symbol in center (pulsing)
-    const skullAlpha = 0.4 + Math.sin(frameCount * 0.05) * 0.15;
-    ctx.strokeStyle = COLORS.fireOrange;
-    ctx.lineWidth = 3;
-    ctx.globalAlpha = skullAlpha;
+    // Glitch X symbol in center
+    const glitchPulse = 0.6 + Math.sin(frameCount * 0.08) * 0.4;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const xSize = 35;
 
-    // Simple skull shape
-    const skullX = width / 2;
-    const skullY = height / 2;
-    const skullSize = 30;
+    // Glitch offset
+    const glitchX = Math.random() > 0.9 ? (Math.random() - 0.5) * 6 : 0;
+    const glitchY = Math.random() > 0.9 ? (Math.random() - 0.5) * 6 : 0;
 
-    // Skull outline
+    // X glow
+    ctx.strokeStyle = '#ff0080';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.globalAlpha = glitchPulse * 0.5;
+    ctx.shadowColor = '#ff0080';
+    ctx.shadowBlur = 20;
     ctx.beginPath();
-    ctx.arc(skullX, skullY - 5, skullSize, 0, Math.PI * 2);
+    ctx.moveTo(centerX - xSize + glitchX, centerY - xSize + glitchY);
+    ctx.lineTo(centerX + xSize + glitchX, centerY + xSize + glitchY);
+    ctx.moveTo(centerX + xSize + glitchX, centerY - xSize + glitchY);
+    ctx.lineTo(centerX - xSize + glitchX, centerY + xSize + glitchY);
     ctx.stroke();
 
-    // Eye sockets
-    ctx.fillStyle = COLORS.fireRed;
-    ctx.beginPath();
-    ctx.arc(skullX - 10, skullY - 8, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(skullX + 10, skullY - 8, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Nose
-    ctx.beginPath();
-    ctx.moveTo(skullX, skullY);
-    ctx.lineTo(skullX - 4, skullY + 8);
-    ctx.lineTo(skullX + 4, skullY + 8);
-    ctx.closePath();
-    ctx.stroke();
-
-    // Teeth
-    ctx.strokeStyle = COLORS.fireOrange;
+    // X core - bright cyan
+    ctx.strokeStyle = '#00ffff';
     ctx.lineWidth = 2;
-    for (let tooth = 0; tooth < 5; tooth++) {
-      const toothX = skullX - 12 + tooth * 6;
-      ctx.beginPath();
-      ctx.moveTo(toothX, skullY + 18);
-      ctx.lineTo(toothX, skullY + 25);
-      ctx.stroke();
-    }
+    ctx.globalAlpha = glitchPulse;
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 15;
+    ctx.stroke();
 
+    ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
   }
+
+  // CRT SCANLINE EFFECT - Retro arcade feel
+  // Horizontal scan lines
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+  for (let y = 0; y < height; y += 3) {
+    ctx.fillRect(0, y, width, 1);
+  }
+
+  // Subtle screen flicker
+  if (Math.random() > 0.97) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  // Vignette effect (darker corners)
+  const vignetteGradient = ctx.createRadialGradient(
+    width / 2, height / 2, width * 0.3,
+    width / 2, height / 2, width * 0.8
+  );
+  vignetteGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  vignetteGradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.15)');
+  vignetteGradient.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
+  ctx.fillStyle = vignetteGradient;
+  ctx.fillRect(0, 0, width, height);
+
+  // Chromatic aberration on edges (subtle RGB shift)
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.015;
+
+  // Red channel shift
+  ctx.fillStyle = '#ff0000';
+  ctx.fillRect(2, 0, width, height);
+
+  // Blue channel shift
+  ctx.fillStyle = '#0000ff';
+  ctx.fillRect(-2, 0, width, height);
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
 
   ctx.restore();
 }
