@@ -7,10 +7,27 @@ interface Position {
   y: number;
 }
 
+type PowerUpType = 'SPEED_BOOST' | 'INVINCIBILITY' | 'SCORE_MULTIPLIER' | 'MAGNET';
+
+interface PowerUp {
+  position: Position;
+  type: PowerUpType;
+  spawnTime: number;
+  duration: number;
+}
+
+interface ActivePowerUp {
+  type: PowerUpType;
+  endTime: number;
+}
+
 interface GameState {
   snake: Position[];
   food: Position;
   gameOver: boolean;
+  powerUp?: PowerUp | null;
+  activePowerUps?: ActivePowerUp[];
+  tickCount?: number;
 }
 
 interface GameBoardProps {
@@ -52,6 +69,22 @@ const COLORS = {
   demonPurple: '#0080b0',
   bloodRed: '#006080',
   emberOrange: '#60c0e0',
+  // Power-up colors
+  powerUpSpeed: '#ffff00',
+  powerUpSpeedGlow: '#ffa500',
+  powerUpInvincibility: '#00ffff',
+  powerUpInvincibilityGlow: '#0088ff',
+  powerUpMultiplier: '#ff00ff',
+  powerUpMultiplierGlow: '#8800ff',
+  powerUpMagnet: '#00ff88',
+  powerUpMagnetGlow: '#00ff00',
+};
+
+const POWERUP_COLORS: Record<PowerUpType, { main: string; glow: string; symbol: string }> = {
+  SPEED_BOOST: { main: '#ffff00', glow: '#ffa500', symbol: '⚡' },
+  INVINCIBILITY: { main: '#00ffff', glow: '#0088ff', symbol: '🛡' },
+  SCORE_MULTIPLIER: { main: '#ff00ff', glow: '#8800ff', symbol: '×3' },
+  MAGNET: { main: '#00ff88', glow: '#00ff00', symbol: '◎' },
 };
 
 function hslToRgb(h: number, s: number, l: number): string {
@@ -253,6 +286,35 @@ let explosions: Explosion2D[] = [];
 
 // Fire ring around food
 let foodFirePhase = 0;
+
+// Power-up visual state
+interface PowerUpParticle2D {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  life: number;
+  hue: number;
+  angle: number;
+}
+let powerUpParticles: PowerUpParticle2D[] = [];
+const MAX_POWERUP_PARTICLES = 30;
+let powerUpPhase = 0;
+
+// Power-up collection burst state
+interface PowerUpBurst2D {
+  x: number;
+  y: number;
+  type: PowerUpType;
+  particles: { angle: number; dist: number; size: number; alpha: number }[];
+  rings: { radius: number; alpha: number }[];
+  life: number;
+}
+let powerUpBursts: PowerUpBurst2D[] = [];
+
+// Active power-up indicator state
+let activePowerUpPulse = 0;
 
 // Screen shake
 let screenShakeX = 0;

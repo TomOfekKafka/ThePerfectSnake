@@ -7,6 +7,20 @@ export interface Position {
   y: number;
 }
 
+export type PowerUpType = 'SPEED_BOOST' | 'INVINCIBILITY' | 'SCORE_MULTIPLIER' | 'MAGNET';
+
+export interface PowerUp {
+  position: Position;
+  type: PowerUpType;
+  spawnTime: number;
+  duration: number;
+}
+
+export interface ActivePowerUp {
+  type: PowerUpType;
+  endTime: number;
+}
+
 export interface GameState {
   snake: Position[];
   food: Position;
@@ -14,6 +28,9 @@ export interface GameState {
   gameOver: boolean;
   gameStarted: boolean;
   score: number;
+  powerUp: PowerUp | null;
+  activePowerUps: ActivePowerUp[];
+  tickCount: number;
 }
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';

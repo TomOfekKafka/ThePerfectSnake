@@ -5,8 +5,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameState, Direction } from './types';
-import { createInitialState, INITIAL_SNAKE, GAME_SPEED_MS, GRID_SIZE } from './constants';
-import { tick, createNewGame } from './logic';
+import { createInitialState, INITIAL_SNAKE, GAME_SPEED_MS, GRID_SIZE, SPEED_BOOST_MS } from './constants';
+import { tick, createNewGame, hasPowerUp } from './logic';
 import { usePostMessage } from './usePostMessage';
 import { useKeyboard } from './useKeyboard';
 import { useTouch } from './useTouch';
@@ -70,14 +70,17 @@ export function useSnakeGame() {
       setGameState(prev => tick(prev, direction));
     };
 
-    gameLoopRef.current = window.setInterval(runTick, GAME_SPEED_MS);
+    const hasSpeedBoost = hasPowerUp(gameState.activePowerUps, 'SPEED_BOOST');
+    const speed = hasSpeedBoost ? SPEED_BOOST_MS : GAME_SPEED_MS;
+
+    gameLoopRef.current = window.setInterval(runTick, speed);
 
     return () => {
       if (gameLoopRef.current) {
         clearInterval(gameLoopRef.current);
       }
     };
-  }, [gameState.gameStarted, gameState.gameOver, directionQueue]);
+  }, [gameState.gameStarted, gameState.gameOver, gameState.activePowerUps, directionQueue]);
 
   // Broadcast state changes to parent
   useEffect(() => {
