@@ -434,6 +434,320 @@ let ghostSnake: GhostSnake2D | null = null;
 const GHOST_SNAKE_LENGTH = 8;
 const GHOST_MOVE_INTERVAL = 10;
 
+// Tail orbs state - two mystical energy orbs that orbit the snake's tail
+interface TailOrb2D {
+  x: number;
+  y: number;
+  targetX: number;
+  targetY: number;
+  angle: number;
+  orbitRadius: number;
+  orbitSpeed: number;
+  size: number;
+  hue: number;
+  pulsePhase: number;
+  trail: { x: number; y: number; alpha: number; size: number }[];
+  sparkles: { x: number; y: number; vx: number; vy: number; life: number; size: number; hue: number }[];
+}
+let tailOrbs: TailOrb2D[] = [];
+let tailOrbsInitialized = false;
+
+function initTailOrbs(): void {
+  if (tailOrbsInitialized) return;
+  tailOrbsInitialized = true;
+
+  // Create two orbs with complementary colors and opposite orbit phases
+  tailOrbs = [
+    {
+      x: 0,
+      y: 0,
+      targetX: 0,
+      targetY: 0,
+      angle: 0,
+      orbitRadius: 18,
+      orbitSpeed: 0.08,
+      size: 6,
+      hue: 280, // Purple
+      pulsePhase: 0,
+      trail: [],
+      sparkles: [],
+    },
+    {
+      x: 0,
+      y: 0,
+      targetX: 0,
+      targetY: 0,
+      angle: Math.PI, // Opposite side
+      orbitRadius: 18,
+      orbitSpeed: 0.08,
+      size: 6,
+      hue: 180, // Cyan
+      pulsePhase: Math.PI,
+      trail: [],
+      sparkles: [],
+    },
+  ];
+}
+
+function updateTailOrbs(gameState: GameState): void {
+  if (!tailOrbsInitialized) {
+    initTailOrbs();
+  }
+
+  if (gameState.gameOver) {
+    // Fade out and disperse orbs on game over
+    for (const orb of tailOrbs) {
+      orb.orbitRadius += 2;
+      orb.size *= 0.95;
+      for (const t of orb.trail) {
+        t.alpha *= 0.85;
+      }
+      orb.trail = orb.trail.filter(t => t.alpha > 0.02);
+      for (let i = orb.sparkles.length - 1; i >= 0; i--) {
+        const s = orb.sparkles[i];
+        s.x += s.vx;
+        s.y += s.vy;
+        s.life -= 0.05;
+        if (s.life <= 0) orb.sparkles.splice(i, 1);
+      }
+    }
+    return;
+  }
+
+  const snake = gameState.snake;
+  if (snake.length < 1) return;
+
+  // Get tail position
+  const tail = snake[snake.length - 1];
+  const tailX = tail.x * CELL_SIZE + CELL_SIZE / 2;
+  const tailY = tail.y * CELL_SIZE + CELL_SIZE / 2;
+
+  // Get direction from second-to-last to tail (or use default)
+  let tailDx = 0, tailDy = 1;
+  if (snake.length >= 2) {
+    const prev = snake[snake.length - 2];
+    tailDx = tail.x - prev.x;
+    tailDy = tail.y - prev.y;
+    const len = Math.sqrt(tailDx * tailDx + tailDy * tailDy);
+    if (len > 0) {
+      tailDx /= len;
+      tailDy /= len;
+    }
+  }
+
+  // Position orbs behind the tail in the direction the tail is trailing
+  const orbBaseX = tailX + tailDx * 12;
+  const orbBaseY = tailY + tailDy * 12;
+
+  for (const orb of tailOrbs) {
+    // Update orbit angle
+    orb.angle += orb.orbitSpeed;
+    orb.pulsePhase += 0.1;
+
+    // Calculate target position (orbiting around the tail)
+    orb.targetX = orbBaseX + Math.cos(orb.angle) * orb.orbitRadius;
+    orb.targetY = orbBaseY + Math.sin(orb.angle) * orb.orbitRadius;
+
+    // Smooth follow
+    orb.x += (orb.targetX - orb.x) * 0.15;
+    orb.y += (orb.targetY - orb.y) * 0.15;
+
+    // Pulsing size
+    const basePulse = 0.85 + Math.sin(orb.pulsePhase) * 0.15;
+    orb.size = 6 * basePulse;
+
+    // Add trail segment
+    if (frameCount % 2 === 0) {
+      orb.trail.unshift({
+        x: orb.x,
+        y: orb.y,
+        alpha: 0.8,
+        size: orb.size * 0.7,
+      });
+      if (orb.trail.length > 12) orb.trail.pop();
+    }
+
+    // Fade trail
+    for (const t of orb.trail) {
+      t.alpha *= 0.88;
+      t.size *= 0.95;
+    }
+    orb.trail = orb.trail.filter(t => t.alpha > 0.02);
+
+    // Spawn sparkles occasionally
+    if (Math.random() < 0.15) {
+      const sparkleAngle = Math.random() * Math.PI * 2;
+      const sparkleSpeed = 0.5 + Math.random() * 1;
+      orb.sparkles.push({
+        x: orb.x,
+        y: orb.y,
+        vx: Math.cos(sparkleAngle) * sparkleSpeed,
+        vy: Math.sin(sparkleAngle) * sparkleSpeed - 0.5,
+        life: 1,
+        size: 1.5 + Math.random() * 1.5,
+        hue: orb.hue + (Math.random() - 0.5) * 30,
+      });
+    }
+
+    // Update sparkles
+    for (let i = orb.sparkles.length - 1; i >= 0; i--) {
+      const s = orb.sparkles[i];
+      s.x += s.vx;
+      s.y += s.vy;
+      s.vy += 0.02; // Gentle gravity
+      s.life -= 0.04;
+      s.size *= 0.97;
+      if (s.life <= 0 || s.size < 0.3) {
+        orb.sparkles.splice(i, 1);
+      }
+    }
+
+    // Limit sparkles
+    while (orb.sparkles.length > 15) {
+      orb.sparkles.shift();
+    }
+  }
+}
+
+function drawTailOrbs(ctx: CanvasRenderingContext2D, gameState: GameState): void {
+  if (gameState.snake.length < 1) return;
+
+  for (const orb of tailOrbs) {
+    if (orb.size < 0.5) continue;
+
+    const pulse = 0.8 + Math.sin(orb.pulsePhase) * 0.2;
+
+    // Draw trail first (behind the orb)
+    for (let i = orb.trail.length - 1; i >= 0; i--) {
+      const t = orb.trail[i];
+      const progress = i / orb.trail.length;
+
+      // Outer glow
+      ctx.fillStyle = `hsla(${orb.hue}, 70%, 50%, ${t.alpha * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, t.size * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Core trail
+      ctx.fillStyle = `hsla(${orb.hue}, 80%, 60%, ${t.alpha * 0.5 * (1 - progress)})`;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, t.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw sparkles
+    for (const s of orb.sparkles) {
+      const sparkleAlpha = s.life * 0.8;
+
+      // Sparkle glow
+      ctx.fillStyle = `hsla(${s.hue}, 90%, 70%, ${sparkleAlpha * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sparkle core
+      ctx.fillStyle = `hsla(${s.hue}, 100%, 80%, ${sparkleAlpha})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bright center
+      ctx.fillStyle = `rgba(255, 255, 255, ${sparkleAlpha * 0.8})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Outer ethereal glow
+    const glowSize = orb.size * 3 * pulse;
+    ctx.fillStyle = `hsla(${orb.hue}, 60%, 40%, ${0.15 * pulse})`;
+    ctx.beginPath();
+    ctx.arc(orb.x, orb.y, glowSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Mid glow
+    ctx.fillStyle = `hsla(${orb.hue}, 70%, 55%, ${0.25 * pulse})`;
+    ctx.beginPath();
+    ctx.arc(orb.x, orb.y, orb.size * 2 * pulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Main orb body
+    const orbGradient = ctx.createRadialGradient(
+      orb.x - orb.size * 0.3, orb.y - orb.size * 0.3, 0,
+      orb.x, orb.y, orb.size * 1.2
+    );
+    orbGradient.addColorStop(0, `hsla(${orb.hue + 30}, 80%, 85%, ${0.95 * pulse})`);
+    orbGradient.addColorStop(0.4, `hsla(${orb.hue}, 90%, 65%, ${0.9 * pulse})`);
+    orbGradient.addColorStop(1, `hsla(${orb.hue - 20}, 80%, 45%, ${0.7 * pulse})`);
+    ctx.fillStyle = orbGradient;
+    ctx.beginPath();
+    ctx.arc(orb.x, orb.y, orb.size * 1.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner bright core
+    ctx.fillStyle = `hsla(${orb.hue + 40}, 70%, 90%, ${0.9 * pulse})`;
+    ctx.beginPath();
+    ctx.arc(orb.x, orb.y, orb.size * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // White hot center
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.7 * pulse})`;
+    ctx.beginPath();
+    ctx.arc(orb.x, orb.y, orb.size * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Lens flare effect
+    const flareAngle = orb.angle + Math.PI / 4;
+    const flareDist = orb.size * 1.5;
+    const flareX = orb.x + Math.cos(flareAngle) * flareDist;
+    const flareY = orb.y + Math.sin(flareAngle) * flareDist;
+    ctx.fillStyle = `hsla(${orb.hue + 60}, 100%, 90%, ${0.3 * pulse})`;
+    ctx.beginPath();
+    ctx.arc(flareX, flareY, orb.size * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw energy connection between the two orbs
+  if (tailOrbs.length >= 2) {
+    const orb1 = tailOrbs[0];
+    const orb2 = tailOrbs[1];
+    const dist = Math.sqrt((orb2.x - orb1.x) ** 2 + (orb2.y - orb1.y) ** 2);
+
+    if (dist > 5 && orb1.size > 0.5 && orb2.size > 0.5) {
+      const pulseAlpha = 0.2 + Math.sin(frameCount * 0.1) * 0.1;
+
+      // Gradient connection line
+      const gradient = ctx.createLinearGradient(orb1.x, orb1.y, orb2.x, orb2.y);
+      gradient.addColorStop(0, `hsla(${orb1.hue}, 80%, 60%, ${pulseAlpha})`);
+      gradient.addColorStop(0.5, `hsla(${(orb1.hue + orb2.hue) / 2}, 70%, 70%, ${pulseAlpha * 1.2})`);
+      gradient.addColorStop(1, `hsla(${orb2.hue}, 80%, 60%, ${pulseAlpha})`);
+
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 2 + Math.sin(frameCount * 0.15) * 0.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(orb1.x, orb1.y);
+      ctx.lineTo(orb2.x, orb2.y);
+      ctx.stroke();
+
+      // Energy particles along the connection
+      const numParticles = 3;
+      for (let i = 0; i < numParticles; i++) {
+        const t = ((frameCount * 0.03 + i / numParticles) % 1);
+        const px = orb1.x + (orb2.x - orb1.x) * t;
+        const py = orb1.y + (orb2.y - orb1.y) * t;
+        const pHue = orb1.hue + (orb2.hue - orb1.hue) * t;
+        const pAlpha = Math.sin(t * Math.PI) * 0.6;
+
+        ctx.fillStyle = `hsla(${pHue}, 90%, 75%, ${pAlpha})`;
+        ctx.beginPath();
+        ctx.arc(px, py, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
 function spawnBee2D(): void {
   if (bees2D.length >= MAX_BEES_2D) return;
 
@@ -1975,6 +2289,7 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   updateCometTrail(gameState);
   updateEtherealParticles();
   updateGhostSnake(gameState);
+  updateTailOrbs(gameState);
 
   ctx.save();
   ctx.scale(canvas.width / width, canvas.height / height);
@@ -2228,6 +2543,9 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   ctx.arc(foodX - 2, foodY - 3, CELL_SIZE / 7, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
+
+  // Draw tail orbs (behind the snake)
+  drawTailOrbs(ctx, gameState);
 
   // Draw demon snake
   const snake = gameState.snake;
