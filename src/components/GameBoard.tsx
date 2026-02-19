@@ -114,8 +114,8 @@ function hslToRgb(h: number, s: number, l: number): string {
 // Animation frame counter
 let frameCount = 0;
 
-// Neon electric spikes on the snake head
-function drawNeonSpikes(
+// Draw human hair on head
+function drawHumanHair(
   ctx: CanvasRenderingContext2D,
   headX: number,
   headY: number,
@@ -125,107 +125,125 @@ function drawNeonSpikes(
   perpY: number,
   frame: number
 ): void {
-  const spikeOffset = -6;
-  const spikeBaseX = headX - dx * spikeOffset;
-  const spikeBaseY = headY - dy * spikeOffset;
+  const hairBaseX = headX - dx * 8;
+  const hairBaseY = headY - dy * 8;
 
-  // Neon pulse animation
-  const pulse = 0.6 + Math.sin(frame * 0.15) * 0.4;
-  const flicker = Math.random() > 0.95 ? 0.3 : 1;
+  const pulse = 0.8 + Math.sin(frame * 0.1) * 0.2;
+  const windSway = Math.sin(frame * 0.08) * 0.15;
 
-  const spikeSize = 14;
-  const spikeSpread = 6;
+  // Hair strands - flowing behind the head
+  const numStrands = 7;
+  for (let i = 0; i < numStrands; i++) {
+    const strandOffset = (i - (numStrands - 1) / 2) * 3;
+    const strandX = hairBaseX + perpX * strandOffset;
+    const strandY = hairBaseY + perpY * strandOffset;
 
-  // Left neon spike
-  ctx.save();
-  ctx.translate(spikeBaseX + perpX * spikeSpread, spikeBaseY + perpY * spikeSpread);
-  ctx.rotate(Math.atan2(perpY, perpX) + 0.5);
+    // Hair flows opposite to movement direction with wave
+    const strandLength = 12 + Math.sin(frame * 0.12 + i) * 3;
+    const wave = Math.sin(frame * 0.15 + i * 0.5) * 4;
 
-  // Outer glow
-  ctx.shadowColor = '#ff00ff';
-  ctx.shadowBlur = 12 * pulse * flicker;
+    const endX = strandX - dx * strandLength + perpX * wave;
+    const endY = strandY - dy * strandLength + perpY * wave;
 
-  // Spike body - hot pink neon
-  ctx.fillStyle = `rgba(255, 0, 128, ${0.9 * flicker})`;
-  ctx.beginPath();
-  ctx.moveTo(0, spikeSize * 0.2);
-  ctx.lineTo(-spikeSize * 0.2, 0);
-  ctx.lineTo(0, -spikeSize);
-  ctx.lineTo(spikeSize * 0.2, 0);
-  ctx.closePath();
-  ctx.fill();
+    // Control point for bezier curve
+    const ctrlX = strandX - dx * strandLength * 0.6 + perpX * wave * 0.5 + windSway * 5;
+    const ctrlY = strandY - dy * strandLength * 0.6 + perpY * wave * 0.5;
 
-  // Inner bright core
-  ctx.fillStyle = `rgba(255, 150, 200, ${pulse * flicker})`;
-  ctx.beginPath();
-  ctx.moveTo(0, spikeSize * 0.1);
-  ctx.lineTo(-spikeSize * 0.08, 0);
-  ctx.lineTo(0, -spikeSize * 0.7);
-  ctx.lineTo(spikeSize * 0.08, 0);
-  ctx.closePath();
-  ctx.fill();
+    // Hair glow
+    ctx.shadowColor = '#ffcc66';
+    ctx.shadowBlur = 4 * pulse;
 
-  ctx.shadowBlur = 0;
-  ctx.restore();
+    // Hair strand gradient - blonde/golden with neon tint
+    const hairHue = 40 + i * 5;
+    ctx.strokeStyle = `hsl(${hairHue}, 80%, ${55 + i * 3}%)`;
+    ctx.lineWidth = 2.5 - i * 0.15;
+    ctx.lineCap = 'round';
 
-  // Right neon spike
-  ctx.save();
-  ctx.translate(spikeBaseX - perpX * spikeSpread, spikeBaseY - perpY * spikeSpread);
-  ctx.rotate(Math.atan2(-perpY, -perpX) + 0.5);
-
-  ctx.shadowColor = '#00ffff';
-  ctx.shadowBlur = 12 * pulse * flicker;
-
-  ctx.fillStyle = `rgba(0, 255, 255, ${0.9 * flicker})`;
-  ctx.beginPath();
-  ctx.moveTo(0, spikeSize * 0.2);
-  ctx.lineTo(-spikeSize * 0.2, 0);
-  ctx.lineTo(0, -spikeSize);
-  ctx.lineTo(spikeSize * 0.2, 0);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = `rgba(150, 255, 255, ${pulse * flicker})`;
-  ctx.beginPath();
-  ctx.moveTo(0, spikeSize * 0.1);
-  ctx.lineTo(-spikeSize * 0.08, 0);
-  ctx.lineTo(0, -spikeSize * 0.7);
-  ctx.lineTo(spikeSize * 0.08, 0);
-  ctx.closePath();
-  ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(strandX, strandY);
+    ctx.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
+    ctx.stroke();
+  }
 
   ctx.shadowBlur = 0;
-  ctx.restore();
+}
 
-  // Center crown spike - electric yellow
-  ctx.save();
-  ctx.translate(spikeBaseX, spikeBaseY);
-  ctx.rotate(Math.atan2(dy, dx) + Math.PI);
+// Draw human arm reaching from body segment
+function drawHumanArm(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  perpX: number,
+  perpY: number,
+  side: number, // 1 for left, -1 for right
+  frame: number,
+  segmentIndex: number
+): void {
+  const armPhase = frame * 0.08 + segmentIndex * 0.5;
+  const crawlMotion = Math.sin(armPhase) * 0.4;
+  const armExtend = 0.6 + crawlMotion * 0.4;
 
-  const centerSize = spikeSize * 1.3;
-  ctx.shadowColor = '#ffff00';
-  ctx.shadowBlur = 15 * pulse * flicker;
+  // Shoulder position
+  const shoulderX = x + perpX * side * 6;
+  const shoulderY = y + perpY * side * 6;
 
-  ctx.fillStyle = `rgba(255, 255, 0, ${0.95 * flicker})`;
+  // Elbow - bent arm
+  const elbowAngle = armPhase + side * 0.3;
+  const elbowDist = 8 * armExtend;
+  const elbowX = shoulderX + perpX * side * elbowDist + Math.cos(elbowAngle) * 4;
+  const elbowY = shoulderY + perpY * side * elbowDist + Math.sin(elbowAngle) * 4 - 2;
+
+  // Hand position - reaching forward/down
+  const handDist = 7 * armExtend;
+  const handX = elbowX + perpX * side * handDist * 0.5 + Math.cos(elbowAngle + 0.5) * 5;
+  const handY = elbowY + perpY * side * handDist * 0.5 + Math.sin(elbowAngle + 0.5) * 5;
+
+  // Skin tone with neon glow
+  const skinHue = 25;
+  const skinLight = 70;
+
+  // Arm glow
+  ctx.shadowColor = '#ff9966';
+  ctx.shadowBlur = 5;
+
+  // Upper arm
+  ctx.strokeStyle = `hsl(${skinHue}, 50%, ${skinLight}%)`;
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(0, centerSize * 0.15);
-  ctx.lineTo(-centerSize * 0.15, 0);
-  ctx.lineTo(0, -centerSize);
-  ctx.lineTo(centerSize * 0.15, 0);
-  ctx.closePath();
+  ctx.moveTo(shoulderX, shoulderY);
+  ctx.lineTo(elbowX, elbowY);
+  ctx.stroke();
+
+  // Forearm
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(elbowX, elbowY);
+  ctx.lineTo(handX, handY);
+  ctx.stroke();
+
+  // Hand - simple oval
+  ctx.fillStyle = `hsl(${skinHue}, 50%, ${skinLight + 5}%)`;
+  ctx.beginPath();
+  ctx.ellipse(handX, handY, 3, 2.5, elbowAngle, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = `rgba(255, 255, 200, ${pulse * flicker})`;
-  ctx.beginPath();
-  ctx.moveTo(0, centerSize * 0.05);
-  ctx.lineTo(-centerSize * 0.06, 0);
-  ctx.lineTo(0, -centerSize * 0.75);
-  ctx.lineTo(centerSize * 0.06, 0);
-  ctx.closePath();
-  ctx.fill();
+  // Fingers - small lines
+  for (let f = 0; f < 4; f++) {
+    const fingerAngle = elbowAngle - 0.4 + f * 0.25;
+    const fingerLen = 2.5;
+    ctx.strokeStyle = `hsl(${skinHue}, 45%, ${skinLight + 3}%)`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(handX + Math.cos(fingerAngle - 0.3) * 2, handY + Math.sin(fingerAngle - 0.3) * 2);
+    ctx.lineTo(
+      handX + Math.cos(fingerAngle) * (2 + fingerLen),
+      handY + Math.sin(fingerAngle) * (2 + fingerLen)
+    );
+    ctx.stroke();
+  }
 
   ctx.shadowBlur = 0;
-  ctx.restore();
 }
 
 // Flame effects state
@@ -2651,161 +2669,226 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   // Draw tail orbs (behind the snake)
   drawTailOrbs(ctx, gameState);
 
-  // Draw demon snake
+  // Draw human snake - a crawling humanoid figure
   const snake = gameState.snake;
   const snakeLen = snake.length;
 
-  // Draw snake segments (back to front)
+  // First pass: Draw arms (behind body)
+  for (let i = snakeLen - 1; i >= 1; i--) {
+    const segment = snake[i];
+    const prevSegment = snake[i - 1];
+    const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2;
+
+    // Calculate direction
+    let dx = prevSegment.x - segment.x;
+    let dy = prevSegment.y - segment.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len > 0) { dx /= len; dy /= len; }
+    const perpX = -dy;
+    const perpY = dx;
+
+    // Draw arms on every other segment (alternating sides create crawling motion)
+    if (i % 2 === 0) {
+      drawHumanArm(ctx, centerX, centerY, perpX, perpY, 1, frameCount, i);
+    } else {
+      drawHumanArm(ctx, centerX, centerY, perpX, perpY, -1, frameCount, i);
+    }
+  }
+
+  // Second pass: Draw body segments (back to front)
   for (let i = snakeLen - 1; i >= 0; i--) {
     const segment = snake[i];
     const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
     const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2;
 
     const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
-    const radius = (CELL_SIZE / 2 - 1) * (0.9 + t * 0.1);
 
-    // Fire intensity based on position
-    const fireIntensity = 0.5 + (1 - t) * 0.5;
+    // Calculate direction for this segment
+    let dx = 1, dy = 0;
+    if (i === 0 && snake[1]) {
+      dx = segment.x - snake[1].x;
+      dy = segment.y - snake[1].y;
+    } else if (i > 0) {
+      dx = snake[i - 1].x - segment.x;
+      dy = snake[i - 1].y - segment.y;
+    }
+    const dirLen = Math.sqrt(dx * dx + dy * dy);
+    if (dirLen > 0) { dx /= dirLen; dy /= dirLen; }
+    const perpX = -dy;
+    const perpY = dx;
+
+    // Skin tone with slight variation
+    const skinHue = 25;
+    const skinSat = 45;
+    const skinLight = 68 - t * 8;
 
     if (i === 0) {
-      // Demon head with fiery glow
-      const headGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius + 8);
-      headGlow.addColorStop(0, COLORS.snakeHead);
-      headGlow.addColorStop(0.5, COLORS.snakeBody);
-      headGlow.addColorStop(1, 'rgba(139, 0, 0, 0)');
-      ctx.fillStyle = headGlow;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius + 8, 0, Math.PI * 2);
-      ctx.fill();
+      // HUMAN HEAD
+      const headRadius = CELL_SIZE / 2 + 2;
 
-      // Head body
-      const headGradient = ctx.createRadialGradient(centerX - 2, centerY - 2, 0, centerX, centerY, radius + 2);
-      headGradient.addColorStop(0, COLORS.snakeHighlight);
-      headGradient.addColorStop(0.5, COLORS.snakeHead);
-      headGradient.addColorStop(1, COLORS.snakeBody);
+      // Head glow (warm skin tone)
+      ctx.shadowColor = '#ffaa77';
+      ctx.shadowBlur = 10;
+
+      // Head shape - slightly oval
+      const headGradient = ctx.createRadialGradient(
+        centerX - 2, centerY - 2, 0,
+        centerX, centerY, headRadius + 3
+      );
+      headGradient.addColorStop(0, `hsl(${skinHue}, ${skinSat + 10}%, ${skinLight + 15}%)`);
+      headGradient.addColorStop(0.5, `hsl(${skinHue}, ${skinSat}%, ${skinLight + 5}%)`);
+      headGradient.addColorStop(1, `hsl(${skinHue}, ${skinSat - 5}%, ${skinLight - 10}%)`);
       ctx.fillStyle = headGradient;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, radius + 2, 0, Math.PI * 2);
+      ctx.ellipse(centerX, centerY, headRadius + 1, headRadius, Math.atan2(dy, dx), 0, Math.PI * 2);
       ctx.fill();
+      ctx.shadowBlur = 0;
 
-      // Eye direction
-      const nextSegment = snake[1];
-      let dx = 1, dy = 0;
-      if (nextSegment) {
-        dx = segment.x - nextSegment.x;
-        dy = segment.y - nextSegment.y;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        if (len > 0) { dx /= len; dy /= len; }
-      }
-
-      const perpX = -dy;
-      const perpY = dx;
+      // Face features
       const eyeOffset = 4;
-      const eyeForward = 2;
-
-      // Demon eyes - glowing yellow
+      const eyeForward = 3;
       const leftEyeX = centerX + perpX * eyeOffset + dx * eyeForward;
       const leftEyeY = centerY + perpY * eyeOffset + dy * eyeForward;
       const rightEyeX = centerX - perpX * eyeOffset + dx * eyeForward;
       const rightEyeY = centerY - perpY * eyeOffset + dy * eyeForward;
 
-      // Eye glow
-      ctx.fillStyle = COLORS.snakeEye;
-      ctx.shadowColor = COLORS.snakeEye;
-      ctx.shadowBlur = 6;
+      // Eye whites
+      ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(leftEyeX, leftEyeY, 4, 0, Math.PI * 2);
+      ctx.ellipse(leftEyeX, leftEyeY, 3.5, 2.5, Math.atan2(dy, dx), 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(rightEyeX, rightEyeY, 4, 0, Math.PI * 2);
+      ctx.ellipse(rightEyeX, rightEyeY, 3.5, 2.5, Math.atan2(dy, dx), 0, Math.PI * 2);
+      ctx.fill();
+
+      // Irises - blue/green with glow
+      const irisColor = `hsl(${200 + Math.sin(frameCount * 0.05) * 20}, 70%, 45%)`;
+      ctx.fillStyle = irisColor;
+      ctx.shadowColor = irisColor;
+      ctx.shadowBlur = 4;
+      ctx.beginPath();
+      ctx.arc(leftEyeX + dx * 0.8, leftEyeY + dy * 0.8, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(rightEyeX + dx * 0.8, rightEyeY + dy * 0.8, 2, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // Slit pupils
-      ctx.fillStyle = COLORS.snakePupil;
+      // Pupils
+      ctx.fillStyle = '#000000';
       ctx.beginPath();
-      ctx.ellipse(leftEyeX + dx, leftEyeY + dy, 1, 2.5, Math.atan2(dy, dx), 0, Math.PI * 2);
+      ctx.arc(leftEyeX + dx * 1, leftEyeY + dy * 1, 1, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.ellipse(rightEyeX + dx, rightEyeY + dy, 1, 2.5, Math.atan2(dy, dx), 0, Math.PI * 2);
+      ctx.arc(rightEyeX + dx * 1, rightEyeY + dy * 1, 1, 0, Math.PI * 2);
       ctx.fill();
 
-      // Eye glint
+      // Eye glints
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(leftEyeX - 1, leftEyeY - 1, 1, 0, Math.PI * 2);
+      ctx.arc(leftEyeX + dx * 0.3 - 0.5, leftEyeY + dy * 0.3 - 0.5, 0.8, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(rightEyeX - 1, rightEyeY - 1, 1, 0, Math.PI * 2);
+      ctx.arc(rightEyeX + dx * 0.3 - 0.5, rightEyeY + dy * 0.3 - 0.5, 0.8, 0, Math.PI * 2);
       ctx.fill();
 
-      // Draw demon horns
-      drawNeonSpikes(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
-
-      // Menacing mouth
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      const mouthY = centerY + dy * 6;
-      const mouthX = centerX + dx * 6;
+      // Eyebrows (determined expression)
+      ctx.strokeStyle = `hsl(30, 40%, 35%)`;
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      const browOffset = -3;
       ctx.beginPath();
-      ctx.moveTo(mouthX - 4, mouthY);
-      ctx.lineTo(mouthX + 4, mouthY);
+      ctx.moveTo(leftEyeX + perpX * 3 + dy * browOffset, leftEyeY + perpY * 3 + (-dx) * browOffset);
+      ctx.lineTo(leftEyeX - perpX * 2 + dy * browOffset, leftEyeY - perpY * 2 + (-dx) * browOffset - 1);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(rightEyeX - perpX * 3 + dy * browOffset, rightEyeY - perpY * 3 + (-dx) * browOffset);
+      ctx.lineTo(rightEyeX + perpX * 2 + dy * browOffset, rightEyeY + perpY * 2 + (-dx) * browOffset - 1);
       ctx.stroke();
 
-      // Fangs
-      ctx.fillStyle = '#ffffff';
+      // Nose (simple)
+      const noseX = centerX + dx * 5;
+      const noseY = centerY + dy * 5;
+      ctx.fillStyle = `hsl(${skinHue}, ${skinSat - 5}%, ${skinLight - 5}%)`;
       ctx.beginPath();
-      ctx.moveTo(mouthX - 3, mouthY);
-      ctx.lineTo(mouthX - 2, mouthY + 3);
-      ctx.lineTo(mouthX - 1, mouthY);
+      ctx.ellipse(noseX, noseY, 1.5, 1, Math.atan2(dy, dx), 0, Math.PI * 2);
       ctx.fill();
+
+      // Mouth (slight smile or neutral)
+      const mouthX = centerX + dx * 7;
+      const mouthY = centerY + dy * 7;
+      ctx.strokeStyle = `hsl(0, 50%, 45%)`;
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(mouthX + 3, mouthY);
-      ctx.lineTo(mouthX + 2, mouthY + 3);
-      ctx.lineTo(mouthX + 1, mouthY);
+      ctx.arc(mouthX, mouthY, 3, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+
+      // Draw hair
+      drawHumanHair(ctx, centerX, centerY, dx, dy, perpX, perpY, frameCount);
+
+      // Ear (on one side)
+      const earX = centerX - perpX * (headRadius - 1);
+      const earY = centerY - perpY * (headRadius - 1);
+      ctx.fillStyle = `hsl(${skinHue}, ${skinSat}%, ${skinLight}%)`;
+      ctx.beginPath();
+      ctx.ellipse(earX, earY, 2, 3, Math.atan2(perpY, perpX), 0, Math.PI * 2);
       ctx.fill();
 
     } else {
-      // Body segments with neon gradient - from hot pink to purple to blue
-      const segHue = 320 - t * 80; // Pink (320) to purple (280) to blue (240)
+      // HUMAN BODY SEGMENTS - torso-like shapes
+      const bodyWidth = (CELL_SIZE / 2 - 1) * (0.85 + t * 0.15);
+      const bodyLength = CELL_SIZE / 2 + 1;
 
-      // Outer neon glow
-      ctx.shadowColor = `hsl(${segHue}, 100%, 60%)`;
-      ctx.shadowBlur = 8 * fireIntensity;
-      const bodyGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius + 5);
-      bodyGlow.addColorStop(0, `hsla(${segHue}, 100%, 60%, ${fireIntensity * 0.5})`);
-      bodyGlow.addColorStop(1, `hsla(${segHue}, 100%, 50%, 0)`);
-      ctx.fillStyle = bodyGlow;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius + 5, 0, Math.PI * 2);
-      ctx.fill();
+      // Body glow
+      ctx.shadowColor = '#ffaa77';
+      ctx.shadowBlur = 6;
 
-      // Main body with neon gradient
-      const bodyGradient = ctx.createRadialGradient(centerX - 1, centerY - 1, 0, centerX, centerY, radius);
-      bodyGradient.addColorStop(0, `hsl(${segHue + 20}, 100%, 75%)`);
-      bodyGradient.addColorStop(0.4, `hsl(${segHue}, 100%, 55%)`);
-      bodyGradient.addColorStop(1, `hsl(${segHue - 10}, 90%, 40%)`);
+      // Torso segment with clothing (shirt)
+      const clothingHue = 220; // Blue shirt
+      const clothingSat = 60;
+      const clothingLight = 45 + (1 - t) * 15;
+
+      // Body shape (oval oriented along movement)
+      const bodyGradient = ctx.createRadialGradient(
+        centerX - dx * 2, centerY - dy * 2, 0,
+        centerX, centerY, bodyWidth + 3
+      );
+      bodyGradient.addColorStop(0, `hsl(${clothingHue}, ${clothingSat}%, ${clothingLight + 15}%)`);
+      bodyGradient.addColorStop(0.6, `hsl(${clothingHue}, ${clothingSat}%, ${clothingLight}%)`);
+      bodyGradient.addColorStop(1, `hsl(${clothingHue}, ${clothingSat - 10}%, ${clothingLight - 15}%)`);
       ctx.fillStyle = bodyGradient;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.ellipse(centerX, centerY, bodyLength, bodyWidth, Math.atan2(dy, dx), 0, Math.PI * 2);
       ctx.fill();
+      ctx.shadowBlur = 0;
 
-      // Inner dark ring pattern
-      if (i % 2 === 0) {
-        ctx.fillStyle = `hsla(${segHue - 20}, 80%, 20%, 0.4)`;
+      // Shirt collar/neckline hint on first body segment
+      if (i === 1) {
+        ctx.strokeStyle = `hsl(${clothingHue}, ${clothingSat - 10}%, ${clothingLight - 20}%)`;
+        ctx.lineWidth = 1.5;
+        const collarX = centerX + dx * (bodyLength - 3);
+        const collarY = centerY + dy * (bodyLength - 3);
         ctx.beginPath();
-        ctx.arc(centerX, centerY, radius * 0.65, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.arc(collarX, collarY, 4, Math.atan2(dy, dx) - 0.8, Math.atan2(dy, dx) + 0.8);
+        ctx.stroke();
       }
 
-      // Highlight sparkle
-      ctx.fillStyle = '#ffffff';
-      ctx.globalAlpha = 0.4;
+      // Shirt wrinkle details
+      if (i % 3 === 0) {
+        ctx.strokeStyle = `hsla(${clothingHue}, ${clothingSat - 15}%, ${clothingLight - 10}%, 0.4)`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(centerX + perpX * bodyWidth * 0.3, centerY + perpY * bodyWidth * 0.3);
+        ctx.lineTo(centerX - perpX * bodyWidth * 0.3, centerY - perpY * bodyWidth * 0.3);
+        ctx.stroke();
+      }
+
+      // Highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
       ctx.beginPath();
-      ctx.arc(centerX - 2, centerY - 2, radius * 0.2, 0, Math.PI * 2);
+      ctx.ellipse(centerX - dx * 2 - 1, centerY - dy * 2 - 1, bodyLength * 0.3, bodyWidth * 0.2, Math.atan2(dy, dx), 0, Math.PI * 2);
       ctx.fill();
-      ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
     }
   }
 
