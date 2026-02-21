@@ -2010,6 +2010,94 @@ let hudPulsePhase = 0;
 let lastHudScore = 0;
 let scoreFlashIntensity = 0;
 
+// Scoreboard state - High score tracking
+interface HighScoreEntry {
+  score: number;
+  date: number;
+  rank: number;
+}
+
+const MAX_HIGH_SCORES = 5;
+let cachedHighScores: HighScoreEntry[] = [];
+let highScoresLoaded = false;
+let newHighScoreRank = -1;
+let scoreboardAnimPhase = 0;
+let scoreboardRevealProgress = 0;
+let lastGameOverState = false;
+
+function loadHighScores(): HighScoreEntry[] {
+  if (highScoresLoaded && cachedHighScores.length > 0) {
+    return cachedHighScores;
+  }
+  try {
+    const stored = localStorage.getItem('snake_high_scores');
+    if (stored) {
+      const parsed = JSON.parse(stored) as HighScoreEntry[];
+      cachedHighScores = parsed.slice(0, MAX_HIGH_SCORES);
+      highScoresLoaded = true;
+      return cachedHighScores;
+    }
+  } catch {
+    // localStorage not available or corrupted
+  }
+  cachedHighScores = [];
+  highScoresLoaded = true;
+  return cachedHighScores;
+}
+
+function saveHighScore(score: number): number {
+  const highScores = loadHighScores();
+  const newEntry: HighScoreEntry = {
+    score,
+    date: Date.now(),
+    rank: 0
+  };
+
+  // Find position for new score
+  let insertIndex = highScores.findIndex(entry => score > entry.score);
+  if (insertIndex === -1) {
+    insertIndex = highScores.length;
+  }
+
+  // Only add if it's a high score
+  if (insertIndex < MAX_HIGH_SCORES && score > 0) {
+    highScores.splice(insertIndex, 0, newEntry);
+    // Update ranks
+    highScores.forEach((entry, i) => { entry.rank = i + 1; });
+    // Keep only top scores
+    cachedHighScores = highScores.slice(0, MAX_HIGH_SCORES);
+
+    try {
+      localStorage.setItem('snake_high_scores', JSON.stringify(cachedHighScores));
+    } catch {
+      // localStorage not available
+    }
+
+    return insertIndex + 1; // Return rank (1-based)
+  }
+
+  return -1; // Not a high score
+}
+
+function checkAndSaveHighScore(gameState: GameState): void {
+  // Detect transition to game over
+  if (gameState.gameOver && !lastGameOverState) {
+    const rank = saveHighScore(gameState.score);
+    if (rank > 0) {
+      newHighScoreRank = rank;
+    } else {
+      newHighScoreRank = -1;
+    }
+    scoreboardRevealProgress = 0;
+  }
+  lastGameOverState = gameState.gameOver;
+
+  // Reset when game starts
+  if (gameState.gameStarted && !gameState.gameOver) {
+    newHighScoreRank = -1;
+  }
+}
+
 // Draw the HUD overlay with score, length, and power-up indicators
 function drawHUD(
   ctx: CanvasRenderingContext2D,
@@ -2273,6 +2361,246 @@ function drawHUDCornerCrystals(
   drawNeonCorner(offset, offset, false, false, 60);
   drawNeonCorner(width - offset, offset, true, false, 280);
   ctx.globalAlpha = 1;
+}
+
+// Draw the dramatic scoreboard overlay
+function drawScoreboard(
+  ctx: CanvasRenderingContext2D,
+  gameState: GameState,
+  width: number,
+  height: number
+): void {
+  if (!gameState.gameOver) return;
+
+  scoreboardAnimPhase += 0.06;
+  scoreboardRevealProgress = Math.min(1, scoreboardRevealProgress + 0.02);
+
+  const highScores = loadHighScores();
+  const centerX = width / 2;
+  const baseY = height * 0.22;
+
+  // Scoreboard panel dimensions
+  const panelWidth = 200;
+  const panelHeight = 180;
+  const panelX = centerX - panelWidth / 2;
+  const panelY = baseY;
+
+  // Slide-in animation
+  const slideOffset = (1 - scoreboardRevealProgress) * 50;
+  const alphaMultiplier = scoreboardRevealProgress;
+
+  ctx.save();
+  ctx.translate(0, -slideOffset);
+  ctx.globalAlpha = alphaMultiplier;
+
+  // Panel background - deep purple gradient with glow
+  const panelGradient = ctx.createLinearGradient(
+    panelX, panelY,
+    panelX + panelWidth, panelY + panelHeight
+  );
+  panelGradient.addColorStop(0, 'rgba(30, 0, 60, 0.95)');
+  panelGradient.addColorStop(0.5, 'rgba(50, 0, 80, 0.92)');
+  panelGradient.addColorStop(1, 'rgba(30, 0, 60, 0.95)');
+
+  // Outer glow for panel
+  ctx.shadowColor = newHighScoreRank > 0 ? '#ffff00' : '#ff00ff';
+  ctx.shadowBlur = 20 + Math.sin(scoreboardAnimPhase) * 5;
+
+  ctx.fillStyle = panelGradient;
+  ctx.beginPath();
+  ctx.roundRect(panelX, panelY, panelWidth, panelHeight, 12);
+  ctx.fill();
+
+  // Animated border - cycling neon colors
+  const borderHue = newHighScoreRank > 0
+    ? (45 + Math.sin(scoreboardAnimPhase * 2) * 15) // Golden pulsing for new high score
+    : (280 + Math.sin(scoreboardAnimPhase) * 40);   // Purple to magenta cycle
+
+  ctx.strokeStyle = `hsl(${borderHue}, 100%, 60%)`;
+  ctx.lineWidth = 3;
+  ctx.shadowColor = `hsl(${borderHue}, 100%, 60%)`;
+  ctx.shadowBlur = 12;
+  ctx.stroke();
+
+  // Inner border
+  ctx.strokeStyle = `hsla(${borderHue}, 100%, 80%, 0.5)`;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Title: "HIGH SCORES" with dramatic glow
+  const titleY = panelY + 25;
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Title glow
+  ctx.shadowColor = '#00ffff';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = '#00ffff';
+  ctx.fillText('HIGH SCORES', centerX, titleY);
+
+  // Title underline
+  ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(panelX + 30, titleY + 12);
+  ctx.lineTo(panelX + panelWidth - 30, titleY + 12);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Score entries
+  const entryStartY = titleY + 30;
+  const entryHeight = 24;
+
+  if (highScores.length === 0) {
+    // No scores yet message
+    ctx.font = '10px monospace';
+    ctx.fillStyle = 'rgba(150, 150, 200, 0.8)';
+    ctx.fillText('No scores yet', centerX, entryStartY + 40);
+    ctx.fillText('Be the first!', centerX, entryStartY + 55);
+  } else {
+    for (let i = 0; i < Math.min(highScores.length, 5); i++) {
+      const entry = highScores[i];
+      const entryY = entryStartY + i * entryHeight;
+      const isNewScore = newHighScoreRank === i + 1;
+
+      // Staggered reveal animation
+      const entryDelay = i * 0.15;
+      const entryProgress = Math.max(0, Math.min(1, (scoreboardRevealProgress - entryDelay) * 2));
+      if (entryProgress <= 0) continue;
+
+      ctx.globalAlpha = alphaMultiplier * entryProgress;
+
+      // Row highlight for new high score
+      if (isNewScore) {
+        const flashIntensity = 0.3 + Math.sin(scoreboardAnimPhase * 3) * 0.2;
+        ctx.fillStyle = `rgba(255, 255, 0, ${flashIntensity})`;
+        ctx.beginPath();
+        ctx.roundRect(panelX + 10, entryY - 8, panelWidth - 20, entryHeight - 2, 4);
+        ctx.fill();
+      }
+
+      // Rank number with medal colors
+      const rankColors = ['#ffd700', '#c0c0c0', '#cd7f32', '#ff00ff', '#00ffff'];
+      const rankColor = rankColors[i] || '#888888';
+
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'left';
+      ctx.shadowColor = rankColor;
+      ctx.shadowBlur = isNewScore ? 8 : 4;
+      ctx.fillStyle = rankColor;
+      ctx.fillText(`${i + 1}.`, panelX + 20, entryY);
+      ctx.shadowBlur = 0;
+
+      // Score value
+      ctx.font = isNewScore ? 'bold 13px monospace' : '12px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillStyle = isNewScore ? '#ffffff' : '#ddddff';
+
+      if (isNewScore) {
+        ctx.shadowColor = '#ffff00';
+        ctx.shadowBlur = 6;
+      }
+      ctx.fillText(String(entry.score).padStart(5, '0'), panelX + panelWidth - 20, entryY);
+      ctx.shadowBlur = 0;
+
+      // "NEW!" badge for new high score
+      if (isNewScore) {
+        const badgePulse = 0.8 + Math.sin(scoreboardAnimPhase * 4) * 0.2;
+        ctx.font = 'bold 8px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = `rgba(255, 255, 0, ${badgePulse})`;
+        ctx.shadowColor = '#ffff00';
+        ctx.shadowBlur = 6;
+        ctx.fillText('NEW!', panelX + 65, entryY);
+        ctx.shadowBlur = 0;
+      }
+    }
+  }
+
+  ctx.globalAlpha = alphaMultiplier;
+
+  // Current score display at bottom
+  const currentScoreY = panelY + panelHeight - 20;
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(200, 200, 255, 0.8)';
+  ctx.fillText('YOUR SCORE', centerX, currentScoreY - 12);
+
+  // Big current score with glow
+  ctx.font = 'bold 16px monospace';
+  ctx.shadowColor = newHighScoreRank > 0 ? '#ffff00' : '#00ff88';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = newHighScoreRank > 0 ? '#ffff00' : '#00ff88';
+  ctx.fillText(String(gameState.score).padStart(5, '0'), centerX, currentScoreY + 2);
+  ctx.shadowBlur = 0;
+
+  // Decorative corner triangles
+  const cornerSize = 8;
+  ctx.fillStyle = `hsla(${borderHue}, 100%, 60%, 0.6)`;
+
+  // Top-left
+  ctx.beginPath();
+  ctx.moveTo(panelX, panelY);
+  ctx.lineTo(panelX + cornerSize, panelY);
+  ctx.lineTo(panelX, panelY + cornerSize);
+  ctx.closePath();
+  ctx.fill();
+
+  // Top-right
+  ctx.beginPath();
+  ctx.moveTo(panelX + panelWidth, panelY);
+  ctx.lineTo(panelX + panelWidth - cornerSize, panelY);
+  ctx.lineTo(panelX + panelWidth, panelY + cornerSize);
+  ctx.closePath();
+  ctx.fill();
+
+  // Bottom-left
+  ctx.beginPath();
+  ctx.moveTo(panelX, panelY + panelHeight);
+  ctx.lineTo(panelX + cornerSize, panelY + panelHeight);
+  ctx.lineTo(panelX, panelY + panelHeight - cornerSize);
+  ctx.closePath();
+  ctx.fill();
+
+  // Bottom-right
+  ctx.beginPath();
+  ctx.moveTo(panelX + panelWidth, panelY + panelHeight);
+  ctx.lineTo(panelX + panelWidth - cornerSize, panelY + panelHeight);
+  ctx.lineTo(panelX + panelWidth, panelY + panelHeight - cornerSize);
+  ctx.closePath();
+  ctx.fill();
+
+  // Sparkle particles for new high score
+  if (newHighScoreRank > 0) {
+    const numSparkles = 8;
+    for (let s = 0; s < numSparkles; s++) {
+      const sparkleAngle = (s / numSparkles) * Math.PI * 2 + scoreboardAnimPhase;
+      const sparkleRadius = 100 + Math.sin(scoreboardAnimPhase * 2 + s) * 15;
+      const sparkleX = centerX + Math.cos(sparkleAngle) * sparkleRadius;
+      const sparkleY = panelY + panelHeight / 2 + Math.sin(sparkleAngle) * sparkleRadius * 0.5;
+      const sparkleSize = 2 + Math.sin(scoreboardAnimPhase * 3 + s * 2) * 1;
+      const sparkleAlpha = 0.5 + Math.sin(scoreboardAnimPhase * 4 + s) * 0.3;
+
+      ctx.fillStyle = `rgba(255, 255, 100, ${sparkleAlpha})`;
+      ctx.beginPath();
+      ctx.arc(sparkleX, sparkleY, sparkleSize, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Star shape
+      ctx.strokeStyle = `rgba(255, 200, 0, ${sparkleAlpha * 0.5})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(sparkleX - 4, sparkleY);
+      ctx.lineTo(sparkleX + 4, sparkleY);
+      ctx.moveTo(sparkleX, sparkleY - 4);
+      ctx.lineTo(sparkleX, sparkleY + 4);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
 }
 
 function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
@@ -3003,7 +3331,13 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
 
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
+
+    // Draw the dramatic scoreboard
+    drawScoreboard(ctx, gameState, width, height);
   }
+
+  // Check and save high scores
+  checkAndSaveHighScore(gameState);
 
   // CRT SCANLINE EFFECT - Retro arcade feel
   // Horizontal scan lines
