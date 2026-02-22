@@ -267,36 +267,36 @@ interface GhostSnake {
 const GHOST_SNAKE_LENGTH = 8;
 const GHOST_MOVE_INTERVAL = 12;
 
-// Color palette - ICE CRYSTAL DRAGON theme: frozen arctic, crystalline beauty
+// Color palette - VOLCANIC INFERNO theme: molten lava, blazing crimson fury
 const COLORS = {
-  bgDark: 0x030818,
-  bgMid: 0x051020,
-  gridLine: 0x102040,
-  gridAccent: 0x1a3555,
-  snakeHead: 0x40e0ff,
-  snakeBody: 0x20b0d0,
-  snakeTail: 0x1080a0,
-  snakeHighlight: 0x80f0ff,
-  snakeScale: 0x3090b0,
-  snakeEye: 0xff4080,
-  snakePupil: 0x200010,
-  snakeGlow: 0x60c0e0,
-  food: 0x00d0ff,
-  foodCore: 0xe0ffff,
-  foodGlow: 0x40c0ff,
-  foodParticle: 0xa0e0ff,
-  star: 0xa0e0ff,
-  gameOverOverlay: 0x030818,
-  gameOverText: 0x80f0ff,
-  plasma1: 0x30a0c0,
-  plasma2: 0x40c0e0,
-  plasma3: 0x2080a0,
-  screenFlash: 0x80f0ff,
-  // Ice crystal specific colors
-  noirWhite: 0x80f0ff,
-  noirGray: 0x2080a0,
-  noirDark: 0x102040,
-  spotlight: 0xa0e0ff,
+  bgDark: 0x0a0205,
+  bgMid: 0x150508,
+  gridLine: 0x301010,
+  gridAccent: 0x451515,
+  snakeHead: 0xff4020,
+  snakeBody: 0xd03010,
+  snakeTail: 0xa02008,
+  snakeHighlight: 0xff8040,
+  snakeScale: 0xb04020,
+  snakeEye: 0xffff00,
+  snakePupil: 0x100800,
+  snakeGlow: 0xe06030,
+  food: 0xff2000,
+  foodCore: 0xffff80,
+  foodGlow: 0xff6020,
+  foodParticle: 0xffa060,
+  star: 0xff8040,
+  gameOverOverlay: 0x0a0205,
+  gameOverText: 0xff6040,
+  plasma1: 0xc04020,
+  plasma2: 0xe06030,
+  plasma3: 0xa03018,
+  screenFlash: 0xff8040,
+  // Volcanic inferno specific colors
+  noirWhite: 0xff8040,
+  noirGray: 0xa04020,
+  noirDark: 0x301010,
+  spotlight: 0xffa060,
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -468,7 +468,7 @@ export class SnakeScene extends Phaser.Scene {
       moveInterval: GHOST_MOVE_INTERVAL,
       pulsePhase: 0,
       glowIntensity: 0.6,
-      hue: 260,
+      hue: 15,
       trail: [],
     };
   }
@@ -562,7 +562,7 @@ export class SnakeScene extends Phaser.Scene {
       gs.hue = 0;
       gs.glowIntensity *= 0.95;
     } else {
-      gs.hue = 260 + Math.sin(gs.pulsePhase * 0.5) * 20;
+      gs.hue = 15 + Math.sin(gs.pulsePhase * 0.5) * 15;
     }
   }
 
@@ -686,7 +686,7 @@ export class SnakeScene extends Phaser.Scene {
       wingPhase: Math.random() * Math.PI * 2,
       wingSpeed: 0.4 + Math.random() * 0.2,
       size: 6 + Math.random() * 3,
-      hue: 40 + Math.random() * 30, // Golden/amber color
+      hue: 0 + Math.random() * 20, // Crimson/red volcanic color
       glowIntensity: 0.5 + Math.random() * 0.5,
       bobPhase: Math.random() * Math.PI * 2,
       bobSpeed: 0.08 + Math.random() * 0.04,
@@ -1062,7 +1062,7 @@ export class SnakeScene extends Phaser.Scene {
 
   private initPlasmaWaves(): void {
     this.plasmaWaves = [];
-    const hues = [280, 300, 260]; // Purple variations
+    const hues = [0, 15, 30]; // Red/orange volcanic variations
     for (let i = 0; i < NUM_PLASMA_WAVES; i++) {
       this.plasmaWaves.push({
         phase: Math.random() * Math.PI * 2,
@@ -1077,8 +1077,8 @@ export class SnakeScene extends Phaser.Scene {
   private initAuroraWaves(): void {
     this.auroraWaves = [];
     const height = GRID_SIZE * CELL_SIZE;
-    // Aurora hues: greens, cyans, magentas, purples
-    const auroraHues = [270, 280, 290, 300, 260];
+    // Aurora hues: volcanic reds, oranges, crimsons
+    const auroraHues = [0, 10, 20, 30, 350];
     for (let i = 0; i < NUM_AURORA_WAVES; i++) {
       this.auroraWaves.push({
         y: height * 0.2 + (height * 0.6 * i) / NUM_AURORA_WAVES,
@@ -1095,8 +1095,8 @@ export class SnakeScene extends Phaser.Scene {
     this.nebulaClouds = [];
     const width = GRID_SIZE * CELL_SIZE;
     const height = GRID_SIZE * CELL_SIZE;
-    // Deep space nebula colors: purples, blues, magentas
-    const nebulaHues = [260, 270, 280, 290, 300, 310];
+    // Volcanic smoke and lava glow colors: reds, oranges, crimsons
+    const nebulaHues = [0, 10, 20, 30, 350, 340];
     for (let i = 0; i < NUM_NEBULA_CLOUDS; i++) {
       this.nebulaClouds.push({
         x: Math.random() * width,
@@ -1117,7 +1117,7 @@ export class SnakeScene extends Phaser.Scene {
     this.vortexParticles = [];
 
     // Create concentric rings with different properties
-    const ringHues = [270, 280, 290, 300, 260];
+    const ringHues = [0, 10, 20, 30, 350];
     for (let i = 0; i < NUM_VORTEX_RINGS; i++) {
       const baseRadius = 25 + i * 18;
       this.vortexRings.push({
@@ -1172,7 +1172,7 @@ export class SnakeScene extends Phaser.Scene {
       vx: -Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       size: 2 + Math.random() * 3,
-      hue: Math.random() < 0.3 ? 270 + Math.random() * 40 : 280 + Math.random() * 60, // Purple or magenta
+      hue: Math.random() < 0.3 ? 0 + Math.random() * 30 : 20 + Math.random() * 40, // Red or orange volcanic
       alpha: 0.6 + Math.random() * 0.4,
       trail: [],
       life: 1,
@@ -1974,7 +1974,7 @@ export class SnakeScene extends Phaser.Scene {
       size: 3 + Math.random() * 4 * intensity,
       life,
       maxLife: life,
-      hue: 270 + Math.random() * 40,
+      hue: 10 + Math.random() * 30,
       brightness: 0.5 + Math.random() * 0.3,
     });
   }
@@ -3060,7 +3060,7 @@ export class SnakeScene extends Phaser.Scene {
     perpX: number,
     perpY: number
   ): void {
-    // Film noir crown: silver/platinum with white diamonds
+    // Volcanic crown: molten gold with ruby gems
     const crownOffset = -8;
     const crownBaseX = headX - dx * crownOffset;
     const crownBaseY = headY - dy * crownOffset;
@@ -3095,12 +3095,12 @@ export class SnakeScene extends Phaser.Scene {
       baseRight
     ];
 
-    // Noir crown glow (silver/white aura)
+    // Crown glow (molten orange/red aura)
     g.fillStyle(COLORS.noirWhite, 0.25 * sparkle);
     g.fillCircle(crownBaseX + pointOffset * 0.5, crownBaseY + pointOffsetY * 0.5, crownHeight + 4);
 
-    // Crown base (platinum silver)
-    g.fillStyle(0xc0c0c0, 1);
+    // Crown base (molten gold)
+    g.fillStyle(0xffa500, 1);
     g.beginPath();
     g.moveTo(crownPoints[0].x, crownPoints[0].y);
     for (let i = 1; i < crownPoints.length; i++) {
@@ -3109,8 +3109,8 @@ export class SnakeScene extends Phaser.Scene {
     g.closePath();
     g.fillPath();
 
-    // Crown outline (dark gray)
-    g.lineStyle(1.5, 0x505050, 1);
+    // Crown outline (dark crimson)
+    g.lineStyle(1.5, 0x801010, 1);
     g.beginPath();
     g.moveTo(crownPoints[0].x, crownPoints[0].y);
     for (let i = 1; i < crownPoints.length; i++) {
@@ -3128,10 +3128,10 @@ export class SnakeScene extends Phaser.Scene {
       x: baseRight.x + pointOffset * 0.15,
       y: baseRight.y + pointOffsetY * 0.15
     };
-    g.lineStyle(3, 0x808080, 1);
+    g.lineStyle(3, 0xcc6600, 1);
     g.lineBetween(bandY1.x, bandY1.y, bandY2.x, bandY2.y);
 
-    // Noir jewels: white diamonds
+    // Ruby jewels: glowing red gems
     const jewelPositions = [
       { x: crownBaseX + pointOffset, y: crownBaseY + pointOffsetY, size: 2.5 },
       { x: crownBaseX + perpX * (halfWidth * 0.5) + pointOffset * 0.9, y: crownBaseY + perpY * (halfWidth * 0.5) + pointOffsetY * 0.9, size: 2 },
@@ -3139,18 +3139,18 @@ export class SnakeScene extends Phaser.Scene {
     ];
 
     for (const jewel of jewelPositions) {
-      g.fillStyle(COLORS.noirWhite, 0.5 * sparkle);
+      g.fillStyle(0xff4020, 0.5 * sparkle);
       g.fillCircle(jewel.x, jewel.y, jewel.size + 2);
 
-      g.fillStyle(0xffffff, 1);
+      g.fillStyle(0xff2000, 1);
       g.fillCircle(jewel.x, jewel.y, jewel.size);
 
-      g.fillStyle(0xffffff, 0.9 * sparkle);
+      g.fillStyle(0xffff80, 0.9 * sparkle);
       g.fillCircle(jewel.x - 0.5, jewel.y - 0.5, jewel.size * 0.4);
     }
 
-    // Crown highlight
-    g.fillStyle(0xffffff, 0.6 * sparkle);
+    // Crown highlight (golden gleam)
+    g.fillStyle(0xffff80, 0.6 * sparkle);
     g.fillCircle(crownBaseX + perpX * 3 + pointOffset * 0.3, crownBaseY + perpY * 3 + pointOffsetY * 0.3, 2);
   }
 }
