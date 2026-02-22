@@ -330,44 +330,52 @@ interface HighScoreEntry {
 
 const MAX_HIGH_SCORES = 5;
 
-// Color palette - ARMAGEDDON CHAOS theme: apocalyptic destruction, blood-red skies, hellfire
+// Color palette - HALLOWEEN theme: spooky purple/orange, ghostly greens, pumpkin glow
 const COLORS = {
-  bgDark: 0x0a0002,
-  bgMid: 0x1a0505,
-  gridLine: 0x400808,
-  gridAccent: 0x601010,
-  snakeHead: 0xff2000,
-  snakeBody: 0xcc1800,
-  snakeTail: 0x991000,
-  snakeHighlight: 0xff6030,
-  snakeScale: 0xaa2010,
-  snakeEye: 0xffff00,
-  snakePupil: 0x200000,
-  snakeGlow: 0xff4010,
-  food: 0xff0000,
-  foodCore: 0xffff40,
-  foodGlow: 0xff3000,
-  foodParticle: 0xff8020,
-  star: 0xff4000,
-  gameOverOverlay: 0x100000,
-  gameOverText: 0xff4020,
-  plasma1: 0xff2000,
-  plasma2: 0xff4010,
-  plasma3: 0xcc1000,
-  screenFlash: 0xff6020,
-  // Armageddon chaos specific colors
-  noirWhite: 0xff6030,
-  noirGray: 0xcc4020,
-  noirDark: 0x400808,
-  spotlight: 0xff8040,
-  // Apocalyptic additions
-  chaosRed: 0xff0000,
-  chaosOrange: 0xff6000,
+  bgDark: 0x0a0012,
+  bgMid: 0x150825,
+  gridLine: 0x2a1540,
+  gridAccent: 0x401860,
+  snakeHead: 0x00ff66,
+  snakeBody: 0x00cc55,
+  snakeTail: 0x009944,
+  snakeHighlight: 0x66ffaa,
+  snakeScale: 0x00aa44,
+  snakeEye: 0xff0000,
+  snakePupil: 0x000000,
+  snakeGlow: 0x00ff80,
+  food: 0xff6600,
+  foodCore: 0xffcc00,
+  foodGlow: 0xff8800,
+  foodParticle: 0xffaa00,
+  star: 0x8844ff,
+  gameOverOverlay: 0x0a0015,
+  gameOverText: 0xff6600,
+  plasma1: 0x9933ff,
+  plasma2: 0xbb55ff,
+  plasma3: 0x7722cc,
+  screenFlash: 0xff6600,
+  // Halloween specific colors
+  noirWhite: 0xeeddff,
+  noirGray: 0x8866aa,
+  noirDark: 0x2a1540,
+  spotlight: 0xff8800,
+  // Halloween additions
+  chaosRed: 0x9933ff,
+  chaosOrange: 0xff6600,
   chaosYellow: 0xffcc00,
-  lavaGlow: 0xff4400,
-  ashGray: 0x444444,
-  bloodRed: 0x880000,
-  hellfire: 0xff2200,
+  lavaGlow: 0x9944ff,
+  ashGray: 0x554466,
+  bloodRed: 0x660088,
+  hellfire: 0xff6600,
+  // New Halloween colors
+  pumpkinOrange: 0xff6600,
+  ghostWhite: 0xeeffee,
+  witchPurple: 0x9933ff,
+  spiderBlack: 0x111122,
+  candyCorn1: 0xffcc00,
+  candyCorn2: 0xff8800,
+  candyCorn3: 0xffffff,
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -646,73 +654,138 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   private drawArmageddonBackground(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
-    // Blood-red apocalyptic sky gradient
+    // Spooky Halloween night sky
     const skyPulse = 0.8 + Math.sin(this.armageddonPulse * 0.5) * 0.2;
 
-    // Layer 1: Deep blood red base
-    g.fillStyle(0x100000, 1);
+    // Layer 1: Deep purple-black night base
+    g.fillStyle(0x0a0018, 1);
     g.fillRect(0, 0, width, height);
 
-    // Layer 2: Hellish glow from below
-    g.fillStyle(0x200800, 0.4 * skyPulse);
-    g.fillRect(0, height * 0.6, width, height * 0.4);
+    // Layer 2: Eerie purple glow from below (like fog)
+    g.fillStyle(0x200840, 0.3 * skyPulse);
+    g.fillRect(0, height * 0.7, width, height * 0.3);
 
-    // Layer 3: Smoky atmosphere at top
+    // Layer 3: Misty purple clouds
     for (let i = 0; i < 4; i++) {
       const cloudY = i * 30 + Math.sin(this.armageddonPulse + i) * 10;
-      const cloudAlpha = 0.08 - i * 0.015;
-      g.fillStyle(0x301010, cloudAlpha * skyPulse);
+      const cloudAlpha = 0.1 - i * 0.02;
+      g.fillStyle(0x301040, cloudAlpha * skyPulse);
       g.fillRect(0, cloudY, width, 40);
     }
 
+    // Draw haunted moon
+    this.drawHauntedMoon(g, width);
+
+    // Draw flying bats in background
+    this.drawFlyingBats(g, width, height);
+
     // Draw apocalyptic skulls (very faint, background layer)
     this.drawApocalypticSkulls(g);
+  }
+
+  private drawHauntedMoon(g: Phaser.GameObjects.Graphics, width: number): void {
+    const moonX = width * 0.8;
+    const moonY = 60;
+    const moonRadius = 35;
+    const moonPulse = 0.9 + Math.sin(this.frameCount * 0.02) * 0.1;
+
+    // Moon glow
+    g.fillStyle(0xff8800, 0.1 * moonPulse);
+    g.fillCircle(moonX, moonY, moonRadius * 2);
+    g.fillStyle(0xffaa00, 0.15 * moonPulse);
+    g.fillCircle(moonX, moonY, moonRadius * 1.5);
+
+    // Main moon (orange harvest moon)
+    g.fillStyle(0xffaa33, 0.9);
+    g.fillCircle(moonX, moonY, moonRadius);
+
+    // Moon craters
+    g.fillStyle(0xcc8822, 0.4);
+    g.fillCircle(moonX - 10, moonY - 5, 8);
+    g.fillCircle(moonX + 12, moonY + 8, 6);
+    g.fillCircle(moonX - 5, moonY + 12, 5);
+  }
+
+  private drawFlyingBats(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+    const batCount = 6;
+    for (let i = 0; i < batCount; i++) {
+      const phase = this.frameCount * 0.03 + i * 1.5;
+      const batX = ((i * 127 + this.frameCount * 0.5) % (width + 100)) - 50;
+      const batY = 40 + i * 20 + Math.sin(phase) * 15;
+      const wingPhase = Math.sin(this.frameCount * 0.15 + i * 2);
+
+      // Bat body
+      g.fillStyle(0x111122, 0.8);
+      g.fillCircle(batX, batY, 4);
+
+      // Bat wings (flapping)
+      const wingSpread = 8 + wingPhase * 4;
+      g.fillStyle(0x111122, 0.7);
+
+      // Left wing
+      g.beginPath();
+      g.moveTo(batX - 2, batY);
+      g.lineTo(batX - wingSpread, batY - wingPhase * 3);
+      g.lineTo(batX - wingSpread * 0.6, batY + 2);
+      g.closePath();
+      g.fillPath();
+
+      // Right wing
+      g.beginPath();
+      g.moveTo(batX + 2, batY);
+      g.lineTo(batX + wingSpread, batY - wingPhase * 3);
+      g.lineTo(batX + wingSpread * 0.6, batY + 2);
+      g.closePath();
+      g.fillPath();
+    }
   }
 
   private drawGroundFissures(g: Phaser.GameObjects.Graphics): void {
     for (const fissure of this.groundFissures) {
       const pulse = fissure.glowIntensity;
 
-      // Lava glow underneath
-      g.lineStyle(fissure.width * 3, COLORS.lavaGlow, 0.15 * pulse);
+      // Ghostly purple glow underneath
+      g.lineStyle(fissure.width * 3, COLORS.lavaGlow, 0.12 * pulse);
       g.lineBetween(fissure.x1, fissure.y1, fissure.x2, fissure.y2);
 
-      // Crack edges (dark)
-      g.lineStyle(fissure.width + 2, 0x200000, 0.4);
+      // Crack edges (dark purple)
+      g.lineStyle(fissure.width + 2, 0x200030, 0.4);
       g.lineBetween(fissure.x1, fissure.y1, fissure.x2, fissure.y2);
 
-      // Lava core (bright orange/yellow)
-      g.lineStyle(fissure.width, COLORS.chaosOrange, 0.4 * pulse);
+      // Ethereal core (bright purple)
+      g.lineStyle(fissure.width, COLORS.witchPurple, 0.3 * pulse);
       g.lineBetween(fissure.x1, fissure.y1, fissure.x2, fissure.y2);
 
-      // Hot white center
-      g.lineStyle(fissure.width * 0.3, COLORS.chaosYellow, 0.3 * pulse);
+      // Ghostly white center
+      g.lineStyle(fissure.width * 0.3, COLORS.ghostWhite, 0.2 * pulse);
       g.lineBetween(fissure.x1, fissure.y1, fissure.x2, fissure.y2);
     }
   }
 
   private drawFireRain(g: Phaser.GameObjects.Graphics): void {
     for (const p of this.fireRainParticles) {
-      // Draw trail
+      // Draw ghostly trail
       for (let i = 0; i < p.trail.length; i++) {
         const t = p.trail[i];
         const trailSize = p.size * (1 - i / p.trail.length) * 0.6;
-        const trailColor = this.hslToRgb(p.hue / 360, 1, 0.5);
-        g.fillStyle(trailColor, t.alpha * 0.4);
+        // Ghostly purple/green trail
+        const ghostHue = 0.75 + (p.hue % 60) / 360;
+        const trailColor = this.hslToRgb(ghostHue, 0.6, 0.6);
+        g.fillStyle(trailColor, t.alpha * 0.3);
         g.fillCircle(t.x, t.y, trailSize);
       }
 
-      // Main fire particle
-      const outerColor = this.hslToRgb(p.hue / 360, 1, 0.4);
-      const coreColor = this.hslToRgb((p.hue + 20) / 360, 1, 0.7);
+      // Main spirit particle (ghostly appearance)
+      const outerColor = this.hslToRgb(0.8, 0.5, 0.5);
+      const coreColor = this.hslToRgb(0.85, 0.3, 0.8);
 
-      g.fillStyle(outerColor, p.alpha * 0.5);
+      g.fillStyle(outerColor, p.alpha * 0.4);
       g.fillCircle(p.x, p.y, p.size * 1.5);
 
-      g.fillStyle(coreColor, p.alpha * 0.8);
+      g.fillStyle(coreColor, p.alpha * 0.6);
       g.fillCircle(p.x, p.y, p.size);
 
-      g.fillStyle(0xffff80, p.alpha * 0.6);
+      g.fillStyle(COLORS.ghostWhite, p.alpha * 0.5);
       g.fillCircle(p.x, p.y, p.size * 0.3);
     }
   }
@@ -754,19 +827,19 @@ export class SnakeScene extends Phaser.Scene {
       const alpha = skull.alpha * pulse;
       const s = skull.size;
 
-      // Skull glow
-      g.fillStyle(COLORS.bloodRed, alpha * 0.3);
+      // Ghostly purple glow
+      g.fillStyle(COLORS.witchPurple, alpha * 0.2);
       g.fillCircle(skull.x, skull.y, s * 1.5);
 
-      // Skull outline (simplified shape)
-      g.fillStyle(COLORS.ashGray, alpha);
+      // Skull outline (bone white)
+      g.fillStyle(0xcccccc, alpha * 0.8);
       // Cranium
       g.fillCircle(skull.x, skull.y - s * 0.1, s * 0.8);
       // Jaw
       g.fillRect(skull.x - s * 0.4, skull.y + s * 0.3, s * 0.8, s * 0.4);
 
-      // Eye sockets (glowing red)
-      g.fillStyle(COLORS.chaosRed, alpha * 1.5);
+      // Eye sockets (glowing green - spooky!)
+      g.fillStyle(COLORS.snakeHead, alpha * 1.2);
       g.fillCircle(skull.x - s * 0.25, skull.y - s * 0.1, s * 0.2);
       g.fillCircle(skull.x + s * 0.25, skull.y - s * 0.1, s * 0.2);
 
@@ -783,12 +856,12 @@ export class SnakeScene extends Phaser.Scene {
   private drawChaosOverlay(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
     if (this.chaosIntensity <= 0) return;
 
-    // Red tint overlay when chaos is active
-    g.fillStyle(COLORS.chaosRed, this.chaosIntensity * 0.15);
+    // Purple tint overlay when chaos is active
+    g.fillStyle(COLORS.witchPurple, this.chaosIntensity * 0.1);
     g.fillRect(0, 0, width, height);
 
-    // Pulsing vignette edges
-    const vignetteAlpha = this.chaosIntensity * 0.3;
+    // Pulsing purple vignette edges
+    const vignetteAlpha = this.chaosIntensity * 0.25;
     g.lineStyle(80, COLORS.bloodRed, vignetteAlpha);
     g.strokeRect(-40, -40, width + 80, height + 80);
   }
@@ -3657,37 +3730,75 @@ export class SnakeScene extends Phaser.Scene {
     const pulseScale = 1 + Math.sin(this.frameCount * 0.15) * 0.08;
     const glowPulse = 0.4 + Math.sin(this.frameCount * 0.1) * 0.2;
 
-    // Spawn particles
+    // Spawn particles (orange/yellow for Halloween)
     this.spawnFoodParticles(foodX, foodY);
 
-    // Draw particles (grayscale)
+    // Draw particles
     for (const p of this.foodParticles) {
-      g.fillStyle(COLORS.noirWhite, p.life * 0.4);
+      g.fillStyle(COLORS.pumpkinOrange, p.life * 0.4);
       g.fillCircle(p.x, p.y, p.size * p.life);
     }
 
-    // Film noir food: bright white orb like a spotlight or diamond
+    // Halloween pumpkin!
+    const pumpkinSize = (CELL_SIZE / 2) * pulseScale;
+
     // Shadow underneath
     g.fillStyle(0x000000, 0.5);
-    g.fillCircle(foodX + 3, foodY + 3, (CELL_SIZE / 2) * pulseScale);
+    g.fillEllipse(foodX + 2, foodY + pumpkinSize * 0.8, pumpkinSize * 1.2, pumpkinSize * 0.4);
 
-    // Outer ethereal glow
-    g.fillStyle(COLORS.noirWhite, glowPulse * 0.2);
-    g.fillCircle(foodX, foodY, (CELL_SIZE / 2 + 12) * pulseScale);
-    g.fillStyle(COLORS.noirWhite, glowPulse * 0.35);
-    g.fillCircle(foodX, foodY, (CELL_SIZE / 2 + 6) * pulseScale);
+    // Outer orange glow (candlelight effect)
+    g.fillStyle(COLORS.pumpkinOrange, glowPulse * 0.15);
+    g.fillCircle(foodX, foodY, pumpkinSize + 12);
+    g.fillStyle(COLORS.candyCorn1, glowPulse * 0.2);
+    g.fillCircle(foodX, foodY, pumpkinSize + 6);
 
-    // Main food body - brilliant white
-    g.fillStyle(COLORS.food, 0.95);
-    g.fillCircle(foodX, foodY, (CELL_SIZE / 2) * pulseScale);
+    // Pumpkin body (slightly squashed circle)
+    g.fillStyle(COLORS.pumpkinOrange, 0.95);
+    g.fillEllipse(foodX, foodY, pumpkinSize * 1.1, pumpkinSize * 0.9);
 
-    // Film noir sharp highlight - like light on a gem
-    g.fillStyle(0xffffff, 0.9);
-    g.fillCircle(foodX - 3, foodY - 3, 4 * pulseScale);
+    // Pumpkin segments (darker lines)
+    g.lineStyle(2, 0xcc4400, 0.5);
+    g.lineBetween(foodX, foodY - pumpkinSize * 0.8, foodX, foodY + pumpkinSize * 0.7);
+    g.lineStyle(1.5, 0xcc4400, 0.3);
+    g.lineBetween(foodX - pumpkinSize * 0.5, foodY - pumpkinSize * 0.5, foodX - pumpkinSize * 0.4, foodY + pumpkinSize * 0.6);
+    g.lineBetween(foodX + pumpkinSize * 0.5, foodY - pumpkinSize * 0.5, foodX + pumpkinSize * 0.4, foodY + pumpkinSize * 0.6);
 
-    // Secondary sparkle
-    g.fillStyle(0xffffff, 0.6);
-    g.fillCircle(foodX + 2, foodY - 2, 2 * pulseScale);
+    // Pumpkin stem
+    g.fillStyle(0x228822, 0.9);
+    g.fillRect(foodX - 2, foodY - pumpkinSize * 0.9 - 4, 4, 6);
+
+    // Jack-o-lantern face - glowing eyes and mouth
+    const faceGlow = 0.8 + Math.sin(this.frameCount * 0.12) * 0.2;
+    g.fillStyle(COLORS.candyCorn1, faceGlow);
+
+    // Eyes (triangles)
+    g.fillTriangle(
+      foodX - pumpkinSize * 0.4, foodY - pumpkinSize * 0.1,
+      foodX - pumpkinSize * 0.15, foodY - pumpkinSize * 0.1,
+      foodX - pumpkinSize * 0.27, foodY - pumpkinSize * 0.35
+    );
+    g.fillTriangle(
+      foodX + pumpkinSize * 0.4, foodY - pumpkinSize * 0.1,
+      foodX + pumpkinSize * 0.15, foodY - pumpkinSize * 0.1,
+      foodX + pumpkinSize * 0.27, foodY - pumpkinSize * 0.35
+    );
+
+    // Mouth (jagged smile)
+    g.fillStyle(COLORS.candyCorn1, faceGlow * 0.9);
+    g.fillRect(foodX - pumpkinSize * 0.35, foodY + pumpkinSize * 0.15, pumpkinSize * 0.7, pumpkinSize * 0.25);
+
+    // Teeth (dark gaps in mouth)
+    g.fillStyle(COLORS.pumpkinOrange, 1);
+    g.fillTriangle(
+      foodX - pumpkinSize * 0.15, foodY + pumpkinSize * 0.15,
+      foodX, foodY + pumpkinSize * 0.15,
+      foodX - pumpkinSize * 0.075, foodY + pumpkinSize * 0.3
+    );
+    g.fillTriangle(
+      foodX + pumpkinSize * 0.15, foodY + pumpkinSize * 0.15,
+      foodX + pumpkinSize * 0.3, foodY + pumpkinSize * 0.15,
+      foodX + pumpkinSize * 0.225, foodY + pumpkinSize * 0.3
+    );
   }
 
   private drawEnergyTendrils(g: Phaser.GameObjects.Graphics, foodX: number, foodY: number): void {
@@ -3741,31 +3852,31 @@ export class SnakeScene extends Phaser.Scene {
     const snake = this.currentState.snake;
     const snakeLen = snake.length;
 
-    // Film noir: dramatic shadow under snake
+    // Spooky shadow under snake
     for (let i = snakeLen - 1; i >= 0; i--) {
       const segment = snake[i];
       const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2 + 3;
       const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2 + 3;
       const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
       const shadowRadius = (CELL_SIZE / 2) * (0.9 + t * 0.1);
-      g.fillStyle(0x000000, 0.4 * t);
+      g.fillStyle(0x000000, 0.5 * t);
       g.fillCircle(centerX, centerY, shadowRadius);
     }
 
-    // Draw trailing glow (noir white/gray)
+    // Draw trailing glow (ghostly green)
     for (let i = snakeLen - 1; i >= 0; i--) {
       const segment = snake[i];
       const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
       const centerY = segment.y * CELL_SIZE + CELL_SIZE / 2;
       const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
-      const glowAlpha = 0.15 * t;
+      const glowAlpha = 0.2 * t;
       const glowSize = (CELL_SIZE / 2 + 4) * (0.5 + t * 0.5);
 
-      g.fillStyle(COLORS.noirWhite, glowAlpha);
+      g.fillStyle(COLORS.snakeGlow, glowAlpha);
       g.fillCircle(centerX, centerY, glowSize);
     }
 
-    // Draw snake segments from tail to head with grayscale gradient
+    // Draw snake segments from tail to head with green gradient
     for (let i = snakeLen - 1; i >= 0; i--) {
       const segment = snake[i];
       const centerX = segment.x * CELL_SIZE + CELL_SIZE / 2;
@@ -3774,33 +3885,33 @@ export class SnakeScene extends Phaser.Scene {
       const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
       const radius = (CELL_SIZE / 2 - 1) * (0.85 + t * 0.15);
 
-      // Grayscale gradient from tail (dark) to head (bright)
-      const brightness = 0.4 + t * 0.5;
-      const segmentColor = this.hslToRgb(0, 0, brightness);
+      // Green gradient from tail (dark) to head (bright)
+      const brightness = 0.3 + t * 0.4;
+      const segmentColor = this.hslToRgb(0.4, 0.9, brightness);
 
       if (i === 0) {
-        // Head: brightest white with dramatic glow
-        g.fillStyle(COLORS.noirWhite, 0.5);
-        g.fillCircle(centerX, centerY, radius + 6);
+        // Head: brightest green with eerie glow
+        g.fillStyle(COLORS.snakeGlow, 0.4);
+        g.fillCircle(centerX, centerY, radius + 8);
 
         g.fillStyle(COLORS.snakeHead, 1);
         g.fillCircle(centerX, centerY, radius + 1);
 
-        // Film noir head highlight - sharp specular
-        g.fillStyle(0xffffff, 0.7);
+        // Slimy highlight
+        g.fillStyle(0xaaffcc, 0.6);
         g.fillCircle(centerX - 2, centerY - 2, radius * 0.35);
 
         this.drawSnakeHead(g, segment, snake[1]);
       } else {
-        // Body segment with grayscale
-        g.fillStyle(COLORS.noirGray, 0.2);
+        // Body segment with green tones
+        g.fillStyle(COLORS.snakeGlow, 0.15);
         g.fillCircle(centerX, centerY, radius + 2);
 
         g.fillStyle(segmentColor, 1);
         g.fillCircle(centerX, centerY, radius);
 
-        // Specular highlight
-        g.fillStyle(0xffffff, 0.2 * t);
+        // Slimy specular highlight
+        g.fillStyle(0xaaffcc, 0.15 * t);
         g.fillCircle(centerX - 1, centerY - 1, radius * 0.25);
       }
     }
@@ -3808,18 +3919,18 @@ export class SnakeScene extends Phaser.Scene {
 
   private drawFoodBurst(g: Phaser.GameObjects.Graphics): void {
     for (const p of this.foodBurstParticles) {
-      // Film noir: grayscale burst
+      // Halloween: orange pumpkin burst
       for (let i = 0; i < p.trail.length; i++) {
         const t = p.trail[i];
         const trailAlpha = p.life * 0.4 * (1 - i / p.trail.length);
         const trailSize = p.size * p.life * (1 - i / p.trail.length);
-        g.fillStyle(COLORS.noirGray, trailAlpha);
+        g.fillStyle(COLORS.pumpkinOrange, trailAlpha);
         g.fillCircle(t.x, t.y, trailSize);
       }
 
-      g.fillStyle(COLORS.noirWhite, p.life * 0.7);
+      g.fillStyle(COLORS.candyCorn1, p.life * 0.7);
       g.fillCircle(p.x, p.y, p.size * p.life);
-      g.fillStyle(0xffffff, p.life * 0.9);
+      g.fillStyle(COLORS.candyCorn3, p.life * 0.9);
       g.fillCircle(p.x, p.y, p.size * p.life * 0.4);
     }
   }
@@ -3832,7 +3943,7 @@ export class SnakeScene extends Phaser.Scene {
     const pulseOffset = Math.sin(this.frameCount * 0.1) * 0.02;
     const alpha = Math.min(0.3, baseIntensity + pulseOffset);
 
-    // Film noir: subtle grayscale energy field
+    // Halloween: ghostly green energy field
     for (let i = 0; i < snake.length; i++) {
       const seg = snake[i];
       const cx = seg.x * CELL_SIZE + CELL_SIZE / 2;
@@ -3840,10 +3951,10 @@ export class SnakeScene extends Phaser.Scene {
 
       const fieldRadius = CELL_SIZE * (0.8 + this.energyFieldPulse * 0.5) + Math.sin(this.frameCount * 0.15 + i * 0.5) * 2;
 
-      g.fillStyle(COLORS.noirWhite, alpha * 0.25);
+      g.fillStyle(COLORS.snakeGlow, alpha * 0.2);
       g.fillCircle(cx, cy, fieldRadius + 4);
 
-      g.fillStyle(COLORS.noirWhite, alpha * 0.4);
+      g.fillStyle(COLORS.snakeGlow, alpha * 0.35);
       g.fillCircle(cx, cy, fieldRadius);
     }
 
