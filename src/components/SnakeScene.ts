@@ -129,7 +129,7 @@ const NUM_VORTEX_RINGS = 5;
 const NUM_VORTEX_PARTICLES = 20;
 const NUM_METEORS = 8;
 const MAX_DEATH_DEBRIS = 24;
-const NUM_MONSTERS_PER_EDGE = 2;
+const NUM_SPIRITS_PER_EDGE = 2;
 const MAX_FLAME_PARTICLES = 60;
 const MAX_COMET_TRAIL_LENGTH = 30;
 const MAX_ETHEREAL_PARTICLES = 50;
@@ -203,8 +203,8 @@ interface DeathDebris {
   type: 'shard' | 'spark' | 'ember';
 }
 
-// Monster shadow lurking at edges
-interface MonsterShadow {
+// Guardian spirit - ethereal protectors at edges
+interface GuardianSpirit {
   x: number;
   y: number;
   baseX: number;
@@ -212,11 +212,13 @@ interface MonsterShadow {
   size: number;
   phase: number;
   speed: number;
-  eyePhase: number;
-  tentaclePhase: number;
+  haloPhase: number;
+  orbPhase: number;
   edge: 'top' | 'bottom' | 'left' | 'right';
   targetAlpha: number;
   currentAlpha: number;
+  hue: number;
+  orbs: { angle: number; distance: number; size: number; speed: number }[];
 }
 
 // Flame particle for burning effect
@@ -405,7 +407,7 @@ export class SnakeScene extends Phaser.Scene {
   private spotlightX = 0;
   private spotlightY = 0;
   private smokeParticles: { x: number; y: number; vx: number; vy: number; size: number; alpha: number; life: number }[] = [];
-  private monsterShadows: MonsterShadow[] = [];
+  private guardianSpirits: GuardianSpirit[] = [];
   // Burning flame particles trailing behind snake
   private flameParticles: FlameParticle[] = [];
   // Comet trail system - historical positions for smooth ribbon trail
@@ -452,7 +454,7 @@ export class SnakeScene extends Phaser.Scene {
     this.initVortex();
     this.initMeteors();
     this.initSmokeParticles();
-    this.initMonsterShadows();
+    this.initGuardianSpirits();
     this.initBees();
     this.initRivalSnake();
     this.initArmageddonEffects();
@@ -791,16 +793,18 @@ export class SnakeScene extends Phaser.Scene {
     g.strokeRect(-40, -40, width + 80, height + 80);
   }
 
-  private initMonsterShadows(): void {
-    this.monsterShadows = [];
+  private initGuardianSpirits(): void {
+    this.guardianSpirits = [];
     const width = GRID_SIZE * CELL_SIZE;
     const height = GRID_SIZE * CELL_SIZE;
+    const spiritHues = [180, 220, 280, 320];
 
     const edges: ('top' | 'bottom' | 'left' | 'right')[] = ['top', 'bottom', 'left', 'right'];
-    for (const edge of edges) {
-      for (let i = 0; i < NUM_MONSTERS_PER_EDGE; i++) {
+    for (let edgeIndex = 0; edgeIndex < edges.length; edgeIndex++) {
+      const edge = edges[edgeIndex];
+      for (let i = 0; i < NUM_SPIRITS_PER_EDGE; i++) {
         let x = 0, y = 0;
-        const offset = (i + 0.5) / NUM_MONSTERS_PER_EDGE;
+        const offset = (i + 0.5) / NUM_SPIRITS_PER_EDGE;
 
         switch (edge) {
           case 'top':
@@ -821,19 +825,32 @@ export class SnakeScene extends Phaser.Scene {
             break;
         }
 
-        this.monsterShadows.push({
+        const orbs: { angle: number; distance: number; size: number; speed: number }[] = [];
+        const numOrbs = 3;
+        for (let o = 0; o < numOrbs; o++) {
+          orbs.push({
+            angle: (o / numOrbs) * Math.PI * 2,
+            distance: 15 + Math.random() * 10,
+            size: 3 + Math.random() * 2,
+            speed: 0.03 + Math.random() * 0.02,
+          });
+        }
+
+        this.guardianSpirits.push({
           x,
           y,
           baseX: x,
           baseY: y,
-          size: 25 + Math.random() * 15,
+          size: 20 + Math.random() * 10,
           phase: Math.random() * Math.PI * 2,
-          speed: 0.02 + Math.random() * 0.015,
-          eyePhase: Math.random() * Math.PI * 2,
-          tentaclePhase: Math.random() * Math.PI * 2,
+          speed: 0.015 + Math.random() * 0.01,
+          haloPhase: Math.random() * Math.PI * 2,
+          orbPhase: Math.random() * Math.PI * 2,
           edge,
-          targetAlpha: 0.3 + Math.random() * 0.2,
+          targetAlpha: 0.4 + Math.random() * 0.2,
           currentAlpha: 0,
+          hue: spiritHues[edgeIndex % spiritHues.length] + Math.random() * 30 - 15,
+          orbs,
         });
       }
     }
@@ -1447,7 +1464,7 @@ export class SnakeScene extends Phaser.Scene {
     return (Math.round(r * 255) << 16) + (Math.round(g * 255) << 8) + Math.round(b * 255);
   }
 
-  private updateMonsterShadows(): void {
+  private updateGuardianSpirits(): void {
     if (!this.currentState) return;
 
     const width = GRID_SIZE * CELL_SIZE;
@@ -1455,125 +1472,119 @@ export class SnakeScene extends Phaser.Scene {
     const gameOver = this.currentState.gameOver;
     const snakeHead = this.currentState.snake.length > 0 ? this.currentState.snake[0] : null;
 
-    for (const monster of this.monsterShadows) {
-      monster.phase += monster.speed;
-      monster.eyePhase += 0.05;
-      monster.tentaclePhase += 0.03;
+    for (const spirit of this.guardianSpirits) {
+      spirit.phase += spirit.speed;
+      spirit.haloPhase += 0.04;
+      spirit.orbPhase += 0.02;
 
-      const creepAmount = gameOver ? 25 : 8;
-      const breathAmount = 3;
-      const breath = Math.sin(monster.phase) * breathAmount;
+      for (const orb of spirit.orbs) {
+        orb.angle += orb.speed;
+      }
 
-      let targetX = monster.baseX;
-      let targetY = monster.baseY;
+      const floatAmount = gameOver ? 20 : 12;
+      const waveAmount = 5;
+      const wave = Math.sin(spirit.phase) * waveAmount;
 
-      switch (monster.edge) {
+      let targetX = spirit.baseX;
+      let targetY = spirit.baseY;
+
+      switch (spirit.edge) {
         case 'top':
-          targetY = monster.baseY + creepAmount + breath;
-          targetX = monster.baseX + Math.sin(monster.phase * 0.5) * 10;
+          targetY = spirit.baseY + floatAmount + wave;
+          targetX = spirit.baseX + Math.sin(spirit.phase * 0.7) * 8;
           break;
         case 'bottom':
-          targetY = monster.baseY - creepAmount - breath;
-          targetX = monster.baseX + Math.sin(monster.phase * 0.5) * 10;
+          targetY = spirit.baseY - floatAmount - wave;
+          targetX = spirit.baseX + Math.sin(spirit.phase * 0.7) * 8;
           break;
         case 'left':
-          targetX = monster.baseX + creepAmount + breath;
-          targetY = monster.baseY + Math.sin(monster.phase * 0.5) * 10;
+          targetX = spirit.baseX + floatAmount + wave;
+          targetY = spirit.baseY + Math.sin(spirit.phase * 0.7) * 8;
           break;
         case 'right':
-          targetX = monster.baseX - creepAmount - breath;
-          targetY = monster.baseY + Math.sin(monster.phase * 0.5) * 10;
+          targetX = spirit.baseX - floatAmount - wave;
+          targetY = spirit.baseY + Math.sin(spirit.phase * 0.7) * 8;
           break;
       }
 
-      // Recoil from snake head
       if (snakeHead && !gameOver) {
         const headX = snakeHead.x * CELL_SIZE + CELL_SIZE / 2;
         const headY = snakeHead.y * CELL_SIZE + CELL_SIZE / 2;
-        const dx = monster.x - headX;
-        const dy = monster.y - headY;
+        const dx = spirit.x - headX;
+        const dy = spirit.y - headY;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < 100) {
-          const recoil = (100 - dist) / 100 * 20;
-          targetX += (dx / dist) * recoil;
-          targetY += (dy / dist) * recoil;
+        if (dist < 120) {
+          const attraction = (120 - dist) / 120 * 15;
+          targetX += (dx / dist) * attraction;
+          targetY += (dy / dist) * attraction;
         }
       }
 
-      monster.x += (targetX - monster.x) * 0.05;
-      monster.y += (targetY - monster.y) * 0.05;
-      monster.x = Math.max(-50, Math.min(width + 50, monster.x));
-      monster.y = Math.max(-50, Math.min(height + 50, monster.y));
+      spirit.x += (targetX - spirit.x) * 0.04;
+      spirit.y += (targetY - spirit.y) * 0.04;
+      spirit.x = Math.max(-50, Math.min(width + 50, spirit.x));
+      spirit.y = Math.max(-50, Math.min(height + 50, spirit.y));
 
-      const baseAlpha = gameOver ? 0.6 : monster.targetAlpha;
-      monster.currentAlpha += (baseAlpha - monster.currentAlpha) * 0.05;
+      const baseAlpha = gameOver ? 0.8 : spirit.targetAlpha;
+      spirit.currentAlpha += (baseAlpha - spirit.currentAlpha) * 0.05;
     }
   }
 
-  private drawMonsterShadows(g: Phaser.GameObjects.Graphics): void {
-    for (const monster of this.monsterShadows) {
-      if (monster.currentAlpha < 0.01) continue;
+  private drawGuardianSpirits(g: Phaser.GameObjects.Graphics): void {
+    for (const spirit of this.guardianSpirits) {
+      if (spirit.currentAlpha < 0.01) continue;
 
-      const { x, y, size, phase, eyePhase, tentaclePhase, currentAlpha } = monster;
-      const bodyPulse = 1 + Math.sin(phase * 2) * 0.1;
-      const bodySize = size * bodyPulse;
+      const { x, y, size, phase, haloPhase, currentAlpha, hue, orbs } = spirit;
+      const breathPulse = 1 + Math.sin(phase * 2) * 0.15;
+      const coreSize = size * breathPulse;
 
-      // Outer shadow
-      g.fillStyle(0x000000, currentAlpha * 0.3);
-      g.fillCircle(x, y, bodySize * 1.4);
+      const spiritColor = this.hslToHex(hue, 0.7, 0.6);
+      const glowColor = this.hslToHex(hue, 0.5, 0.8);
+      const haloColor = this.hslToHex(hue, 0.3, 0.9);
 
-      // Tentacles
-      const numTentacles = 5;
-      for (let i = 0; i < numTentacles; i++) {
-        const angle = (i / numTentacles) * Math.PI * 2 + tentaclePhase;
-        const tentacleLength = bodySize * (0.8 + Math.sin(phase + i) * 0.3);
-        const wave = Math.sin(tentaclePhase * 2 + i * 0.7) * 8;
+      g.fillStyle(glowColor, currentAlpha * 0.1);
+      g.fillCircle(x, y, coreSize * 2.5);
 
-        const startX = x + Math.cos(angle) * bodySize * 0.5;
-        const startY = y + Math.sin(angle) * bodySize * 0.5;
-        const endX = x + Math.cos(angle + Math.sin(phase) * 0.3) * tentacleLength + wave * 0.3;
-        const endY = y + Math.sin(angle + Math.sin(phase) * 0.3) * tentacleLength + wave * 0.3;
+      g.fillStyle(glowColor, currentAlpha * 0.15);
+      g.fillCircle(x, y, coreSize * 1.8);
 
-        g.lineStyle(4 - i * 0.3, 0x0a0a0a, currentAlpha * 0.7);
-        g.lineBetween(startX, startY, endX, endY);
+      const haloRadius = coreSize * 1.4 + Math.sin(haloPhase) * 3;
+      g.lineStyle(2, haloColor, currentAlpha * 0.4);
+      g.strokeCircle(x, y, haloRadius);
 
-        g.fillStyle(0x1e001e, currentAlpha * 0.5);
-        g.fillCircle(endX, endY, 3);
+      const innerHaloRadius = coreSize * 1.1 + Math.sin(haloPhase + 1) * 2;
+      g.lineStyle(1.5, haloColor, currentAlpha * 0.3);
+      g.strokeCircle(x, y, innerHaloRadius);
+
+      for (const orb of orbs) {
+        const orbX = x + Math.cos(orb.angle) * orb.distance;
+        const orbY = y + Math.sin(orb.angle) * orb.distance;
+        const orbPulse = 1 + Math.sin(phase + orb.angle) * 0.3;
+
+        g.fillStyle(glowColor, currentAlpha * 0.3);
+        g.fillCircle(orbX, orbY, orb.size * orbPulse * 1.5);
+
+        g.fillStyle(spiritColor, currentAlpha * 0.8);
+        g.fillCircle(orbX, orbY, orb.size * orbPulse);
       }
 
-      // Main body blob
-      g.fillStyle(0x05050a, currentAlpha * 0.9);
-      g.fillCircle(x, y, bodySize * 0.6);
+      g.fillStyle(spiritColor, currentAlpha * 0.9);
+      g.fillCircle(x, y, coreSize * 0.5);
 
-      // Inner dark core
-      g.fillStyle(0x000000, currentAlpha);
-      g.fillCircle(x, y, bodySize * 0.35);
+      g.fillStyle(0xffffff, currentAlpha * 0.7);
+      g.fillCircle(x, y, coreSize * 0.25);
 
-      // Glowing eyes
-      const numEyes = 2 + Math.floor(Math.sin(phase * 0.1) + 1);
-      for (let i = 0; i < numEyes; i++) {
-        const eyeAngle = (i / numEyes) * Math.PI * 0.8 - Math.PI * 0.4 + Math.sin(eyePhase) * 0.2;
-        const eyeDist = bodySize * 0.2;
-        const eyeX = x + Math.cos(eyeAngle) * eyeDist;
-        const eyeY = y + Math.sin(eyeAngle) * eyeDist - size * 0.1;
-        const eyeSize = 3 + Math.sin(eyePhase + i) * 1;
+      const sparkleCount = 4;
+      for (let i = 0; i < sparkleCount; i++) {
+        const sparkleAngle = (i / sparkleCount) * Math.PI * 2 + phase * 0.5;
+        const sparkleDist = coreSize * (0.8 + Math.sin(phase * 2 + i) * 0.3);
+        const sparkleX = x + Math.cos(sparkleAngle) * sparkleDist;
+        const sparkleY = y + Math.sin(sparkleAngle) * sparkleDist;
+        const sparkleSize = 1.5 + Math.sin(phase * 3 + i * 2) * 0.5;
 
-        // Eye glow
-        g.fillStyle(0x50002a, currentAlpha * 0.6);
-        g.fillCircle(eyeX, eyeY, eyeSize * 2);
-
-        // Eye core - menacing red
-        g.fillStyle(0xb4143c, currentAlpha);
-        g.fillCircle(eyeX, eyeY, eyeSize);
-
-        // Eye pupil
-        g.fillStyle(0x000000, currentAlpha);
-        g.fillCircle(eyeX + Math.sin(eyePhase) * 1, eyeY, eyeSize * 0.5);
-
-        // Eye glint
-        g.fillStyle(0xff6464, currentAlpha * 0.8);
-        g.fillCircle(eyeX - 1, eyeY - 1, eyeSize * 0.25);
+        g.fillStyle(0xffffff, currentAlpha * (0.4 + Math.sin(phase * 2 + i) * 0.3));
+        g.fillCircle(sparkleX, sparkleY, sparkleSize);
       }
     }
   }
@@ -2347,9 +2358,9 @@ export class SnakeScene extends Phaser.Scene {
     // Grid with armageddon styling
     this.drawGrid(g, width, height);
 
-    // Update and draw monster shadows at the edges
-    this.updateMonsterShadows();
-    this.drawMonsterShadows(g);
+    // Update and draw guardian spirits at the edges
+    this.updateGuardianSpirits();
+    this.drawGuardianSpirits(g);
 
     if (!this.currentState) return;
 
