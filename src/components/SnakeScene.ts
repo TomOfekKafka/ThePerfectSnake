@@ -9,6 +9,8 @@ interface GameState {
   snake: Position[];
   food: Position;
   gameOver: boolean;
+  gameStarted?: boolean;
+  score?: number;
 }
 
 interface Star {
@@ -267,6 +269,15 @@ interface GhostSnake {
 const GHOST_SNAKE_LENGTH = 8;
 const GHOST_MOVE_INTERVAL = 12;
 
+// High score entry for scoreboard
+interface HighScoreEntry {
+  score: number;
+  date: number;
+  rank: number;
+}
+
+const MAX_HIGH_SCORES = 5;
+
 // Color palette - VOLCANIC INFERNO theme: molten lava, blazing crimson fury
 const COLORS = {
   bgDark: 0x0a0205,
@@ -352,6 +363,16 @@ export class SnakeScene extends Phaser.Scene {
   private bees: MysticalBee[] = [];
   // Ghost snake - spectral AI companion
   private ghostSnake: GhostSnake | null = null;
+  // Scoreboard system
+  private highScores: HighScoreEntry[] = [];
+  private highScoresLoaded = false;
+  private newHighScoreRank = -1;
+  private scoreboardAnimPhase = 0;
+  private scoreboardRevealProgress = 0;
+  private lastGameOverState = false;
+  private hudPulsePhase = 0;
+  private lastHudScore = 0;
+  private scoreFlashIntensity = 0;
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -1859,10 +1880,17 @@ export class SnakeScene extends Phaser.Scene {
     this.updateDeathDebris();
     this.drawDeathDebris(g);
 
+    // Draw HUD (score and length display)
+    this.drawHUD(g, width);
+
     // Game over overlay with animation
     if (this.currentState.gameOver) {
       this.drawGameOver(g, width, height);
+      this.drawScoreboard(g, width, height);
     }
+
+    // Check and save high scores
+    this.checkAndSaveHighScore();
 
     this.needsRedraw = false;
   }
@@ -2681,6 +2709,362 @@ export class SnakeScene extends Phaser.Scene {
       b = hue2rgb(p, q, h - 1 / 3);
     }
     return (Math.round(r * 255) << 16) | (Math.round(g * 255) << 8) | Math.round(b * 255);
+  }
+
+  private loadHighScores(): HighScoreEntry[] {
+    if (this.highScoresLoaded && this.highScores.length > 0) {
+      return this.highScores;
+    }
+    try {
+      const stored = localStorage.getItem('snake_high_scores');
+      if (stored) {
+        const parsed = JSON.parse(stored) as HighScoreEntry[];
+        this.highScores = parsed.slice(0, MAX_HIGH_SCORES);
+        this.highScoresLoaded = true;
+        return this.highScores;
+      }
+    } catch {
+      // localStorage not available
+    }
+    this.highScores = [];
+    this.highScoresLoaded = true;
+    return this.highScores;
+  }
+
+  private saveHighScore(score: number): number {
+    const highScores = this.loadHighScores();
+    const newEntry: HighScoreEntry = { score, date: Date.now(), rank: 0 };
+
+    let insertIndex = highScores.findIndex(entry => score > entry.score);
+    if (insertIndex === -1) insertIndex = highScores.length;
+
+    if (insertIndex < MAX_HIGH_SCORES && score > 0) {
+      highScores.splice(insertIndex, 0, newEntry);
+      highScores.forEach((entry, i) => { entry.rank = i + 1; });
+      this.highScores = highScores.slice(0, MAX_HIGH_SCORES);
+
+      try {
+        localStorage.setItem('snake_high_scores', JSON.stringify(this.highScores));
+      } catch {
+        // localStorage not available
+      }
+      return insertIndex + 1;
+    }
+    return -1;
+  }
+
+  private checkAndSaveHighScore(): void {
+    if (!this.currentState) return;
+
+    if (this.currentState.gameOver && !this.lastGameOverState) {
+      const score = this.currentState.score || 0;
+      const rank = this.saveHighScore(score);
+      this.newHighScoreRank = rank > 0 ? rank : -1;
+      this.scoreboardRevealProgress = 0;
+    }
+    this.lastGameOverState = this.currentState.gameOver;
+
+    if (this.currentState.gameStarted && !this.currentState.gameOver) {
+      this.newHighScoreRank = -1;
+    }
+  }
+
+  private drawHUD(g: Phaser.GameObjects.Graphics, width: number): void {
+    if (!this.currentState || !this.currentState.gameStarted) return;
+
+    this.hudPulsePhase += 0.08;
+    const score = this.currentState.score || 0;
+
+    if (score > this.lastHudScore) {
+      this.scoreFlashIntensity = 1;
+    }
+    this.lastHudScore = score;
+    this.scoreFlashIntensity *= 0.92;
+
+    const padding = 12;
+    const scorePanelWidth = 120;
+    const scorePanelHeight = 50;
+
+    // Score panel background - volcanic lava theme
+    g.fillStyle(0x150508, 0.9);
+    g.fillRoundedRect(padding, padding, scorePanelWidth, scorePanelHeight, 8);
+
+    // Glowing border
+    const borderGlow = 0.6 + this.scoreFlashIntensity * 0.4;
+    g.lineStyle(2, COLORS.snakeGlow, borderGlow);
+    g.strokeRoundedRect(padding, padding, scorePanelWidth, scorePanelHeight, 8);
+
+    // Score label
+    this.drawText(g, 'SCORE', padding + 10, padding + 12, 10, COLORS.snakeBody, 0.9);
+
+    // Score value with flash effect
+    const scoreColor = this.scoreFlashIntensity > 0.5 ? 0xffffff : COLORS.snakeHead;
+    this.drawText(g, String(score).padStart(5, '0'), padding + 10, padding + 32, 18, scoreColor, 1);
+
+    // Outer glow on score when flashing
+    if (this.scoreFlashIntensity > 0.1) {
+      g.fillStyle(COLORS.snakeGlow, this.scoreFlashIntensity * 0.3);
+      g.fillRoundedRect(padding + 5, padding + 20, 100, 28, 4);
+    }
+
+    // Length panel on the right
+    const lengthPanelWidth = 80;
+    const lengthPanelHeight = 50;
+    const lengthX = width - padding - lengthPanelWidth;
+
+    g.fillStyle(0x150508, 0.9);
+    g.fillRoundedRect(lengthX, padding, lengthPanelWidth, lengthPanelHeight, 8);
+
+    g.lineStyle(2, COLORS.foodGlow, 0.6);
+    g.strokeRoundedRect(lengthX, padding, lengthPanelWidth, lengthPanelHeight, 8);
+
+    this.drawText(g, 'LENGTH', lengthX + 10, padding + 12, 10, COLORS.food, 0.9);
+    this.drawText(g, String(this.currentState.snake.length), lengthX + 10, padding + 32, 18, COLORS.foodCore, 1);
+  }
+
+  private drawText(
+    g: Phaser.GameObjects.Graphics,
+    text: string,
+    x: number,
+    y: number,
+    size: number,
+    color: number,
+    alpha: number
+  ): void {
+    // Use simple block characters for text rendering
+    const charWidth = size * 0.6;
+    const charHeight = size;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const cx = x + i * charWidth;
+
+      g.fillStyle(color, alpha);
+
+      // Simple pixel-style character rendering
+      if (char >= '0' && char <= '9') {
+        this.drawDigit(g, char, cx, y, size);
+      } else {
+        this.drawLetter(g, char, cx, y, size);
+      }
+    }
+  }
+
+  private drawDigit(g: Phaser.GameObjects.Graphics, digit: string, x: number, y: number, size: number): void {
+    const w = size * 0.5;
+    const h = size;
+    const t = size * 0.15; // thickness
+
+    // 7-segment style digits
+    const segments: Record<string, number[]> = {
+      '0': [1, 1, 1, 0, 1, 1, 1],
+      '1': [0, 0, 1, 0, 0, 1, 0],
+      '2': [1, 0, 1, 1, 1, 0, 1],
+      '3': [1, 0, 1, 1, 0, 1, 1],
+      '4': [0, 1, 1, 1, 0, 1, 0],
+      '5': [1, 1, 0, 1, 0, 1, 1],
+      '6': [1, 1, 0, 1, 1, 1, 1],
+      '7': [1, 0, 1, 0, 0, 1, 0],
+      '8': [1, 1, 1, 1, 1, 1, 1],
+      '9': [1, 1, 1, 1, 0, 1, 1],
+    };
+
+    const seg = segments[digit] || segments['0'];
+
+    // Top horizontal
+    if (seg[0]) g.fillRect(x, y - h / 2, w, t);
+    // Top-left vertical
+    if (seg[1]) g.fillRect(x - t / 2, y - h / 2, t, h / 2);
+    // Top-right vertical
+    if (seg[2]) g.fillRect(x + w - t / 2, y - h / 2, t, h / 2);
+    // Middle horizontal
+    if (seg[3]) g.fillRect(x, y - t / 2, w, t);
+    // Bottom-left vertical
+    if (seg[4]) g.fillRect(x - t / 2, y, t, h / 2);
+    // Bottom-right vertical
+    if (seg[5]) g.fillRect(x + w - t / 2, y, t, h / 2);
+    // Bottom horizontal
+    if (seg[6]) g.fillRect(x, y + h / 2 - t, w, t);
+  }
+
+  private drawLetter(g: Phaser.GameObjects.Graphics, letter: string, x: number, y: number, size: number): void {
+    const w = size * 0.5;
+    const h = size;
+    const t = size * 0.15;
+
+    // Simple block letters
+    switch (letter.toUpperCase()) {
+      case 'S':
+        g.fillRect(x, y - h / 2, w, t);
+        g.fillRect(x - t / 2, y - h / 2, t, h / 2);
+        g.fillRect(x, y - t / 2, w, t);
+        g.fillRect(x + w - t / 2, y, t, h / 2);
+        g.fillRect(x, y + h / 2 - t, w, t);
+        break;
+      case 'C':
+        g.fillRect(x, y - h / 2, w, t);
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x, y + h / 2 - t, w, t);
+        break;
+      case 'O':
+        g.fillRect(x, y - h / 2, w, t);
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h);
+        g.fillRect(x, y + h / 2 - t, w, t);
+        break;
+      case 'R':
+        g.fillRect(x, y - h / 2, w, t);
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h / 2);
+        g.fillRect(x, y - t / 2, w, t);
+        g.fillRect(x + w / 2, y, t, h / 2);
+        break;
+      case 'E':
+        g.fillRect(x, y - h / 2, w, t);
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x, y - t / 2, w * 0.7, t);
+        g.fillRect(x, y + h / 2 - t, w, t);
+        break;
+      case 'L':
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x, y + h / 2 - t, w, t);
+        break;
+      case 'N':
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h);
+        g.fillRect(x, y - h / 2 + t, w, t);
+        break;
+      case 'G':
+        g.fillRect(x, y - h / 2, w, t);
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w - t / 2, y, t, h / 2);
+        g.fillRect(x + w / 2, y - t / 2, w / 2, t);
+        g.fillRect(x, y + h / 2 - t, w, t);
+        break;
+      case 'T':
+        g.fillRect(x - t, y - h / 2, w + t * 2, t);
+        g.fillRect(x + w / 2 - t / 2, y - h / 2, t, h);
+        break;
+      case 'H':
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h);
+        g.fillRect(x, y - t / 2, w, t);
+        break;
+      case 'I':
+        g.fillRect(x + w / 2 - t / 2, y - h / 2, t, h);
+        break;
+      case 'Y':
+        g.fillRect(x - t / 2, y - h / 2, t, h / 2);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h / 2);
+        g.fillRect(x + w / 2 - t / 2, y, t, h / 2);
+        break;
+      case 'U':
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h);
+        g.fillRect(x, y + h / 2 - t, w, t);
+        break;
+      case 'W':
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w / 2 - t / 2, y, t, h / 2);
+        g.fillRect(x, y + h / 2 - t, w, t);
+        break;
+      case '!':
+        g.fillRect(x + w / 2 - t / 2, y - h / 2, t, h * 0.6);
+        g.fillRect(x + w / 2 - t / 2, y + h / 2 - t * 2, t, t);
+        break;
+      case ' ':
+        break;
+      default:
+        g.fillRect(x, y - t / 2, w, t);
+        break;
+    }
+  }
+
+  private drawScoreboard(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+    if (!this.currentState || !this.currentState.gameOver) return;
+
+    this.scoreboardAnimPhase += 0.06;
+    this.scoreboardRevealProgress = Math.min(1, this.scoreboardRevealProgress + 0.02);
+
+    const highScores = this.loadHighScores();
+    const centerX = width / 2;
+    const baseY = height * 0.18;
+    const panelWidth = 180;
+    const panelHeight = 170;
+    const panelX = centerX - panelWidth / 2;
+    const panelY = baseY;
+    const slideOffset = (1 - this.scoreboardRevealProgress) * 50;
+    const alphaMultiplier = this.scoreboardRevealProgress;
+
+    // Panel background - volcanic lava glow
+    g.fillStyle(0x150510, 0.95 * alphaMultiplier);
+    g.fillRoundedRect(panelX, panelY - slideOffset, panelWidth, panelHeight, 12);
+
+    // Glowing border - animated
+    const borderHue = this.newHighScoreRank > 0 ? 45 : 0;
+    const borderPulse = 0.6 + Math.sin(this.scoreboardAnimPhase) * 0.2;
+    const borderColor = this.newHighScoreRank > 0 ? 0xffcc00 : COLORS.snakeGlow;
+    g.lineStyle(3, borderColor, borderPulse * alphaMultiplier);
+    g.strokeRoundedRect(panelX, panelY - slideOffset, panelWidth, panelHeight, 12);
+
+    // Title
+    const titleY = panelY - slideOffset + 22;
+    this.drawText(g, 'HIGH SCORES', centerX - 55, titleY, 10, COLORS.foodCore, alphaMultiplier);
+
+    // Divider line
+    g.lineStyle(1, COLORS.snakeGlow, 0.5 * alphaMultiplier);
+    g.lineBetween(panelX + 20, titleY + 8, panelX + panelWidth - 20, titleY + 8);
+
+    const entryStartY = titleY + 25;
+    const entryHeight = 22;
+
+    if (highScores.length === 0) {
+      this.drawText(g, 'NO SCORES YET', centerX - 50, entryStartY + 30, 8, COLORS.noirGray, 0.8 * alphaMultiplier);
+    } else {
+      for (let i = 0; i < Math.min(highScores.length, 5); i++) {
+        const entry = highScores[i];
+        const entryY = entryStartY + i * entryHeight;
+        const isNewScore = this.newHighScoreRank === i + 1;
+        const entryDelay = i * 0.15;
+        const entryProgress = Math.max(0, Math.min(1, (this.scoreboardRevealProgress - entryDelay) * 2));
+        if (entryProgress <= 0) continue;
+
+        const entryAlpha = alphaMultiplier * entryProgress;
+
+        // Highlight new high score row
+        if (isNewScore) {
+          const flashIntensity = 0.3 + Math.sin(this.scoreboardAnimPhase * 3) * 0.2;
+          g.fillStyle(0xffcc00, flashIntensity * entryAlpha);
+          g.fillRoundedRect(panelX + 8, entryY - slideOffset - 8, panelWidth - 16, entryHeight - 2, 4);
+        }
+
+        // Rank colors: gold, silver, bronze, then volcanic colors
+        const rankColors = [0xffd700, 0xc0c0c0, 0xcd7f32, COLORS.snakeGlow, COLORS.foodGlow];
+        const rankColor = rankColors[i] || 0x888888;
+
+        // Rank number
+        this.drawText(g, `${i + 1}`, panelX + 18, entryY - slideOffset, 10, rankColor, entryAlpha);
+
+        // Score value
+        const scoreColor = isNewScore ? 0xffffff : COLORS.foodCore;
+        this.drawText(g, String(entry.score).padStart(5, '0'), panelX + panelWidth - 70, entryY - slideOffset, 10, scoreColor, entryAlpha);
+
+        // NEW! label
+        if (isNewScore) {
+          const newAlpha = 0.8 + Math.sin(this.scoreboardAnimPhase * 4) * 0.2;
+          this.drawText(g, 'NEW', panelX + 50, entryY - slideOffset, 7, 0xffcc00, newAlpha * entryAlpha);
+        }
+      }
+    }
+
+    // Current score at bottom
+    const currentScoreY = panelY - slideOffset + panelHeight - 30;
+    this.drawText(g, 'YOUR SCORE', centerX - 40, currentScoreY - 10, 8, COLORS.noirGray, 0.8 * alphaMultiplier);
+
+    const currentScore = this.currentState.score || 0;
+    const scoreColor = this.newHighScoreRank > 0 ? 0xffcc00 : COLORS.snakeGlow;
+    this.drawText(g, String(currentScore).padStart(5, '0'), centerX - 25, currentScoreY + 8, 14, scoreColor, alphaMultiplier);
   }
 
   private drawGrid(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
