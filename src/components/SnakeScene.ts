@@ -269,6 +269,51 @@ interface GhostSnake {
 const GHOST_SNAKE_LENGTH = 8;
 const GHOST_MOVE_INTERVAL = 12;
 
+// Armageddon Chaos effect types
+interface GroundFissure {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  width: number;
+  glowIntensity: number;
+  pulsePhase: number;
+}
+
+interface FireRainParticle {
+  x: number;
+  y: number;
+  vy: number;
+  size: number;
+  alpha: number;
+  hue: number;
+  trail: { x: number; y: number; alpha: number }[];
+}
+
+interface ChaosExplosion {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  life: number;
+  rings: { radius: number; alpha: number }[];
+  debris: { x: number; y: number; vx: number; vy: number; size: number; alpha: number }[];
+}
+
+interface ApocalypticSkull {
+  x: number;
+  y: number;
+  size: number;
+  alpha: number;
+  rotation: number;
+  pulsePhase: number;
+}
+
+const NUM_FISSURES = 6;
+const MAX_FIRE_RAIN = 30;
+const MAX_CHAOS_EXPLOSIONS = 3;
+const NUM_SKULLS = 4;
+
 // High score entry for scoreboard
 interface HighScoreEntry {
   score: number;
@@ -278,36 +323,44 @@ interface HighScoreEntry {
 
 const MAX_HIGH_SCORES = 5;
 
-// Color palette - VOLCANIC INFERNO theme: molten lava, blazing crimson fury
+// Color palette - ARMAGEDDON CHAOS theme: apocalyptic destruction, blood-red skies, hellfire
 const COLORS = {
-  bgDark: 0x0a0205,
-  bgMid: 0x150508,
-  gridLine: 0x301010,
-  gridAccent: 0x451515,
-  snakeHead: 0xff4020,
-  snakeBody: 0xd03010,
-  snakeTail: 0xa02008,
-  snakeHighlight: 0xff8040,
-  snakeScale: 0xb04020,
+  bgDark: 0x0a0002,
+  bgMid: 0x1a0505,
+  gridLine: 0x400808,
+  gridAccent: 0x601010,
+  snakeHead: 0xff2000,
+  snakeBody: 0xcc1800,
+  snakeTail: 0x991000,
+  snakeHighlight: 0xff6030,
+  snakeScale: 0xaa2010,
   snakeEye: 0xffff00,
-  snakePupil: 0x100800,
-  snakeGlow: 0xe06030,
-  food: 0xff2000,
-  foodCore: 0xffff80,
-  foodGlow: 0xff6020,
-  foodParticle: 0xffa060,
-  star: 0xff8040,
-  gameOverOverlay: 0x0a0205,
-  gameOverText: 0xff6040,
-  plasma1: 0xc04020,
-  plasma2: 0xe06030,
-  plasma3: 0xa03018,
-  screenFlash: 0xff8040,
-  // Volcanic inferno specific colors
-  noirWhite: 0xff8040,
-  noirGray: 0xa04020,
-  noirDark: 0x301010,
-  spotlight: 0xffa060,
+  snakePupil: 0x200000,
+  snakeGlow: 0xff4010,
+  food: 0xff0000,
+  foodCore: 0xffff40,
+  foodGlow: 0xff3000,
+  foodParticle: 0xff8020,
+  star: 0xff4000,
+  gameOverOverlay: 0x100000,
+  gameOverText: 0xff4020,
+  plasma1: 0xff2000,
+  plasma2: 0xff4010,
+  plasma3: 0xcc1000,
+  screenFlash: 0xff6020,
+  // Armageddon chaos specific colors
+  noirWhite: 0xff6030,
+  noirGray: 0xcc4020,
+  noirDark: 0x400808,
+  spotlight: 0xff8040,
+  // Apocalyptic additions
+  chaosRed: 0xff0000,
+  chaosOrange: 0xff6000,
+  chaosYellow: 0xffcc00,
+  lavaGlow: 0xff4400,
+  ashGray: 0x444444,
+  bloodRed: 0x880000,
+  hellfire: 0xff2200,
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -373,6 +426,13 @@ export class SnakeScene extends Phaser.Scene {
   private hudPulsePhase = 0;
   private lastHudScore = 0;
   private scoreFlashIntensity = 0;
+  // Armageddon Chaos effects
+  private groundFissures: GroundFissure[] = [];
+  private fireRainParticles: FireRainParticle[] = [];
+  private chaosExplosions: ChaosExplosion[] = [];
+  private apocalypticSkulls: ApocalypticSkull[] = [];
+  private armageddonPulse = 0;
+  private chaosIntensity = 0;
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -390,9 +450,52 @@ export class SnakeScene extends Phaser.Scene {
     this.initMonsterShadows();
     this.initBees();
     this.initGhostSnake();
+    this.initArmageddonEffects();
 
     if (this.currentState) {
       this.needsRedraw = true;
+    }
+  }
+
+  private initArmageddonEffects(): void {
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+
+    // Initialize ground fissures - cracks in the earth with lava
+    this.groundFissures = [];
+    for (let i = 0; i < NUM_FISSURES; i++) {
+      const startX = Math.random() * width;
+      const startY = Math.random() * height;
+      const angle = Math.random() * Math.PI;
+      const length = 40 + Math.random() * 80;
+      this.groundFissures.push({
+        x1: startX,
+        y1: startY,
+        x2: startX + Math.cos(angle) * length,
+        y2: startY + Math.sin(angle) * length,
+        width: 2 + Math.random() * 4,
+        glowIntensity: 0.5 + Math.random() * 0.5,
+        pulsePhase: Math.random() * Math.PI * 2,
+      });
+    }
+
+    // Initialize fire rain
+    this.fireRainParticles = [];
+
+    // Initialize chaos explosions
+    this.chaosExplosions = [];
+
+    // Initialize apocalyptic skulls floating in background
+    this.apocalypticSkulls = [];
+    for (let i = 0; i < NUM_SKULLS; i++) {
+      this.apocalypticSkulls.push({
+        x: 30 + Math.random() * (width - 60),
+        y: 30 + Math.random() * (height - 60),
+        size: 15 + Math.random() * 10,
+        alpha: 0.03 + Math.random() * 0.04,
+        rotation: Math.random() * Math.PI * 2,
+        pulsePhase: Math.random() * Math.PI * 2,
+      });
     }
   }
 
@@ -411,6 +514,276 @@ export class SnakeScene extends Phaser.Scene {
         life: Math.random(),
       });
     }
+  }
+
+  private updateArmageddonEffects(): void {
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+
+    this.armageddonPulse += 0.04;
+
+    // Update ground fissures - pulsing lava glow
+    for (const fissure of this.groundFissures) {
+      fissure.pulsePhase += 0.06;
+      fissure.glowIntensity = 0.5 + Math.sin(fissure.pulsePhase) * 0.3;
+    }
+
+    // Spawn fire rain particles
+    if (this.fireRainParticles.length < MAX_FIRE_RAIN && Math.random() < 0.3) {
+      const hueVariation = Math.random();
+      this.fireRainParticles.push({
+        x: Math.random() * width,
+        y: -20,
+        vy: 2 + Math.random() * 3,
+        size: 2 + Math.random() * 4,
+        alpha: 0.6 + Math.random() * 0.4,
+        hue: hueVariation < 0.6 ? 0 : (hueVariation < 0.85 ? 20 : 40), // Red, orange, yellow
+        trail: [],
+      });
+    }
+
+    // Update fire rain
+    for (let i = this.fireRainParticles.length - 1; i >= 0; i--) {
+      const p = this.fireRainParticles[i];
+      p.trail.unshift({ x: p.x, y: p.y, alpha: p.alpha });
+      if (p.trail.length > 6) p.trail.pop();
+      for (const t of p.trail) { t.alpha *= 0.7; }
+
+      p.y += p.vy;
+      p.x += Math.sin(this.armageddonPulse + p.y * 0.05) * 0.3;
+      p.alpha *= 0.995;
+
+      if (p.y > height + 20 || p.alpha < 0.05) {
+        this.fireRainParticles.splice(i, 1);
+      }
+    }
+
+    // Update chaos explosions
+    for (let i = this.chaosExplosions.length - 1; i >= 0; i--) {
+      const exp = this.chaosExplosions[i];
+      exp.radius += 4;
+      exp.life -= 0.03;
+
+      for (const ring of exp.rings) {
+        ring.radius += 3;
+        ring.alpha *= 0.92;
+      }
+      exp.rings = exp.rings.filter(r => r.alpha > 0.02);
+
+      for (const d of exp.debris) {
+        d.x += d.vx;
+        d.y += d.vy;
+        d.vy += 0.1;
+        d.alpha *= 0.96;
+      }
+      exp.debris = exp.debris.filter(d => d.alpha > 0.02);
+
+      if (exp.life <= 0 && exp.rings.length === 0 && exp.debris.length === 0) {
+        this.chaosExplosions.splice(i, 1);
+      }
+    }
+
+    // Update apocalyptic skulls - slow drift and pulse
+    for (const skull of this.apocalypticSkulls) {
+      skull.pulsePhase += 0.02;
+      skull.rotation += 0.002;
+      skull.x += Math.sin(skull.pulsePhase * 0.5) * 0.1;
+      skull.y += Math.cos(skull.pulsePhase * 0.3) * 0.1;
+
+      // Keep in bounds
+      if (skull.x < 20) skull.x = 20;
+      if (skull.x > width - 20) skull.x = width - 20;
+      if (skull.y < 20) skull.y = 20;
+      if (skull.y > height - 20) skull.y = height - 20;
+    }
+
+    // Chaos intensity increases when snake eats or dies
+    this.chaosIntensity *= 0.97;
+  }
+
+  private spawnChaosExplosion(x: number, y: number): void {
+    if (this.chaosExplosions.length >= MAX_CHAOS_EXPLOSIONS) {
+      this.chaosExplosions.shift();
+    }
+
+    const debris: { x: number; y: number; vx: number; vy: number; size: number; alpha: number }[] = [];
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.3;
+      const speed = 3 + Math.random() * 5;
+      debris.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 2,
+        size: 2 + Math.random() * 4,
+        alpha: 1,
+      });
+    }
+
+    this.chaosExplosions.push({
+      x,
+      y,
+      radius: 5,
+      maxRadius: 80,
+      life: 1,
+      rings: [
+        { radius: 10, alpha: 1 },
+        { radius: 5, alpha: 0.8 },
+        { radius: 15, alpha: 0.6 },
+      ],
+      debris,
+    });
+
+    this.chaosIntensity = Math.min(1, this.chaosIntensity + 0.5);
+    this.screenShakeIntensity = Math.max(this.screenShakeIntensity, 12);
+  }
+
+  private drawArmageddonBackground(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+    // Blood-red apocalyptic sky gradient
+    const skyPulse = 0.8 + Math.sin(this.armageddonPulse * 0.5) * 0.2;
+
+    // Layer 1: Deep blood red base
+    g.fillStyle(0x100000, 1);
+    g.fillRect(0, 0, width, height);
+
+    // Layer 2: Hellish glow from below
+    g.fillStyle(0x200800, 0.4 * skyPulse);
+    g.fillRect(0, height * 0.6, width, height * 0.4);
+
+    // Layer 3: Smoky atmosphere at top
+    for (let i = 0; i < 4; i++) {
+      const cloudY = i * 30 + Math.sin(this.armageddonPulse + i) * 10;
+      const cloudAlpha = 0.08 - i * 0.015;
+      g.fillStyle(0x301010, cloudAlpha * skyPulse);
+      g.fillRect(0, cloudY, width, 40);
+    }
+
+    // Draw apocalyptic skulls (very faint, background layer)
+    this.drawApocalypticSkulls(g);
+  }
+
+  private drawGroundFissures(g: Phaser.GameObjects.Graphics): void {
+    for (const fissure of this.groundFissures) {
+      const pulse = fissure.glowIntensity;
+
+      // Lava glow underneath
+      g.lineStyle(fissure.width * 3, COLORS.lavaGlow, 0.15 * pulse);
+      g.lineBetween(fissure.x1, fissure.y1, fissure.x2, fissure.y2);
+
+      // Crack edges (dark)
+      g.lineStyle(fissure.width + 2, 0x200000, 0.4);
+      g.lineBetween(fissure.x1, fissure.y1, fissure.x2, fissure.y2);
+
+      // Lava core (bright orange/yellow)
+      g.lineStyle(fissure.width, COLORS.chaosOrange, 0.4 * pulse);
+      g.lineBetween(fissure.x1, fissure.y1, fissure.x2, fissure.y2);
+
+      // Hot white center
+      g.lineStyle(fissure.width * 0.3, COLORS.chaosYellow, 0.3 * pulse);
+      g.lineBetween(fissure.x1, fissure.y1, fissure.x2, fissure.y2);
+    }
+  }
+
+  private drawFireRain(g: Phaser.GameObjects.Graphics): void {
+    for (const p of this.fireRainParticles) {
+      // Draw trail
+      for (let i = 0; i < p.trail.length; i++) {
+        const t = p.trail[i];
+        const trailSize = p.size * (1 - i / p.trail.length) * 0.6;
+        const trailColor = this.hslToRgb(p.hue / 360, 1, 0.5);
+        g.fillStyle(trailColor, t.alpha * 0.4);
+        g.fillCircle(t.x, t.y, trailSize);
+      }
+
+      // Main fire particle
+      const outerColor = this.hslToRgb(p.hue / 360, 1, 0.4);
+      const coreColor = this.hslToRgb((p.hue + 20) / 360, 1, 0.7);
+
+      g.fillStyle(outerColor, p.alpha * 0.5);
+      g.fillCircle(p.x, p.y, p.size * 1.5);
+
+      g.fillStyle(coreColor, p.alpha * 0.8);
+      g.fillCircle(p.x, p.y, p.size);
+
+      g.fillStyle(0xffff80, p.alpha * 0.6);
+      g.fillCircle(p.x, p.y, p.size * 0.3);
+    }
+  }
+
+  private drawChaosExplosions(g: Phaser.GameObjects.Graphics): void {
+    for (const exp of this.chaosExplosions) {
+      // Central flash
+      if (exp.life > 0.7) {
+        const flashAlpha = (exp.life - 0.7) * 3;
+        g.fillStyle(0xffffff, flashAlpha * 0.5);
+        g.fillCircle(exp.x, exp.y, exp.radius * 0.5);
+        g.fillStyle(COLORS.chaosYellow, flashAlpha * 0.4);
+        g.fillCircle(exp.x, exp.y, exp.radius);
+      }
+
+      // Expanding rings
+      for (const ring of exp.rings) {
+        g.lineStyle(4, COLORS.chaosRed, ring.alpha * 0.5);
+        g.strokeCircle(exp.x, exp.y, ring.radius);
+        g.lineStyle(2, COLORS.chaosOrange, ring.alpha * 0.7);
+        g.strokeCircle(exp.x, exp.y, ring.radius);
+        g.lineStyle(1, 0xffffff, ring.alpha * 0.4);
+        g.strokeCircle(exp.x, exp.y, ring.radius);
+      }
+
+      // Flying debris
+      for (const d of exp.debris) {
+        g.fillStyle(COLORS.chaosOrange, d.alpha * 0.6);
+        g.fillCircle(d.x, d.y, d.size * 1.3);
+        g.fillStyle(COLORS.chaosYellow, d.alpha * 0.9);
+        g.fillCircle(d.x, d.y, d.size);
+      }
+    }
+  }
+
+  private drawApocalypticSkulls(g: Phaser.GameObjects.Graphics): void {
+    for (const skull of this.apocalypticSkulls) {
+      const pulse = 0.7 + Math.sin(skull.pulsePhase) * 0.3;
+      const alpha = skull.alpha * pulse;
+      const s = skull.size;
+
+      // Skull glow
+      g.fillStyle(COLORS.bloodRed, alpha * 0.3);
+      g.fillCircle(skull.x, skull.y, s * 1.5);
+
+      // Skull outline (simplified shape)
+      g.fillStyle(COLORS.ashGray, alpha);
+      // Cranium
+      g.fillCircle(skull.x, skull.y - s * 0.1, s * 0.8);
+      // Jaw
+      g.fillRect(skull.x - s * 0.4, skull.y + s * 0.3, s * 0.8, s * 0.4);
+
+      // Eye sockets (glowing red)
+      g.fillStyle(COLORS.chaosRed, alpha * 1.5);
+      g.fillCircle(skull.x - s * 0.25, skull.y - s * 0.1, s * 0.2);
+      g.fillCircle(skull.x + s * 0.25, skull.y - s * 0.1, s * 0.2);
+
+      // Nose hole
+      g.fillStyle(0x000000, alpha);
+      g.fillTriangle(
+        skull.x, skull.y + s * 0.1,
+        skull.x - s * 0.1, skull.y + s * 0.25,
+        skull.x + s * 0.1, skull.y + s * 0.25
+      );
+    }
+  }
+
+  private drawChaosOverlay(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+    if (this.chaosIntensity <= 0) return;
+
+    // Red tint overlay when chaos is active
+    g.fillStyle(COLORS.chaosRed, this.chaosIntensity * 0.15);
+    g.fillRect(0, 0, width, height);
+
+    // Pulsing vignette edges
+    const vignetteAlpha = this.chaosIntensity * 0.3;
+    g.lineStyle(80, COLORS.bloodRed, vignetteAlpha);
+    g.strokeRect(-40, -40, width + 80, height + 80);
   }
 
   private initMonsterShadows(): void {
@@ -1426,8 +1799,9 @@ export class SnakeScene extends Phaser.Scene {
       this.spawnShockWave(headX, headY);
       this.spawnLightningBurst(headX, headY);
       this.spawnFoodBurst(headX, headY);
-      this.screenFlashAlpha = 0.6; // Trigger screen flash
-      this.chromaticIntensity = 1.0; // Trigger chromatic aberration pulse
+      this.spawnChaosExplosion(headX, headY); // Armageddon chaos explosion
+      this.screenFlashAlpha = 0.8; // More intense flash for armageddon
+      this.chromaticIntensity = 1.5; // Stronger chromatic aberration
       this.energyFieldPulse = 1.0; // Trigger energy field expansion
     }
     this.lastSnakeLength = state.snake.length;
@@ -1451,11 +1825,22 @@ export class SnakeScene extends Phaser.Scene {
       }
     }
 
-    // Detect game over transition
+    // Detect game over transition - ARMAGEDDON CHAOS death sequence
     if (state.gameOver && this.currentState && !this.currentState.gameOver) {
-      this.screenShakeIntensity = 15; // Trigger screen shake on death
-      this.chromaticIntensity = 2.0; // Strong chromatic aberration on death
+      this.screenShakeIntensity = 25; // Massive screen shake on death
+      this.chromaticIntensity = 3.0; // Maximum chromatic aberration on death
+      this.chaosIntensity = 1.0; // Full chaos overlay
       this.spawnDeathExplosion(); // Dramatic death explosion
+      // Spawn chaos explosions across the snake body
+      for (let i = 0; i < Math.min(3, state.snake.length); i++) {
+        const seg = state.snake[Math.floor(i * state.snake.length / 3)];
+        setTimeout(() => {
+          this.spawnChaosExplosion(
+            seg.x * CELL_SIZE + CELL_SIZE / 2,
+            seg.y * CELL_SIZE + CELL_SIZE / 2
+          );
+        }, i * 50);
+      }
     }
 
     this.currentState = state;
@@ -1767,6 +2152,7 @@ export class SnakeScene extends Phaser.Scene {
     this.updateCometTrail();
     this.updateEtherealParticles();
     this.updateBees();
+    this.updateArmageddonEffects();
 
     // Spawn flame particles along snake every few frames
     if (this.frameCount % 2 === 0) {
@@ -1801,9 +2187,11 @@ export class SnakeScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
 
-    // Film noir deep black background
-    g.fillStyle(COLORS.bgDark, 1);
-    g.fillRect(0, 0, width, height);
+    // Armageddon chaos apocalyptic background
+    this.drawArmageddonBackground(g, width, height);
+
+    // Ground fissures with lava glow
+    this.drawGroundFissures(g);
 
     // Dramatic spotlight gradient from snake position
     this.drawSpotlight(g, width, height);
@@ -1811,10 +2199,13 @@ export class SnakeScene extends Phaser.Scene {
     // Smoke/fog atmosphere
     this.drawSmoke(g);
 
-    // Venetian blind light streaks
+    // Fire rain falling from the apocalyptic sky
+    this.drawFireRain(g);
+
+    // Venetian blind light streaks (now in blood-red)
     this.drawVenetianBlinds(g, width, height);
 
-    // Grid with noir styling
+    // Grid with armageddon styling
     this.drawGrid(g, width, height);
 
     // Update and draw monster shadows at the edges
@@ -1870,11 +2261,17 @@ export class SnakeScene extends Phaser.Scene {
       this.drawChromaticAberration(g);
     }
 
+    // Chaos explosions
+    this.drawChaosExplosions(g);
+
     // Screen flash effect (on eating food)
     if (this.screenFlashAlpha > 0) {
       g.fillStyle(COLORS.screenFlash, this.screenFlashAlpha * 0.3);
       g.fillRect(0, 0, width, height);
     }
+
+    // Chaos overlay (red tint during intense moments)
+    this.drawChaosOverlay(g, width, height);
 
     // Death debris particles
     this.updateDeathDebris();
