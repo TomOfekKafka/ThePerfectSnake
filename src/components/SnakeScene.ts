@@ -1,4 +1,23 @@
 import Phaser from 'phaser';
+import {
+  createCleanEffectsState,
+  initMotes,
+  updateMotes,
+  updateRipples,
+  updateGlowTrail,
+  spawnRipple,
+  drawCleanBackground,
+  drawCleanGrid,
+  drawMotes,
+  drawRipples,
+  drawGlowTrail,
+  drawCleanFood,
+  drawCleanSnake,
+  drawCleanVignette,
+  drawCleanHUD,
+  CLEAN_COLORS,
+  CleanEffectsState,
+} from './cleanEffects';
 
 interface Position {
   x: number;
@@ -448,6 +467,7 @@ export class SnakeScene extends Phaser.Scene {
   private apocalypticSkulls: ApocalypticSkull[] = [];
   private armageddonPulse = 0;
   private chaosIntensity = 0;
+  private cleanEffects: CleanEffectsState = createCleanEffectsState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -455,17 +475,9 @@ export class SnakeScene extends Phaser.Scene {
 
   create(): void {
     this.graphics = this.add.graphics();
-    this.initStars();
-    this.initPlasmaWaves();
-    this.initAuroraWaves();
-    this.initNebulaClouds();
-    this.initVortex();
-    this.initMeteors();
-    this.initSmokeParticles();
-    this.initGuardianSpirits();
-    this.initBees();
-    this.initRivalSnake();
-    this.initArmageddonEffects();
+    const width = GRID_SIZE * CELL_SIZE;
+    const height = GRID_SIZE * CELL_SIZE;
+    initMotes(this.cleanEffects, width, height);
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -2366,152 +2378,65 @@ export class SnakeScene extends Phaser.Scene {
 
   update(): void {
     this.frameCount++;
-    this.hueOffset = (this.hueOffset + 0.5) % 360;
-    this.venetianPhase += 0.008;
-    this.updateParticles();
-    this.updateSmokeParticles();
-    this.updateThrownFood();
-    this.updateFlameParticles();
-    this.updateCometTrail();
-    this.updateEtherealParticles();
-    this.updateBees();
-    this.updateArmageddonEffects();
-
-    // Spawn flame particles along snake every few frames
-    if (this.frameCount % 2 === 0) {
-      this.spawnFlamesAlongSnake();
-    }
-
-    // Spawn trail particles when snake moves
-    if (this.currentState && this.currentState.snake.length > 0) {
-      const head = this.currentState.snake[0];
-      const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
-      const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
-      if (this.lastHeadPos && (this.lastHeadPos.x !== head.x || this.lastHeadPos.y !== head.y)) {
-        this.spawnTrailParticles(headX, headY);
-      }
-      this.lastHeadPos = { x: head.x, y: head.y };
-      // Update spotlight to follow snake head smoothly
-      this.spotlightX += (headX - this.spotlightX) * 0.08;
-      this.spotlightY += (headY - this.spotlightY) * 0.08;
-    }
-
-    // Always redraw for animations (stars, particles, pulsing)
-    const g = this.graphics;
-    g.clear();
-
-    // Apply screen shake offset
-    if (this.screenShakeIntensity > 0) {
-      g.setPosition(this.screenShakeX, this.screenShakeY);
-    } else {
-      g.setPosition(0, 0);
-    }
+    this.cleanEffects.frameCount = this.frameCount;
 
     const width = this.scale.width;
     const height = this.scale.height;
 
-    // Armageddon chaos apocalyptic background
-    this.drawArmageddonBackground(g, width, height);
+    updateMotes(this.cleanEffects, width, height);
+    updateRipples(this.cleanEffects);
 
-    // Ground fissures with lava glow
-    this.drawGroundFissures(g);
+    if (this.currentState && this.currentState.snake.length > 0) {
+      const head = this.currentState.snake[0];
+      const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+      const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
 
-    // Dramatic spotlight gradient from snake position
-    this.drawSpotlight(g, width, height);
+      if (this.lastHeadPos && (this.lastHeadPos.x !== head.x || this.lastHeadPos.y !== head.y)) {
+        updateGlowTrail(this.cleanEffects, headX, headY);
+      }
+      this.lastHeadPos = { x: head.x, y: head.y };
 
-    // Smoke/fog atmosphere
-    this.drawSmoke(g);
+      if (this.lastSnakeLength > 0 && this.currentState.snake.length > this.lastSnakeLength) {
+        const food = this.currentState.food;
+        const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
+        const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
+        spawnRipple(this.cleanEffects, foodX, foodY);
+      }
+      this.lastSnakeLength = this.currentState.snake.length;
+    }
 
-    // Fire rain falling from the apocalyptic sky
-    this.drawFireRain(g);
+    const g = this.graphics;
+    g.clear();
+    g.setPosition(0, 0);
 
-    // Venetian blind light streaks (now in blood-red)
-    this.drawVenetianBlinds(g, width, height);
-
-    // Grid with armageddon styling
-    this.drawGrid(g, width, height);
-
-    // Update and draw guardian spirits at the edges
-    this.updateGuardianSpirits();
-    this.drawGuardianSpirits(g);
+    drawCleanBackground(g, width, height, this.frameCount);
+    drawCleanGrid(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
+    drawMotes(g, this.cleanEffects);
 
     if (!this.currentState) return;
 
-    // Draw comet trail (smooth ribbon trail behind snake)
-    this.drawCometTrail(g);
+    drawGlowTrail(g, this.cleanEffects);
+    drawRipples(g, this.cleanEffects);
 
-    // Draw ethereal particles (luminous drifting particles)
-    this.drawEtherealParticles(g);
+    const food = this.currentState.food;
+    const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
+    const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
+    drawCleanFood(g, foodX, foodY, CELL_SIZE, this.frameCount);
 
-    // Draw trail particles (behind everything else)
-    this.drawTrailParticles(g);
+    drawCleanSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount);
 
-    // Draw shockwaves (behind food and snake)
-    this.drawShockWaves(g);
+    drawCleanVignette(g, width, height);
 
-    // Draw snake afterimages (ghost trail)
-    this.drawSnakeAfterimages(g);
+    const score = this.currentState.score || 0;
+    const snakeLength = this.currentState.snake.length;
+    drawCleanHUD(g, score, snakeLength, width, this.frameCount, this.drawDigit.bind(this));
 
-    // Draw flame particles (burning trail behind snake)
-    this.drawFlameParticles(g);
-
-    // Draw thrown food animation (flying food)
-    this.drawThrownFood(g);
-
-    // Food with enhanced glow, particles and energy tendrils (only if landed or no animation)
-    this.drawFood(g);
-
-    // Draw mystical bees swarming around food
-    this.drawBees(g);
-
-    // Snake with trail and scale effects
-    this.drawSnake(g);
-
-    // Draw energy field around snake (pulsing aura)
-    this.drawEnergyField(g);
-
-    // Draw electric arcs between snake segments
-    this.drawSnakeElectricity(g);
-
-    // Draw lightning bolts (on top)
-    this.drawLightningBolts(g);
-
-    // Draw food burst particles (dramatic on-eat effect)
-    this.drawFoodBurst(g);
-
-    // Draw chromatic aberration overlay on snake
-    if (this.chromaticIntensity > 0) {
-      this.drawChromaticAberration(g);
-    }
-
-    // Chaos explosions
-    this.drawChaosExplosions(g);
-
-    // Screen flash effect (on eating food)
-    if (this.screenFlashAlpha > 0) {
-      g.fillStyle(COLORS.screenFlash, this.screenFlashAlpha * 0.3);
-      g.fillRect(0, 0, width, height);
-    }
-
-    // Chaos overlay (red tint during intense moments)
-    this.drawChaosOverlay(g, width, height);
-
-    // Death debris particles
-    this.updateDeathDebris();
-    this.drawDeathDebris(g);
-
-    // Draw HUD (score and length display)
-    this.drawHUD(g, width);
-
-    // Game over overlay with animation
     if (this.currentState.gameOver) {
       this.drawGameOver(g, width, height);
       this.drawScoreboard(g, width, height);
     }
 
-    // Check and save high scores
     this.checkAndSaveHighScore();
-
     this.needsRedraw = false;
   }
 
