@@ -252,8 +252,8 @@ interface MysticalBee {
   sparkleTimer: number;
 }
 
-// Ghost snake - spectral AI companion snake that roams the board
-interface GhostSnake {
+// Rival snake - spectral AI nemesis that competes for food
+interface RivalSnake {
   segments: { x: number; y: number }[];
   direction: { dx: number; dy: number };
   targetX: number;
@@ -264,10 +264,15 @@ interface GhostSnake {
   glowIntensity: number;
   hue: number;
   trail: { x: number; y: number; alpha: number }[];
+  energyTrail: { x: number; y: number; alpha: number; size: number }[];
+  state: 'hunting' | 'fleeing' | 'circling';
+  aggression: number;
+  nearMissTimer: number;
+  electricArcs: { x1: number; y1: number; x2: number; y2: number; life: number }[];
 }
 
-const GHOST_SNAKE_LENGTH = 8;
-const GHOST_MOVE_INTERVAL = 12;
+const RIVAL_SNAKE_LENGTH = 10;
+const RIVAL_MOVE_INTERVAL = 8;
 
 // Armageddon Chaos effect types
 interface GroundFissure {
@@ -414,8 +419,8 @@ export class SnakeScene extends Phaser.Scene {
   private lastFoodPos: Position | null = null;
   // Mystical bees swarming around
   private bees: MysticalBee[] = [];
-  // Ghost snake - spectral AI companion
-  private ghostSnake: GhostSnake | null = null;
+  // Rival snake - spectral AI nemesis
+  private rivalSnake: RivalSnake | null = null;
   // Scoreboard system
   private highScores: HighScoreEntry[] = [];
   private highScoresLoaded = false;
@@ -449,7 +454,7 @@ export class SnakeScene extends Phaser.Scene {
     this.initSmokeParticles();
     this.initMonsterShadows();
     this.initBees();
-    this.initGhostSnake();
+    this.initRivalSnake();
     this.initArmageddonEffects();
 
     if (this.currentState) {
@@ -838,203 +843,337 @@ export class SnakeScene extends Phaser.Scene {
     this.bees = [];
   }
 
-  private initGhostSnake(): void {
+  private initRivalSnake(): void {
     const width = GRID_SIZE * CELL_SIZE;
     const height = GRID_SIZE * CELL_SIZE;
 
-    const startX = 50 + Math.random() * (width - 100);
-    const startY = 50 + Math.random() * (height - 100);
+    const startX = width - 50 - Math.random() * 50;
+    const startY = height - 50 - Math.random() * 50;
 
     const segments: { x: number; y: number }[] = [];
-    for (let i = 0; i < GHOST_SNAKE_LENGTH; i++) {
+    for (let i = 0; i < RIVAL_SNAKE_LENGTH; i++) {
       segments.push({
-        x: startX - i * CELL_SIZE * 0.6,
+        x: startX + i * CELL_SIZE * 0.6,
         y: startY,
       });
     }
 
-    this.ghostSnake = {
+    this.rivalSnake = {
       segments,
-      direction: { dx: 1, dy: 0 },
+      direction: { dx: -1, dy: 0 },
       targetX: width / 2,
       targetY: height / 2,
       moveTimer: 0,
-      moveInterval: GHOST_MOVE_INTERVAL,
+      moveInterval: RIVAL_MOVE_INTERVAL,
       pulsePhase: 0,
-      glowIntensity: 0.6,
-      hue: 15,
+      glowIntensity: 0.8,
+      hue: 200,
       trail: [],
+      energyTrail: [],
+      state: 'hunting',
+      aggression: 0.5,
+      nearMissTimer: 0,
+      electricArcs: [],
     };
   }
 
-  private updateGhostSnake(): void {
-    if (!this.ghostSnake || !this.currentState) return;
+  private updateRivalSnake(): void {
+    if (!this.rivalSnake || !this.currentState) return;
 
-    const gs = this.ghostSnake;
+    const rs = this.rivalSnake;
     const width = GRID_SIZE * CELL_SIZE;
     const height = GRID_SIZE * CELL_SIZE;
 
-    gs.pulsePhase += 0.08;
-    gs.glowIntensity = 0.5 + Math.sin(gs.pulsePhase) * 0.2;
+    rs.pulsePhase += 0.1;
+    rs.glowIntensity = 0.6 + Math.sin(rs.pulsePhase) * 0.3;
 
-    if (gs.segments.length > 0) {
-      gs.trail.unshift({ x: gs.segments[0].x, y: gs.segments[0].y, alpha: 0.5 });
-      if (gs.trail.length > 15) gs.trail.pop();
+    if (rs.segments.length > 0) {
+      rs.trail.unshift({ x: rs.segments[0].x, y: rs.segments[0].y, alpha: 0.7 });
+      if (rs.trail.length > 20) rs.trail.pop();
+
+      rs.energyTrail.unshift({
+        x: rs.segments[0].x + (Math.random() - 0.5) * 8,
+        y: rs.segments[0].y + (Math.random() - 0.5) * 8,
+        alpha: 0.8,
+        size: 3 + Math.random() * 4
+      });
+      if (rs.energyTrail.length > 30) rs.energyTrail.pop();
     }
 
-    for (const t of gs.trail) {
-      t.alpha *= 0.9;
+    for (const t of rs.trail) {
+      t.alpha *= 0.92;
     }
-    gs.trail = gs.trail.filter(t => t.alpha > 0.02);
+    rs.trail = rs.trail.filter(t => t.alpha > 0.02);
 
-    gs.moveTimer++;
-    if (gs.moveTimer >= gs.moveInterval) {
-      gs.moveTimer = 0;
+    for (const e of rs.energyTrail) {
+      e.alpha *= 0.88;
+      e.size *= 0.95;
+    }
+    rs.energyTrail = rs.energyTrail.filter(e => e.alpha > 0.02);
 
-      if (Math.random() < 0.15) {
-        if (Math.random() < 0.3) {
-          const foodX = this.currentState.food.x * CELL_SIZE + CELL_SIZE / 2;
-          const foodY = this.currentState.food.y * CELL_SIZE + CELL_SIZE / 2;
-          const angle = Math.random() * Math.PI * 2;
-          gs.targetX = foodX + Math.cos(angle) * 60;
-          gs.targetY = foodY + Math.sin(angle) * 60;
-        } else {
-          gs.targetX = 40 + Math.random() * (width - 80);
-          gs.targetY = 40 + Math.random() * (height - 80);
-        }
+    rs.electricArcs = rs.electricArcs.filter(arc => {
+      arc.life -= 0.15;
+      return arc.life > 0;
+    });
+
+    if (rs.nearMissTimer > 0) rs.nearMissTimer--;
+
+    const playerHead = this.currentState.snake[0];
+    const playerX = playerHead.x * CELL_SIZE + CELL_SIZE / 2;
+    const playerY = playerHead.y * CELL_SIZE + CELL_SIZE / 2;
+    const rivalHead = rs.segments[0];
+    const distToPlayer = Math.sqrt(
+      Math.pow(playerX - rivalHead.x, 2) + Math.pow(playerY - rivalHead.y, 2)
+    );
+
+    if (distToPlayer < 60 && rs.nearMissTimer === 0) {
+      rs.nearMissTimer = 30;
+      rs.electricArcs.push({
+        x1: rivalHead.x,
+        y1: rivalHead.y,
+        x2: playerX,
+        y2: playerY,
+        life: 1.0
+      });
+      rs.aggression = Math.min(1.0, rs.aggression + 0.1);
+    }
+
+    rs.moveTimer++;
+    if (rs.moveTimer >= rs.moveInterval) {
+      rs.moveTimer = 0;
+
+      const foodX = this.currentState.food.x * CELL_SIZE + CELL_SIZE / 2;
+      const foodY = this.currentState.food.y * CELL_SIZE + CELL_SIZE / 2;
+      const distToFood = Math.sqrt(
+        Math.pow(foodX - rivalHead.x, 2) + Math.pow(foodY - rivalHead.y, 2)
+      );
+
+      if (distToPlayer < 80) {
+        rs.state = 'fleeing';
+        const fleeAngle = Math.atan2(rivalHead.y - playerY, rivalHead.x - playerX);
+        rs.targetX = rivalHead.x + Math.cos(fleeAngle) * 100;
+        rs.targetY = rivalHead.y + Math.sin(fleeAngle) * 100;
+      } else if (distToFood < 150 || rs.aggression > 0.7) {
+        rs.state = 'hunting';
+        rs.targetX = foodX;
+        rs.targetY = foodY;
+      } else {
+        rs.state = 'circling';
+        const circleAngle = rs.pulsePhase * 0.3;
+        rs.targetX = width / 2 + Math.cos(circleAngle) * 120;
+        rs.targetY = height / 2 + Math.sin(circleAngle) * 120;
       }
 
-      const head = gs.segments[0];
-      const dx = gs.targetX - head.x;
-      const dy = gs.targetY - head.y;
+      rs.targetX = Math.max(30, Math.min(width - 30, rs.targetX));
+      rs.targetY = Math.max(30, Math.min(height - 30, rs.targetY));
+
+      const dx = rs.targetX - rivalHead.x;
+      const dy = rs.targetY - rivalHead.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (dist > 5) {
         const targetDx = dx / dist;
         const targetDy = dy / dist;
+        const turnSpeed = rs.state === 'fleeing' ? 0.5 : 0.35;
 
-        gs.direction.dx = gs.direction.dx * 0.7 + targetDx * 0.3;
-        gs.direction.dy = gs.direction.dy * 0.7 + targetDy * 0.3;
+        rs.direction.dx = rs.direction.dx * (1 - turnSpeed) + targetDx * turnSpeed;
+        rs.direction.dy = rs.direction.dy * (1 - turnSpeed) + targetDy * turnSpeed;
 
-        const len = Math.sqrt(gs.direction.dx * gs.direction.dx + gs.direction.dy * gs.direction.dy);
+        const len = Math.sqrt(rs.direction.dx * rs.direction.dx + rs.direction.dy * rs.direction.dy);
         if (len > 0) {
-          gs.direction.dx /= len;
-          gs.direction.dy /= len;
+          rs.direction.dx /= len;
+          rs.direction.dy /= len;
         }
       }
 
-      const moveSpeed = CELL_SIZE * 0.5;
+      const moveSpeed = rs.state === 'fleeing' ? CELL_SIZE * 0.7 : CELL_SIZE * 0.55;
       const newHead = {
-        x: head.x + gs.direction.dx * moveSpeed,
-        y: head.y + gs.direction.dy * moveSpeed,
+        x: rivalHead.x + rs.direction.dx * moveSpeed,
+        y: rivalHead.y + rs.direction.dy * moveSpeed,
       };
 
-      if (newHead.x < -20) newHead.x = width + 20;
-      if (newHead.x > width + 20) newHead.x = -20;
-      if (newHead.y < -20) newHead.y = height + 20;
-      if (newHead.y > height + 20) newHead.y = -20;
+      if (newHead.x < 10) newHead.x = width - 10;
+      if (newHead.x > width - 10) newHead.x = 10;
+      if (newHead.y < 10) newHead.y = height - 10;
+      if (newHead.y > height - 10) newHead.y = 10;
 
-      gs.segments.unshift(newHead);
-      gs.segments.pop();
+      rs.segments.unshift(newHead);
+      rs.segments.pop();
     } else {
-      const head = gs.segments[0];
+      const head = rs.segments[0];
       const moveSpeed = CELL_SIZE * 0.5;
 
-      head.x += gs.direction.dx * moveSpeed * 0.05;
-      head.y += gs.direction.dy * moveSpeed * 0.05;
+      head.x += rs.direction.dx * moveSpeed * 0.06;
+      head.y += rs.direction.dy * moveSpeed * 0.06;
 
-      for (let i = 1; i < gs.segments.length; i++) {
-        const seg = gs.segments[i];
-        const prev = gs.segments[i - 1];
-        const pullStrength = 0.15;
+      for (let i = 1; i < rs.segments.length; i++) {
+        const seg = rs.segments[i];
+        const prev = rs.segments[i - 1];
+        const pullStrength = 0.18;
         seg.x += (prev.x - seg.x) * pullStrength;
         seg.y += (prev.y - seg.y) * pullStrength;
       }
     }
 
     if (this.currentState.gameOver) {
-      gs.hue = 0;
-      gs.glowIntensity *= 0.95;
+      rs.hue = 180;
+      rs.glowIntensity *= 0.95;
+      rs.state = 'circling';
     } else {
-      gs.hue = 15 + Math.sin(gs.pulsePhase * 0.5) * 15;
+      rs.hue = rs.state === 'hunting' ? 190 : (rs.state === 'fleeing' ? 220 : 200);
+      rs.hue += Math.sin(rs.pulsePhase * 0.5) * 10;
     }
+
+    rs.aggression *= 0.998;
   }
 
-  private drawGhostSnake(g: Phaser.GameObjects.Graphics): void {
-    if (!this.ghostSnake || this.ghostSnake.segments.length === 0) return;
+  private drawRivalSnake(g: Phaser.GameObjects.Graphics): void {
+    if (!this.rivalSnake || this.rivalSnake.segments.length === 0) return;
 
-    const gs = this.ghostSnake;
-    const pulse = gs.glowIntensity;
+    const rs = this.rivalSnake;
+    const pulse = rs.glowIntensity;
 
-    // Draw trail
-    for (let i = 0; i < gs.trail.length; i++) {
-      const t = gs.trail[i];
-      const trailSize = 4 * (1 - i / gs.trail.length);
-      g.fillStyle(this.hslToHex(gs.hue, 70, 60), t.alpha * 0.3);
-      g.fillCircle(t.x, t.y, trailSize * 1.5);
+    for (const arc of rs.electricArcs) {
+      this.drawElectricArc(g, arc.x1, arc.y1, arc.x2, arc.y2, arc.life);
     }
 
-    // Draw connecting ribbon
-    g.lineStyle(12, this.hslToHex(gs.hue, 60, 50), 0.15 * pulse);
+    for (const e of rs.energyTrail) {
+      g.fillStyle(this.hslToHex(rs.hue + 20, 80, 70), e.alpha * 0.6);
+      g.fillCircle(e.x, e.y, e.size);
+      g.fillStyle(this.hslToHex(rs.hue, 90, 85), e.alpha * 0.3);
+      g.fillCircle(e.x, e.y, e.size * 0.5);
+    }
+
+    for (let i = 0; i < rs.trail.length; i++) {
+      const t = rs.trail[i];
+      const trailSize = 5 * (1 - i / rs.trail.length);
+      g.fillStyle(this.hslToHex(rs.hue, 80, 55), t.alpha * 0.4);
+      g.fillCircle(t.x, t.y, trailSize * 2);
+      g.fillStyle(this.hslToHex(rs.hue + 30, 70, 70), t.alpha * 0.2);
+      g.fillCircle(t.x, t.y, trailSize);
+    }
+
+    g.lineStyle(14, this.hslToHex(rs.hue, 70, 40), 0.2 * pulse);
     g.beginPath();
-    g.moveTo(gs.segments[0].x, gs.segments[0].y);
-    for (let i = 1; i < gs.segments.length; i++) {
-      g.lineTo(gs.segments[i].x, gs.segments[i].y);
+    g.moveTo(rs.segments[0].x, rs.segments[0].y);
+    for (let i = 1; i < rs.segments.length; i++) {
+      g.lineTo(rs.segments[i].x, rs.segments[i].y);
     }
     g.strokePath();
 
-    g.lineStyle(6, this.hslToHex(gs.hue, 70, 65), 0.25 * pulse);
+    g.lineStyle(8, this.hslToHex(rs.hue, 80, 55), 0.35 * pulse);
     g.beginPath();
-    g.moveTo(gs.segments[0].x, gs.segments[0].y);
-    for (let i = 1; i < gs.segments.length; i++) {
-      g.lineTo(gs.segments[i].x, gs.segments[i].y);
+    g.moveTo(rs.segments[0].x, rs.segments[0].y);
+    for (let i = 1; i < rs.segments.length; i++) {
+      g.lineTo(rs.segments[i].x, rs.segments[i].y);
     }
     g.strokePath();
 
-    // Draw segments
-    for (let i = gs.segments.length - 1; i >= 0; i--) {
-      const seg = gs.segments[i];
-      const t = gs.segments.length > 1 ? i / (gs.segments.length - 1) : 1;
-      const segmentPulse = pulse * (0.7 + Math.sin(gs.pulsePhase + i * 0.5) * 0.3);
+    for (let i = rs.segments.length - 1; i >= 0; i--) {
+      const seg = rs.segments[i];
+      const t = rs.segments.length > 1 ? i / (rs.segments.length - 1) : 1;
+      const segmentPulse = pulse * (0.8 + Math.sin(rs.pulsePhase + i * 0.4) * 0.2);
 
-      const baseSize = 6 + t * 4;
-      const size = baseSize * (0.9 + segmentPulse * 0.2);
+      const baseSize = 7 + t * 5;
+      const size = baseSize * (0.9 + segmentPulse * 0.15);
 
-      g.fillStyle(this.hslToHex(gs.hue, 50, 40), 0.1 * segmentPulse);
-      g.fillCircle(seg.x, seg.y, size * 2.5);
+      g.fillStyle(this.hslToHex(rs.hue - 10, 60, 35), 0.15 * segmentPulse);
+      g.fillCircle(seg.x, seg.y, size * 2.8);
 
-      g.fillStyle(this.hslToHex(gs.hue, 60, 55), 0.2 * segmentPulse);
-      g.fillCircle(seg.x, seg.y, size * 1.5);
+      g.fillStyle(this.hslToHex(rs.hue, 75, 50), 0.3 * segmentPulse);
+      g.fillCircle(seg.x, seg.y, size * 1.6);
 
-      g.fillStyle(this.hslToHex(gs.hue, 70, 70), 0.5 * segmentPulse);
+      g.fillStyle(this.hslToHex(rs.hue + 10, 85, 65), 0.6 * segmentPulse);
       g.fillCircle(seg.x, seg.y, size);
 
-      g.fillStyle(this.hslToHex(gs.hue + 30, 50, 85), 0.4 * segmentPulse);
-      g.fillCircle(seg.x, seg.y, size * 0.4);
+      g.fillStyle(this.hslToHex(rs.hue + 40, 60, 90), 0.5 * segmentPulse);
+      g.fillCircle(seg.x, seg.y, size * 0.35);
 
-      // Head features
       if (i === 0) {
-        const dx = gs.direction.dx;
-        const dy = gs.direction.dy;
+        const dx = rs.direction.dx;
+        const dy = rs.direction.dy;
         const perpX = -dy;
         const perpY = dx;
 
-        const eyeOffset = 3;
-        const eyeForward = 4;
+        g.fillStyle(this.hslToHex(rs.hue, 90, 70), 0.3);
+        g.fillCircle(seg.x - dx * 3, seg.y - dy * 3, size * 1.8);
+
+        const eyeOffset = 4;
+        const eyeForward = 5;
         const leftEyeX = seg.x + perpX * eyeOffset + dx * eyeForward;
         const leftEyeY = seg.y + perpY * eyeOffset + dy * eyeForward;
         const rightEyeX = seg.x - perpX * eyeOffset + dx * eyeForward;
         const rightEyeY = seg.y - perpY * eyeOffset + dy * eyeForward;
 
-        g.fillStyle(this.hslToHex(gs.hue + 60, 80, 80), 0.7 * segmentPulse);
-        g.fillCircle(leftEyeX, leftEyeY, 2.5);
-        g.fillCircle(rightEyeX, rightEyeY, 2.5);
+        const eyeColor = rs.state === 'hunting' ? 0xff4444 :
+                         rs.state === 'fleeing' ? 0xffff44 : 0x44ffff;
 
-        g.fillStyle(0xffffff, 0.8 * segmentPulse);
-        g.fillCircle(leftEyeX, leftEyeY, 1);
-        g.fillCircle(rightEyeX, rightEyeY, 1);
+        g.fillStyle(0x000000, 0.9 * segmentPulse);
+        g.fillCircle(leftEyeX, leftEyeY, 4);
+        g.fillCircle(rightEyeX, rightEyeY, 4);
+
+        g.fillStyle(eyeColor, 0.9 * segmentPulse);
+        g.fillCircle(leftEyeX, leftEyeY, 3);
+        g.fillCircle(rightEyeX, rightEyeY, 3);
+
+        g.fillStyle(0xffffff, 0.95 * segmentPulse);
+        g.fillCircle(leftEyeX + dx, leftEyeY + dy, 1.2);
+        g.fillCircle(rightEyeX + dx, rightEyeY + dy, 1.2);
+
+        const hornLength = 8;
+        const hornAngle = 0.4;
+        g.lineStyle(3, this.hslToHex(rs.hue - 20, 70, 45), 0.8 * segmentPulse);
+        g.beginPath();
+        g.moveTo(seg.x + perpX * 5, seg.y + perpY * 5);
+        g.lineTo(
+          seg.x + perpX * 5 + Math.cos(Math.atan2(dy, dx) - hornAngle) * hornLength,
+          seg.y + perpY * 5 + Math.sin(Math.atan2(dy, dx) - hornAngle) * hornLength
+        );
+        g.strokePath();
+        g.beginPath();
+        g.moveTo(seg.x - perpX * 5, seg.y - perpY * 5);
+        g.lineTo(
+          seg.x - perpX * 5 + Math.cos(Math.atan2(dy, dx) + hornAngle) * hornLength,
+          seg.y - perpY * 5 + Math.sin(Math.atan2(dy, dx) + hornAngle) * hornLength
+        );
+        g.strokePath();
       }
     }
+  }
+
+  private drawElectricArc(g: Phaser.GameObjects.Graphics, x1: number, y1: number, x2: number, y2: number, life: number): void {
+    const segments = 6;
+    const dx = (x2 - x1) / segments;
+    const dy = (y2 - y1) / segments;
+    const jitter = 15 * life;
+
+    g.lineStyle(4, 0x00ffff, 0.2 * life);
+    g.beginPath();
+    g.moveTo(x1, y1);
+    for (let i = 1; i < segments; i++) {
+      const jx = (Math.random() - 0.5) * jitter;
+      const jy = (Math.random() - 0.5) * jitter;
+      g.lineTo(x1 + dx * i + jx, y1 + dy * i + jy);
+    }
+    g.lineTo(x2, y2);
+    g.strokePath();
+
+    g.lineStyle(2, 0x88ffff, 0.5 * life);
+    g.beginPath();
+    g.moveTo(x1, y1);
+    for (let i = 1; i < segments; i++) {
+      const jx = (Math.random() - 0.5) * jitter * 0.5;
+      const jy = (Math.random() - 0.5) * jitter * 0.5;
+      g.lineTo(x1 + dx * i + jx, y1 + dy * i + jy);
+    }
+    g.lineTo(x2, y2);
+    g.strokePath();
+
+    g.lineStyle(1, 0xffffff, 0.8 * life);
+    g.beginPath();
+    g.moveTo(x1, y1);
+    g.lineTo(x2, y2);
+    g.strokePath();
   }
 
   private spawnBee(): void {
