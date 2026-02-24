@@ -68,6 +68,24 @@ export interface Snowball {
   trail: { x: number; y: number; alpha: number }[];
 }
 
+export interface BloodPuddle {
+  x: number;
+  y: number;
+  size: number;
+  alpha: number;
+  age: number;
+}
+
+export interface RedFogParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  alpha: number;
+  pulsePhase: number;
+}
+
 export interface DramaRing {
   x: number;
   y: number;
@@ -134,6 +152,9 @@ const MAX_SNOWFLAKES = 30;
 const MAX_SNOWBALLS = 3;
 const SNOWBALL_TRAIL_LENGTH = 8;
 const SNOWBALL_SPAWN_CHANCE = 0.008;
+const MAX_BLOOD_PUDDLES = 40;
+const BLOOD_PUDDLE_FADE_RATE = 0.003;
+const MAX_RED_FOG = 15;
 
 export function createCleanEffectsState() {
   return {
@@ -145,6 +166,8 @@ export function createCleanEffectsState() {
     blood: [] as BloodSplatter[],
     snowflakes: [] as Snowflake[],
     snowballs: [] as Snowball[],
+    bloodPuddles: [] as BloodPuddle[],
+    redFog: [] as RedFogParticle[],
     screenShake: 0,
     frameCount: 0,
   };
@@ -863,3 +886,221 @@ export function drawCleanHUD(
     xPos += digitSpacing * 0.9;
   }
 }
+
+export function spawnBloodPuddle(state: CleanEffectsState, x: number, y: number): void {
+  if (state.bloodPuddles.length >= MAX_BLOOD_PUDDLES) {
+    state.bloodPuddles.shift();
+  }
+  state.bloodPuddles.push({
+    x: x + (Math.random() - 0.5) * 4,
+    y: y + (Math.random() - 0.5) * 4,
+    size: 3 + Math.random() * 5,
+    alpha: 0.5 + Math.random() * 0.3,
+    age: 0,
+  });
+}
+
+export function updateBloodPuddles(state: CleanEffectsState): void {
+  for (let i = state.bloodPuddles.length - 1; i >= 0; i--) {
+    const puddle = state.bloodPuddles[i];
+    puddle.age += 1;
+    puddle.alpha -= BLOOD_PUDDLE_FADE_RATE;
+    puddle.size += 0.02;
+
+    if (puddle.alpha <= 0) {
+      state.bloodPuddles.splice(i, 1);
+    }
+  }
+}
+
+export function drawBloodPuddles(
+  g: Phaser.GameObjects.Graphics,
+  state: CleanEffectsState
+): void {
+  for (const puddle of state.bloodPuddles) {
+    g.fillStyle(CLEAN_COLORS.bloodDark, puddle.alpha * 0.4);
+    g.fillCircle(puddle.x, puddle.y, puddle.size * 1.3);
+
+    g.fillStyle(CLEAN_COLORS.blood, puddle.alpha * 0.7);
+    g.fillCircle(puddle.x, puddle.y, puddle.size);
+
+    g.fillStyle(0xff1111, puddle.alpha * 0.3);
+    g.fillCircle(puddle.x - puddle.size * 0.2, puddle.y - puddle.size * 0.2, puddle.size * 0.4);
+  }
+}
+
+export function initRedFog(state: CleanEffectsState, width: number, height: number): void {
+  state.redFog = [];
+  for (let i = 0; i < MAX_RED_FOG; i++) {
+    state.redFog.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.2,
+      vy: (Math.random() - 0.5) * 0.15,
+      size: 30 + Math.random() * 50,
+      alpha: 0.02 + Math.random() * 0.04,
+      pulsePhase: Math.random() * Math.PI * 2,
+    });
+  }
+}
+
+export function updateRedFog(state: CleanEffectsState, width: number, height: number): void {
+  for (const fog of state.redFog) {
+    fog.x += fog.vx;
+    fog.y += fog.vy;
+    fog.pulsePhase += 0.015;
+
+    if (fog.x < -fog.size) fog.x = width + fog.size;
+    if (fog.x > width + fog.size) fog.x = -fog.size;
+    if (fog.y < -fog.size) fog.y = height + fog.size;
+    if (fog.y > height + fog.size) fog.y = -fog.size;
+  }
+}
+
+export function drawRedFog(
+  g: Phaser.GameObjects.Graphics,
+  state: CleanEffectsState
+): void {
+  for (const fog of state.redFog) {
+    const pulse = 0.5 + Math.sin(fog.pulsePhase) * 0.5;
+    const alpha = fog.alpha * pulse;
+
+    g.fillStyle(0x440000, alpha);
+    g.fillCircle(fog.x, fog.y, fog.size);
+
+    g.fillStyle(0x660000, alpha * 0.5);
+    g.fillCircle(fog.x, fog.y, fog.size * 0.6);
+  }
+}
+
+export function heartBeatScale(frameCount: number): number {
+  const cycle = (frameCount % 60) / 60;
+  if (cycle < 0.1) return 1 + cycle * 3;
+  if (cycle < 0.2) return 1.3 - (cycle - 0.1) * 5;
+  if (cycle < 0.3) return 0.8 + (cycle - 0.2) * 3.5;
+  if (cycle < 0.4) return 1.15 - (cycle - 0.3) * 2.5;
+  return 0.9 + (cycle - 0.4) * (0.1 / 0.6);
+}
+
+export function drawBeatingHeart(
+  g: Phaser.GameObjects.Graphics,
+  foodX: number,
+  foodY: number,
+  cellSize: number,
+  frameCount: number
+): void {
+  const beat = heartBeatScale(frameCount);
+  const baseSize = cellSize * 0.4;
+  const size = baseSize * beat;
+
+  g.fillStyle(0x330000, 0.3 * beat);
+  g.fillCircle(foodX, foodY, size * 2.5);
+
+  g.fillStyle(0x660000, 0.2 * beat);
+  g.fillCircle(foodX, foodY, size * 1.8);
+
+  const lobeOffset = size * 0.35;
+  const lobeRadius = size * 0.5;
+
+  g.fillStyle(0x8b0000, 0.9);
+  g.fillCircle(foodX - lobeOffset, foodY - size * 0.15, lobeRadius);
+  g.fillCircle(foodX + lobeOffset, foodY - size * 0.15, lobeRadius);
+
+  g.beginPath();
+  g.moveTo(foodX - lobeOffset - lobeRadius * 0.7, foodY);
+  g.lineTo(foodX, foodY + size * 0.85);
+  g.lineTo(foodX + lobeOffset + lobeRadius * 0.7, foodY);
+  g.closePath();
+  g.fillStyle(0x8b0000, 0.9);
+  g.fillPath();
+
+  g.fillStyle(0xcc0000, 0.4);
+  g.fillCircle(foodX - lobeOffset * 0.5, foodY - size * 0.2, lobeRadius * 0.35);
+
+  const veinAlpha = 0.3 + Math.sin(frameCount * 0.15) * 0.15;
+  g.lineStyle(1, 0x550000, veinAlpha);
+  g.lineBetween(foodX, foodY + size * 0.3, foodX - size * 0.3, foodY + size * 0.7);
+  g.lineBetween(foodX, foodY + size * 0.3, foodX + size * 0.2, foodY + size * 0.6);
+  g.lineBetween(foodX, foodY - size * 0.1, foodX, foodY + size * 0.4);
+}
+
+export function drawHorrorSnake(
+  g: Phaser.GameObjects.Graphics,
+  snake: { x: number; y: number }[],
+  cellSize: number,
+  frameCount: number
+): void {
+  const snakeLen = snake.length;
+  if (snakeLen === 0) return;
+
+  for (let i = snakeLen - 1; i >= 0; i--) {
+    const segment = snake[i];
+    const centerX = segment.x * cellSize + cellSize / 2;
+    const centerY = segment.y * cellSize + cellSize / 2;
+    const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
+
+    const glowAlpha = 0.12 * (1 - t * 0.5);
+    const glowSize = (cellSize / 2 + 6) * (0.6 + t * 0.4);
+    g.fillStyle(0x440000, glowAlpha);
+    g.fillCircle(centerX, centerY, glowSize);
+  }
+
+  for (let i = snakeLen - 1; i >= 0; i--) {
+    const segment = snake[i];
+    const centerX = segment.x * cellSize + cellSize / 2;
+    const centerY = segment.y * cellSize + cellSize / 2;
+    const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
+    const radius = (cellSize / 2 - 2) * (0.8 + t * 0.2);
+
+    const bodyGreen = lerpColor(0x005522, 0x003311, t);
+    g.fillStyle(bodyGreen, 0.95);
+    g.fillCircle(centerX, centerY, radius);
+
+    const scaleAlpha = 0.15 + Math.sin(frameCount * 0.05 + i * 0.5) * 0.08;
+    g.fillStyle(0x002211, scaleAlpha);
+    g.fillCircle(centerX + radius * 0.2, centerY + radius * 0.1, radius * 0.5);
+
+    if (i === 0) {
+      const pulse = 0.4 + Math.sin(frameCount * 0.12) * 0.15;
+      g.fillStyle(0x330000, pulse);
+      g.fillCircle(centerX, centerY, radius + 4);
+
+      g.fillStyle(0x004422, 1);
+      g.fillCircle(centerX, centerY, radius);
+
+      g.fillStyle(0x001a0f, 0.3);
+      g.fillCircle(centerX + radius * 0.15, centerY + radius * 0.1, radius * 0.6);
+
+      const eyeSpread = radius * 0.45;
+      const eyeY = centerY - radius * 0.15;
+      const eyeRadius = radius * 0.22;
+
+      g.fillStyle(0xcc0000, 0.9);
+      g.fillCircle(centerX - eyeSpread, eyeY, eyeRadius);
+      g.fillCircle(centerX + eyeSpread, eyeY, eyeRadius);
+
+      g.fillStyle(0xff0000, pulse + 0.3);
+      g.fillCircle(centerX - eyeSpread, eyeY, eyeRadius * 0.5);
+      g.fillCircle(centerX + eyeSpread, eyeY, eyeRadius * 0.5);
+
+      g.fillStyle(0x000000, 0.9);
+      g.fillCircle(centerX - eyeSpread, eyeY, eyeRadius * 0.3);
+      g.fillCircle(centerX + eyeSpread, eyeY, eyeRadius * 0.3);
+    }
+  }
+}
+
+function lerpColor(color1: number, color2: number, t: number): number {
+  const r1 = (color1 >> 16) & 0xff;
+  const g1 = (color1 >> 8) & 0xff;
+  const b1 = color1 & 0xff;
+  const r2 = (color2 >> 16) & 0xff;
+  const g2 = (color2 >> 8) & 0xff;
+  const b2 = color2 & 0xff;
+  const r = Math.round(r1 + (r2 - r1) * t);
+  const g = Math.round(g1 + (g2 - g1) * t);
+  const b = Math.round(b1 + (b2 - b1) * t);
+  return (r << 16) | (g << 8) | b;
+}
+
+export { lerpColor };

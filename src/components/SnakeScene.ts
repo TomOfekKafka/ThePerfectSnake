@@ -30,6 +30,14 @@ import {
   drawCleanHUD,
   drawTears,
   drawBlood,
+  spawnBloodPuddle,
+  updateBloodPuddles,
+  drawBloodPuddles,
+  initRedFog,
+  updateRedFog,
+  drawRedFog,
+  drawBeatingHeart,
+  drawHorrorSnake,
   CLEAN_COLORS,
   CleanEffectsState,
 } from './cleanEffects';
@@ -495,6 +503,7 @@ export class SnakeScene extends Phaser.Scene {
     const height = GRID_SIZE * CELL_SIZE;
     initMotes(this.cleanEffects, width, height);
     initSnowflakes(this.cleanEffects, width, height);
+    initRedFog(this.cleanEffects, width, height);
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -2408,6 +2417,8 @@ export class SnakeScene extends Phaser.Scene {
     updateDramaRings(this.cleanEffects);
     updateTears(this.cleanEffects, height);
     updateBlood(this.cleanEffects, height);
+    updateBloodPuddles(this.cleanEffects);
+    updateRedFog(this.cleanEffects, width, height);
 
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
@@ -2416,6 +2427,7 @@ export class SnakeScene extends Phaser.Scene {
 
       if (this.lastHeadPos && (this.lastHeadPos.x !== head.x || this.lastHeadPos.y !== head.y)) {
         updateGlowTrail(this.cleanEffects, headX, headY);
+        spawnBloodPuddle(this.cleanEffects, headX, headY);
       }
       this.lastHeadPos = { x: head.x, y: head.y };
 
@@ -2424,6 +2436,8 @@ export class SnakeScene extends Phaser.Scene {
         const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
         const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
         spawnRipple(this.cleanEffects, foodX, foodY);
+        spawnBlood(this.cleanEffects, foodX, foodY, 8);
+        spawnDramaRings(this.cleanEffects, foodX, foodY);
       }
       this.lastSnakeLength = this.currentState.snake.length;
     }
@@ -2436,12 +2450,14 @@ export class SnakeScene extends Phaser.Scene {
 
     drawCleanBackground(g, width, height, this.frameCount);
     drawCleanGrid(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
+    drawRedFog(g, this.cleanEffects);
     drawMotes(g, this.cleanEffects);
     drawSnowflakes(g, this.cleanEffects);
     drawSnowballs(g, this.cleanEffects);
 
     if (!this.currentState) return;
 
+    drawBloodPuddles(g, this.cleanEffects);
     drawGlowTrail(g, this.cleanEffects);
     drawRipples(g, this.cleanEffects);
     drawDramaRings(g, this.cleanEffects);
@@ -2449,9 +2465,9 @@ export class SnakeScene extends Phaser.Scene {
     const food = this.currentState.food;
     const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
     const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
-    drawCleanFood(g, foodX, foodY, CELL_SIZE, this.frameCount);
+    drawBeatingHeart(g, foodX, foodY, CELL_SIZE, this.frameCount);
 
-    drawCleanSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount);
+    drawHorrorSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount);
 
     drawTears(g, this.cleanEffects);
     drawBlood(g, this.cleanEffects);
