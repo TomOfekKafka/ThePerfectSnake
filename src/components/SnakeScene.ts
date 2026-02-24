@@ -12,7 +12,9 @@ import {
   updateBlood,
   initSnowflakes,
   updateSnowflakes,
+  updateSnowballs,
   drawSnowflakes,
+  drawSnowballs,
   drawCleanBackground,
   drawCleanGrid,
   drawMotes,
@@ -2396,6 +2398,7 @@ export class SnakeScene extends Phaser.Scene {
 
     updateMotes(this.cleanEffects, width, height);
     updateSnowflakes(this.cleanEffects, width, height);
+    updateSnowballs(this.cleanEffects, width, height);
     updateRipples(this.cleanEffects);
     updateTears(this.cleanEffects, height);
     updateBlood(this.cleanEffects, height);
@@ -2427,6 +2430,7 @@ export class SnakeScene extends Phaser.Scene {
     drawCleanGrid(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
     drawMotes(g, this.cleanEffects);
     drawSnowflakes(g, this.cleanEffects);
+    drawSnowballs(g, this.cleanEffects);
 
     if (!this.currentState) return;
 

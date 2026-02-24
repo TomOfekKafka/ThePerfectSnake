@@ -56,6 +56,18 @@ export interface Snowflake {
   wobbleSpeed: number;
 }
 
+export interface Snowball {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  alpha: number;
+  rotation: number;
+  rotationSpeed: number;
+  trail: { x: number; y: number; alpha: number }[];
+}
+
 export const CLEAN_COLORS = {
   bgDark: 0x0d1f2d,
   bgMid: 0x1a3a4a,
@@ -105,6 +117,9 @@ const MAX_TRAIL_LENGTH = 15;
 const MAX_TEARS = 12;
 const MAX_BLOOD = 20;
 const MAX_SNOWFLAKES = 30;
+const MAX_SNOWBALLS = 3;
+const SNOWBALL_TRAIL_LENGTH = 8;
+const SNOWBALL_SPAWN_CHANCE = 0.008;
 
 export function createCleanEffectsState() {
   return {
@@ -114,6 +129,7 @@ export function createCleanEffectsState() {
     tears: [] as TearDrop[],
     blood: [] as BloodSplatter[],
     snowflakes: [] as Snowflake[],
+    snowballs: [] as Snowball[],
     frameCount: 0,
   };
 }
@@ -598,6 +614,117 @@ export function drawBlood(
       g.fillStyle(0xffffff, effectiveAlpha * 0.3);
       g.fillCircle(drop.x - drop.size * 0.3, drop.y - drop.size * 0.3, drop.size * 0.25);
     }
+  }
+}
+
+export function spawnSnowballEdge(width: number, height: number): Snowball {
+  const edge = Math.floor(Math.random() * 4);
+  let x: number, y: number, vx: number, vy: number;
+
+  const speed = 0.8 + Math.random() * 0.6;
+  const drift = (Math.random() - 0.5) * 0.4;
+
+  switch (edge) {
+    case 0: // top
+      x = Math.random() * width;
+      y = -10;
+      vx = drift;
+      vy = speed;
+      break;
+    case 1: // right
+      x = width + 10;
+      y = Math.random() * height;
+      vx = -speed;
+      vy = drift;
+      break;
+    case 2: // bottom
+      x = Math.random() * width;
+      y = height + 10;
+      vx = drift;
+      vy = -speed;
+      break;
+    default: // left
+      x = -10;
+      y = Math.random() * height;
+      vx = speed;
+      vy = drift;
+      break;
+  }
+
+  return {
+    x, y, vx, vy,
+    size: 4 + Math.random() * 3,
+    alpha: 0.7 + Math.random() * 0.3,
+    rotation: Math.random() * Math.PI * 2,
+    rotationSpeed: (Math.random() - 0.5) * 0.15,
+    trail: [],
+  };
+}
+
+export function updateSnowballs(state: CleanEffectsState, width: number, height: number): void {
+  if (state.snowballs.length < MAX_SNOWBALLS && Math.random() < SNOWBALL_SPAWN_CHANCE) {
+    state.snowballs.push(spawnSnowballEdge(width, height));
+  }
+
+  for (let i = state.snowballs.length - 1; i >= 0; i--) {
+    const ball = state.snowballs[i];
+
+    ball.trail.unshift({ x: ball.x, y: ball.y, alpha: ball.alpha * 0.5 });
+    if (ball.trail.length > SNOWBALL_TRAIL_LENGTH) {
+      ball.trail.pop();
+    }
+    for (const t of ball.trail) {
+      t.alpha *= 0.85;
+    }
+
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+    ball.rotation += ball.rotationSpeed;
+
+    const margin = 30;
+    const outOfBounds =
+      ball.x < -margin || ball.x > width + margin ||
+      ball.y < -margin || ball.y > height + margin;
+
+    if (outOfBounds) {
+      state.snowballs.splice(i, 1);
+    }
+  }
+}
+
+export function drawSnowballs(
+  g: Phaser.GameObjects.Graphics,
+  state: CleanEffectsState
+): void {
+  for (const ball of state.snowballs) {
+    for (let t = ball.trail.length - 1; t >= 0; t--) {
+      const trail = ball.trail[t];
+      const fade = 1 - t / ball.trail.length;
+      const trailSize = ball.size * 0.5 * fade;
+      g.fillStyle(CLEAN_COLORS.snowGlow, trail.alpha * 0.3 * fade);
+      g.fillCircle(trail.x, trail.y, trailSize + 2);
+      g.fillStyle(CLEAN_COLORS.snow, trail.alpha * 0.5 * fade);
+      g.fillCircle(trail.x, trail.y, trailSize);
+    }
+
+    g.fillStyle(CLEAN_COLORS.snowGlow, ball.alpha * 0.25);
+    g.fillCircle(ball.x, ball.y, ball.size * 2);
+
+    g.fillStyle(CLEAN_COLORS.snowmanBody, ball.alpha * 0.9);
+    g.fillCircle(ball.x, ball.y, ball.size);
+
+    g.fillStyle(CLEAN_COLORS.snowmanShadow, ball.alpha * 0.6);
+    g.fillCircle(ball.x + ball.size * 0.15, ball.y + ball.size * 0.15, ball.size * 0.85);
+
+    g.fillStyle(CLEAN_COLORS.snowmanBody, ball.alpha);
+    g.fillCircle(ball.x, ball.y, ball.size * 0.9);
+
+    g.fillStyle(0xffffff, ball.alpha * 0.5);
+    g.fillCircle(
+      ball.x - ball.size * 0.3,
+      ball.y - ball.size * 0.25,
+      ball.size * 0.3
+    );
   }
 }
 
