@@ -257,8 +257,8 @@ export function spawnDramaRings(state: CleanEffectsState, x: number, y: number):
       thickness: 3 - i * 0.5,
     });
   }
-  state.screenShake = 6;
 }
+
 
 export function updateDramaRings(state: CleanEffectsState): void {
   for (let i = state.dramaRings.length - 1; i >= 0; i--) {
@@ -273,12 +273,7 @@ export function updateDramaRings(state: CleanEffectsState): void {
     }
   }
 
-  if (state.screenShake > 0) {
-    state.screenShake *= 0.85;
-    if (state.screenShake < 0.3) {
-      state.screenShake = 0;
-    }
-  }
+  state.screenShake = 0;
 }
 
 export function dramaShakeOffset(state: CleanEffectsState): { x: number; y: number } {

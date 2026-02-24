@@ -83,6 +83,13 @@ import {
   drawSpaceBackground,
   SpaceBackgroundState,
 } from './spaceBackground';
+import {
+  createPulseGlowState,
+  spawnPulseGlow,
+  updatePulseGlows,
+  drawPulseGlows,
+  PulseGlowState,
+} from './pulseGlow';
 
 interface Position {
   x: number;
@@ -538,6 +545,7 @@ export class SnakeScene extends Phaser.Scene {
   private mathParticles: MathParticlesState = createMathParticlesState();
   private spaceBackground: SpaceBackgroundState = createSpaceBackgroundState();
   private dragonBreath: DragonBreathState = createDragonBreathState();
+  private pulseGlow: PulseGlowState = createPulseGlowState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -740,7 +748,6 @@ export class SnakeScene extends Phaser.Scene {
     });
 
     this.chaosIntensity = Math.min(1, this.chaosIntensity + 0.5);
-    this.screenShakeIntensity = Math.max(this.screenShakeIntensity, 12);
   }
 
   private drawArmageddonBackground(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
@@ -2041,17 +2048,9 @@ export class SnakeScene extends Phaser.Scene {
       if (this.screenFlashAlpha < 0) this.screenFlashAlpha = 0;
     }
 
-    // Update screen shake
-    if (this.screenShakeIntensity > 0) {
-      this.screenShakeX = (Math.random() - 0.5) * this.screenShakeIntensity;
-      this.screenShakeY = (Math.random() - 0.5) * this.screenShakeIntensity;
-      this.screenShakeIntensity *= 0.9;
-      if (this.screenShakeIntensity < 0.5) {
-        this.screenShakeIntensity = 0;
-        this.screenShakeX = 0;
-        this.screenShakeY = 0;
-      }
-    }
+    this.screenShakeIntensity = 0;
+    this.screenShakeX = 0;
+    this.screenShakeY = 0;
 
     // Decay chromatic aberration
     if (this.chromaticIntensity > 0) {
@@ -2113,10 +2112,11 @@ export class SnakeScene extends Phaser.Scene {
       this.spawnLightningBurst(headX, headY);
       this.spawnFoodBurst(headX, headY);
       this.spawnChaosExplosion(headX, headY); // Armageddon chaos explosion
-      this.screenFlashAlpha = 0.8; // More intense flash for armageddon
-      this.chromaticIntensity = 1.5; // Stronger chromatic aberration
-      this.energyFieldPulse = 1.0; // Trigger energy field expansion
+      this.screenFlashAlpha = 0.25;
+      this.chromaticIntensity = 1.5;
+      this.energyFieldPulse = 1.0;
       spawnDramaRings(this.cleanEffects, headX, headY);
+      spawnPulseGlow(this.pulseGlow, headX, headY, 1.0, this.hueOffset);
     }
     this.lastSnakeLength = state.snake.length;
 
@@ -2141,7 +2141,7 @@ export class SnakeScene extends Phaser.Scene {
 
     // Detect game over transition - ARMAGEDDON CHAOS death sequence
     if (state.gameOver && this.currentState && !this.currentState.gameOver) {
-      this.screenShakeIntensity = 25; // Massive screen shake on death
+      this.screenShakeIntensity = 0;
       this.chromaticIntensity = 3.0; // Maximum chromatic aberration on death
       this.chaosIntensity = 1.0; // Full chaos overlay
       this.spawnDeathExplosion(); // Dramatic death explosion
@@ -2331,7 +2331,6 @@ export class SnakeScene extends Phaser.Scene {
         tf.y = tf.targetY;
 
         // Spawn landing effects
-        this.screenShakeIntensity = Math.max(this.screenShakeIntensity, 6);
 
         // Impact rings
         tf.impactRings = [
