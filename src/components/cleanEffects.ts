@@ -45,25 +45,36 @@ export interface BloodSplatter {
   splashRadius: number;
 }
 
+export interface Snowflake {
+  x: number;
+  y: number;
+  vy: number;
+  vx: number;
+  size: number;
+  alpha: number;
+  wobblePhase: number;
+  wobbleSpeed: number;
+}
+
 export const CLEAN_COLORS = {
-  bgDark: 0x0a1628,
-  bgMid: 0x0f1d32,
-  bgLight: 0x14253e,
+  bgDark: 0x0d1f2d,
+  bgMid: 0x1a3a4a,
+  bgLight: 0x2a5a6a,
 
-  gridLine: 0x1a3050,
-  gridAccent: 0x254060,
+  gridLine: 0x1e4a5e,
+  gridAccent: 0x2e6a7e,
 
-  snakeHead: 0x4fd1c5,
-  snakeBody: 0x38b2ac,
-  snakeTail: 0x2c9a94,
-  snakeGlow: 0x81e6d9,
+  snakeHead: 0xcc2936,
+  snakeBody: 0x228b22,
+  snakeTail: 0x1a6b1a,
+  snakeGlow: 0xff6b6b,
 
-  food: 0xe2e8f0,
-  foodCore: 0xffffff,
-  foodGlow: 0xcbd5e1,
+  food: 0xffd700,
+  foodCore: 0xffec8b,
+  foodGlow: 0xffa500,
 
-  ripple: 0x81e6d9,
-  mote: 0x4fd1c5,
+  ripple: 0xffd700,
+  mote: 0xe8e8e8,
 
   text: 0xe2e8f0,
   textDim: 0x94a3b8,
@@ -72,6 +83,9 @@ export const CLEAN_COLORS = {
   bloodDark: 0x991b1b,
   tear: 0x60a5fa,
   tearHighlight: 0x93c5fd,
+
+  snow: 0xffffff,
+  snowGlow: 0xe8f4ff,
 };
 
 const MAX_RIPPLES = 5;
@@ -79,6 +93,7 @@ const MAX_MOTES = 20;
 const MAX_TRAIL_LENGTH = 15;
 const MAX_TEARS = 12;
 const MAX_BLOOD = 20;
+const MAX_SNOWFLAKES = 30;
 
 export function createCleanEffectsState() {
   return {
@@ -87,6 +102,7 @@ export function createCleanEffectsState() {
     glowTrail: [] as SnakeGlowTrail[],
     tears: [] as TearDrop[],
     blood: [] as BloodSplatter[],
+    snowflakes: [] as Snowflake[],
     frameCount: 0,
   };
 }
@@ -251,6 +267,50 @@ export function updateBlood(state: CleanEffectsState, height: number): void {
     if (drop.life <= 0 || drop.alpha < 0.02) {
       state.blood.splice(i, 1);
     }
+  }
+}
+
+export function initSnowflakes(state: CleanEffectsState, width: number, height: number): void {
+  state.snowflakes = [];
+  for (let i = 0; i < MAX_SNOWFLAKES; i++) {
+    state.snowflakes.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vy: 0.3 + Math.random() * 0.7,
+      vx: (Math.random() - 0.5) * 0.2,
+      size: 1 + Math.random() * 3,
+      alpha: 0.3 + Math.random() * 0.5,
+      wobblePhase: Math.random() * Math.PI * 2,
+      wobbleSpeed: 0.02 + Math.random() * 0.03,
+    });
+  }
+}
+
+export function updateSnowflakes(state: CleanEffectsState, width: number, height: number): void {
+  for (const flake of state.snowflakes) {
+    flake.wobblePhase += flake.wobbleSpeed;
+    flake.x += flake.vx + Math.sin(flake.wobblePhase) * 0.5;
+    flake.y += flake.vy;
+
+    if (flake.y > height + 10) {
+      flake.y = -10;
+      flake.x = Math.random() * width;
+    }
+    if (flake.x < -10) flake.x = width + 10;
+    if (flake.x > width + 10) flake.x = -10;
+  }
+}
+
+export function drawSnowflakes(
+  g: Phaser.GameObjects.Graphics,
+  state: CleanEffectsState
+): void {
+  for (const flake of state.snowflakes) {
+    g.fillStyle(CLEAN_COLORS.snowGlow, flake.alpha * 0.3);
+    g.fillCircle(flake.x, flake.y, flake.size * 2);
+
+    g.fillStyle(CLEAN_COLORS.snow, flake.alpha);
+    g.fillCircle(flake.x, flake.y, flake.size);
   }
 }
 
