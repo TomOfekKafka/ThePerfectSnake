@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { FaceDirection, FaceState, drawSnakeFace } from './snakeFace';
 
 export interface SolidSegment {
   cx: number;
@@ -100,7 +101,9 @@ function drawSolidBody(
 function drawSolidHead(
   g: Phaser.GameObjects.Graphics,
   seg: SolidSegment,
-  frameCount: number
+  frameCount: number,
+  direction: FaceDirection,
+  faceState: FaceState
 ): void {
   const breathe = 1.0 + Math.sin(frameCount * 0.08) * 0.02;
   const headSize = seg.size * breathe;
@@ -130,25 +133,7 @@ function drawSolidHead(
   const specSize = headSize * 0.18;
   g.fillRect(seg.cx - half + bevel + 1, seg.cy - half + bevel + 1, specSize, specSize);
 
-  const eyeSpread = headSize * 0.22;
-  const eyeY = seg.cy - headSize * 0.05;
-  const eyeW = headSize * 0.18;
-  const eyeH = headSize * 0.14;
-
-  g.fillStyle(0xccffcc, 0.95);
-  g.fillRect(seg.cx - eyeSpread - eyeW / 2, eyeY - eyeH / 2, eyeW, eyeH);
-  g.fillRect(seg.cx + eyeSpread - eyeW / 2, eyeY - eyeH / 2, eyeW, eyeH);
-
-  const pupilW = eyeW * 0.5;
-  const pupilH = eyeH * 0.7;
-  g.fillStyle(0x112211, 0.95);
-  g.fillRect(seg.cx - eyeSpread - pupilW / 2, eyeY - pupilH / 2, pupilW, pupilH);
-  g.fillRect(seg.cx + eyeSpread - pupilW / 2, eyeY - pupilH / 2, pupilW, pupilH);
-
-  g.fillStyle(0xffffff, 0.8);
-  const glintSize = eyeW * 0.22;
-  g.fillRect(seg.cx - eyeSpread - eyeW * 0.25, eyeY - eyeH * 0.25, glintSize, glintSize);
-  g.fillRect(seg.cx + eyeSpread - eyeW * 0.25, eyeY - eyeH * 0.25, glintSize, glintSize);
+  drawSnakeFace(g, seg, headSize, frameCount, direction, faceState);
 }
 
 function drawSolidConnectors(
@@ -207,7 +192,9 @@ export function drawSolidSnake(
   g: Phaser.GameObjects.Graphics,
   snake: { x: number; y: number }[],
   cellSize: number,
-  frameCount: number
+  frameCount: number,
+  direction: FaceDirection,
+  faceState: FaceState
 ): void {
   const len = snake.length;
   if (len === 0) return;
@@ -232,5 +219,5 @@ export function drawSolidSnake(
     drawArmorPlate(g, segments[i], frameCount);
   }
 
-  drawSolidHead(g, segments[0], frameCount);
+  drawSolidHead(g, segments[0], frameCount, direction, faceState);
 }

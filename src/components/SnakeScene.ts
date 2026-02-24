@@ -58,6 +58,12 @@ import {
 } from './depth3d';
 import { drawSolidSnake } from './solidSnake';
 import {
+  FaceState,
+  FaceDirection,
+  createFaceState,
+  updateFaceState,
+} from './snakeFace';
+import {
   createDragonBreathState,
   updateDragonBreath,
   drawDragonBreath,
@@ -90,6 +96,13 @@ import {
   drawPulseGlows,
   PulseGlowState,
 } from './pulseGlow';
+
+function dirToFaceDirection(dx: number, dy: number): FaceDirection {
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return dx >= 0 ? 'RIGHT' : 'LEFT';
+  }
+  return dy >= 0 ? 'DOWN' : 'UP';
+}
 
 interface Position {
   x: number;
@@ -546,6 +559,8 @@ export class SnakeScene extends Phaser.Scene {
   private spaceBackground: SpaceBackgroundState = createSpaceBackgroundState();
   private dragonBreath: DragonBreathState = createDragonBreathState();
   private pulseGlow: PulseGlowState = createPulseGlowState();
+  private faceState: FaceState = createFaceState();
+  private snakeDirection: FaceDirection = 'RIGHT';
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2486,6 +2501,13 @@ export class SnakeScene extends Phaser.Scene {
       }
       this.lastHeadPos = { x: head.x, y: head.y };
 
+      this.snakeDirection = dirToFaceDirection(dirX, dirY);
+      this.faceState = updateFaceState(
+        this.faceState,
+        this.frameCount,
+        this.currentState.foodEaten || 0
+      );
+
       updateDragonBreath(this.dragonBreath, headX, headY, dirX * -1, dirY * -1);
 
       if (this.lastSnakeLength > 0 && this.currentState.snake.length > this.lastSnakeLength) {
@@ -2521,7 +2543,7 @@ export class SnakeScene extends Phaser.Scene {
     drawFood3D(g, foodX, foodY, CELL_SIZE, this.frameCount);
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
 
-    drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount);
+    drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState);
     drawDragonBreath(g, this.dragonBreath);
     drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
 
