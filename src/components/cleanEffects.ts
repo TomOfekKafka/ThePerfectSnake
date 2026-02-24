@@ -86,6 +86,12 @@ export const CLEAN_COLORS = {
 
   snow: 0xffffff,
   snowGlow: 0xe8f4ff,
+
+  snowmanBody: 0xf0f8ff,
+  snowmanShadow: 0xd0e8f0,
+  snowmanNose: 0xff6b35,
+  snowmanCoal: 0x1a1a2e,
+  snowmanScarf: 0xcc2936,
 };
 
 const MAX_RIPPLES = 5;
@@ -391,6 +397,19 @@ export function drawGlowTrail(
   }
 }
 
+export function snowmanMetrics(cellSize: number, frameCount: number) {
+  const wobble = Math.sin(frameCount * 0.06) * 0.5;
+  const breathe = 1 + Math.sin(frameCount * 0.08) * 0.04;
+  const glowPulse = 0.25 + Math.sin(frameCount * 0.05) * 0.1;
+
+  const bodyRadius = (cellSize * 0.32) * breathe;
+  const headRadius = bodyRadius * 0.65;
+  const bodyY = cellSize * 0.18;
+  const headY = -(bodyRadius + headRadius * 0.7);
+
+  return { wobble, breathe, glowPulse, bodyRadius, headRadius, bodyY, headY };
+}
+
 export function drawCleanFood(
   g: Phaser.GameObjects.Graphics,
   foodX: number,
@@ -398,22 +417,69 @@ export function drawCleanFood(
   cellSize: number,
   frameCount: number
 ): void {
-  const pulseScale = 1 + Math.sin(frameCount * 0.08) * 0.1;
-  const glowPulse = 0.3 + Math.sin(frameCount * 0.06) * 0.15;
-  const foodSize = (cellSize / 2 - 2) * pulseScale;
+  const m = snowmanMetrics(cellSize, frameCount);
 
-  g.fillStyle(CLEAN_COLORS.foodGlow, glowPulse * 0.3);
-  g.fillCircle(foodX, foodY, foodSize + 12);
-  g.fillStyle(CLEAN_COLORS.foodGlow, glowPulse * 0.5);
-  g.fillCircle(foodX, foodY, foodSize + 6);
+  g.fillStyle(CLEAN_COLORS.snowGlow, m.glowPulse * 0.3);
+  g.fillCircle(foodX, foodY, cellSize * 0.7);
+  g.fillStyle(CLEAN_COLORS.snowGlow, m.glowPulse * 0.5);
+  g.fillCircle(foodX, foodY, cellSize * 0.45);
 
-  g.fillStyle(CLEAN_COLORS.food, 0.9);
-  g.fillCircle(foodX, foodY, foodSize);
-  g.fillStyle(CLEAN_COLORS.foodCore, 0.8);
-  g.fillCircle(foodX, foodY, foodSize * 0.5);
+  g.fillStyle(CLEAN_COLORS.snowmanShadow, 0.3);
+  g.fillEllipse(foodX, foodY + m.bodyY + m.bodyRadius * 0.8, m.bodyRadius * 2.2, m.bodyRadius * 0.4);
 
-  g.fillStyle(0xffffff, 0.6);
-  g.fillCircle(foodX - foodSize * 0.3, foodY - foodSize * 0.3, foodSize * 0.15);
+  g.fillStyle(CLEAN_COLORS.snowmanBody, 0.95);
+  g.fillCircle(foodX + m.wobble * 0.3, foodY + m.bodyY, m.bodyRadius);
+
+  g.fillStyle(0xffffff, 0.25);
+  g.fillCircle(
+    foodX + m.wobble * 0.3 - m.bodyRadius * 0.3,
+    foodY + m.bodyY - m.bodyRadius * 0.25,
+    m.bodyRadius * 0.3
+  );
+
+  g.fillStyle(CLEAN_COLORS.snowmanBody, 0.95);
+  g.fillCircle(foodX + m.wobble * 0.5, foodY + m.headY, m.headRadius);
+
+  g.fillStyle(0xffffff, 0.3);
+  g.fillCircle(
+    foodX + m.wobble * 0.5 - m.headRadius * 0.3,
+    foodY + m.headY - m.headRadius * 0.25,
+    m.headRadius * 0.25
+  );
+
+  const headCX = foodX + m.wobble * 0.5;
+  const headCY = foodY + m.headY;
+  const eyeSpacing = m.headRadius * 0.35;
+  const eyeY = headCY - m.headRadius * 0.1;
+  g.fillStyle(CLEAN_COLORS.snowmanCoal, 0.9);
+  g.fillCircle(headCX - eyeSpacing, eyeY, m.headRadius * 0.12);
+  g.fillCircle(headCX + eyeSpacing, eyeY, m.headRadius * 0.12);
+
+  g.fillStyle(CLEAN_COLORS.snowmanNose, 0.9);
+  g.fillTriangle(
+    headCX, headCY + m.headRadius * 0.05,
+    headCX + m.headRadius * 0.5, headCY + m.headRadius * 0.15,
+    headCX, headCY + m.headRadius * 0.25
+  );
+
+  const scarfY = foodY + m.headY + m.headRadius * 0.75;
+  g.fillStyle(CLEAN_COLORS.snowmanScarf, 0.85);
+  g.fillRoundedRect(
+    headCX - m.bodyRadius * 0.7, scarfY - m.bodyRadius * 0.12,
+    m.bodyRadius * 1.4, m.bodyRadius * 0.24,
+    m.bodyRadius * 0.08
+  );
+  g.fillStyle(CLEAN_COLORS.snowmanScarf, 0.75);
+  g.fillRoundedRect(
+    headCX + m.bodyRadius * 0.2, scarfY,
+    m.bodyRadius * 0.15, m.bodyRadius * 0.45,
+    m.bodyRadius * 0.06
+  );
+
+  const buttonSpacing = m.bodyRadius * 0.35;
+  g.fillStyle(CLEAN_COLORS.snowmanCoal, 0.8);
+  g.fillCircle(foodX + m.wobble * 0.3, foodY + m.bodyY - buttonSpacing * 0.5, m.bodyRadius * 0.08);
+  g.fillCircle(foodX + m.wobble * 0.3, foodY + m.bodyY + buttonSpacing * 0.3, m.bodyRadius * 0.08);
 }
 
 export function drawCleanSnake(
