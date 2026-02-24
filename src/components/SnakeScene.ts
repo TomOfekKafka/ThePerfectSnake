@@ -58,6 +58,19 @@ import {
   drawGrid3D,
 } from './depth3d';
 import { drawPureSnake } from './pureSnake';
+import {
+  createMathParticlesState,
+  initMathSymbols,
+  initMathWaves,
+  updateMathSymbols,
+  updateMathWaves,
+  updateScoreBursts,
+  spawnScoreBurst,
+  drawMathSymbols,
+  drawMathWaves,
+  drawScoreBursts,
+  MathParticlesState,
+} from './mathParticles';
 
 interface Position {
   x: number;
@@ -510,6 +523,7 @@ export class SnakeScene extends Phaser.Scene {
   private chaosIntensity = 0;
   private cleanEffects: CleanEffectsState = createCleanEffectsState();
   private horrorEffects: HorrorEffectsState = createHorrorEffectsState();
+  private mathParticles: MathParticlesState = createMathParticlesState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -525,6 +539,8 @@ export class SnakeScene extends Phaser.Scene {
     initFoodOrbits(this.cleanEffects);
     initVeins(this.horrorEffects, width, height);
     initTendrils(this.horrorEffects, width, height);
+    initMathSymbols(this.mathParticles, width, height);
+    initMathWaves(this.mathParticles, height);
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -2434,6 +2450,9 @@ export class SnakeScene extends Phaser.Scene {
     updateMotes(this.cleanEffects, width, height);
     updateRipples(this.cleanEffects);
     updateFoodOrbits(this.cleanEffects);
+    updateMathSymbols(this.mathParticles, width, height);
+    updateMathWaves(this.mathParticles);
+    updateScoreBursts(this.mathParticles);
 
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
@@ -2449,6 +2468,8 @@ export class SnakeScene extends Phaser.Scene {
         const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
         const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
         spawnRipple(this.cleanEffects, foodX, foodY);
+        const points = (this.currentState.score || 0) - this.lastHudScore;
+        spawnScoreBurst(this.mathParticles, headX, headY - CELL_SIZE, points > 0 ? points : 10);
       }
       this.lastSnakeLength = this.currentState.snake.length;
     }
@@ -2460,8 +2481,10 @@ export class SnakeScene extends Phaser.Scene {
     g.setPosition(shake.x, shake.y);
 
     drawCleanBackground(g, width, height, this.frameCount);
+    drawMathWaves(g, this.mathParticles, width);
     drawGrid3D(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
     drawMotes(g, this.cleanEffects);
+    drawMathSymbols(g, this.mathParticles);
 
     if (!this.currentState) return;
 
@@ -2474,6 +2497,7 @@ export class SnakeScene extends Phaser.Scene {
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
 
     drawPureSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount);
+    drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
 
     drawCleanVignette(g, width, height);
 
