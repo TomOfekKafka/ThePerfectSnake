@@ -24,6 +24,27 @@ export interface SnakeGlowTrail {
   size: number;
 }
 
+export interface TearDrop {
+  x: number;
+  y: number;
+  vy: number;
+  size: number;
+  alpha: number;
+  wobblePhase: number;
+}
+
+export interface BloodSplatter {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  alpha: number;
+  life: number;
+  splashed: boolean;
+  splashRadius: number;
+}
+
 export const CLEAN_COLORS = {
   bgDark: 0x0a1628,
   bgMid: 0x0f1d32,
@@ -46,17 +67,26 @@ export const CLEAN_COLORS = {
 
   text: 0xe2e8f0,
   textDim: 0x94a3b8,
+
+  blood: 0xdc2626,
+  bloodDark: 0x991b1b,
+  tear: 0x60a5fa,
+  tearHighlight: 0x93c5fd,
 };
 
 const MAX_RIPPLES = 5;
 const MAX_MOTES = 20;
 const MAX_TRAIL_LENGTH = 15;
+const MAX_TEARS = 12;
+const MAX_BLOOD = 20;
 
 export function createCleanEffectsState() {
   return {
     ripples: [] as CleanRipple[],
     motes: [] as FloatingMote[],
     glowTrail: [] as SnakeGlowTrail[],
+    tears: [] as TearDrop[],
+    blood: [] as BloodSplatter[],
     frameCount: 0,
   };
 }
@@ -142,6 +172,86 @@ export function updateGlowTrail(
   }
 
   state.glowTrail = state.glowTrail.filter(t => t.alpha > 0.02);
+}
+
+export function spawnTears(state: CleanEffectsState, x: number, y: number, count: number): void {
+  for (let i = 0; i < count; i++) {
+    if (state.tears.length >= MAX_TEARS) {
+      state.tears.shift();
+    }
+    state.tears.push({
+      x: x + (Math.random() - 0.5) * 20,
+      y: y + (Math.random() - 0.5) * 10,
+      vy: 0.5 + Math.random() * 1.5,
+      size: 3 + Math.random() * 3,
+      alpha: 0.7 + Math.random() * 0.3,
+      wobblePhase: Math.random() * Math.PI * 2,
+    });
+  }
+}
+
+export function updateTears(state: CleanEffectsState, height: number): void {
+  for (let i = state.tears.length - 1; i >= 0; i--) {
+    const tear = state.tears[i];
+    tear.vy += 0.08;
+    tear.y += tear.vy;
+    tear.wobblePhase += 0.1;
+    tear.x += Math.sin(tear.wobblePhase) * 0.3;
+    tear.alpha *= 0.99;
+
+    if (tear.y > height + 10 || tear.alpha < 0.05) {
+      state.tears.splice(i, 1);
+    }
+  }
+}
+
+export function spawnBlood(state: CleanEffectsState, x: number, y: number, count: number): void {
+  for (let i = 0; i < count; i++) {
+    if (state.blood.length >= MAX_BLOOD) {
+      state.blood.shift();
+    }
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1 + Math.random() * 3;
+    state.blood.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1,
+      size: 2 + Math.random() * 4,
+      alpha: 0.8 + Math.random() * 0.2,
+      life: 1.0,
+      splashed: false,
+      splashRadius: 0,
+    });
+  }
+}
+
+export function updateBlood(state: CleanEffectsState, height: number): void {
+  for (let i = state.blood.length - 1; i >= 0; i--) {
+    const drop = state.blood[i];
+
+    if (!drop.splashed) {
+      drop.vy += 0.15;
+      drop.x += drop.vx;
+      drop.y += drop.vy;
+      drop.vx *= 0.98;
+
+      if (drop.y >= height - 5) {
+        drop.splashed = true;
+        drop.y = height - 5;
+        drop.splashRadius = drop.size * 1.5;
+      }
+    } else {
+      drop.splashRadius += 0.3;
+      drop.alpha *= 0.95;
+    }
+
+    drop.life -= 0.015;
+
+    if (drop.life <= 0 || drop.alpha < 0.02) {
+      state.blood.splice(i, 1);
+    }
+  }
 }
 
 export function drawCleanBackground(
@@ -314,6 +424,46 @@ export function drawCleanVignette(
     const alpha = 0.08 * (1 - i / layers);
     g.lineStyle(50, 0x000000, alpha);
     g.strokeRect(inset - 25, inset - 25, width - inset * 2 + 50, height - inset * 2 + 50);
+  }
+}
+
+export function drawTears(
+  g: Phaser.GameObjects.Graphics,
+  state: CleanEffectsState
+): void {
+  for (const tear of state.tears) {
+    g.fillStyle(CLEAN_COLORS.tear, tear.alpha * 0.3);
+    g.fillCircle(tear.x, tear.y, tear.size * 2);
+
+    g.fillStyle(CLEAN_COLORS.tear, tear.alpha);
+    g.fillCircle(tear.x, tear.y - tear.size * 0.3, tear.size);
+    g.fillCircle(tear.x, tear.y + tear.size * 0.5, tear.size * 0.7);
+
+    g.fillStyle(CLEAN_COLORS.tearHighlight, tear.alpha * 0.6);
+    g.fillCircle(tear.x - tear.size * 0.25, tear.y - tear.size * 0.4, tear.size * 0.3);
+  }
+}
+
+export function drawBlood(
+  g: Phaser.GameObjects.Graphics,
+  state: CleanEffectsState
+): void {
+  for (const drop of state.blood) {
+    const effectiveAlpha = drop.alpha * drop.life;
+
+    if (drop.splashed) {
+      g.fillStyle(CLEAN_COLORS.bloodDark, effectiveAlpha * 0.5);
+      g.fillCircle(drop.x, drop.y, drop.splashRadius);
+      g.fillStyle(CLEAN_COLORS.blood, effectiveAlpha * 0.7);
+      g.fillCircle(drop.x, drop.y, drop.splashRadius * 0.6);
+    } else {
+      g.fillStyle(CLEAN_COLORS.blood, effectiveAlpha * 0.4);
+      g.fillCircle(drop.x, drop.y, drop.size * 2);
+      g.fillStyle(CLEAN_COLORS.blood, effectiveAlpha);
+      g.fillCircle(drop.x, drop.y, drop.size);
+      g.fillStyle(0xffffff, effectiveAlpha * 0.3);
+      g.fillCircle(drop.x - drop.size * 0.3, drop.y - drop.size * 0.3, drop.size * 0.25);
+    }
   }
 }
 

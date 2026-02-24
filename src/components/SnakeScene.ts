@@ -6,6 +6,10 @@ import {
   updateRipples,
   updateGlowTrail,
   spawnRipple,
+  spawnTears,
+  spawnBlood,
+  updateTears,
+  updateBlood,
   drawCleanBackground,
   drawCleanGrid,
   drawMotes,
@@ -15,6 +19,8 @@ import {
   drawCleanSnake,
   drawCleanVignette,
   drawCleanHUD,
+  drawTears,
+  drawBlood,
   CLEAN_COLORS,
   CleanEffectsState,
 } from './cleanEffects';
@@ -2385,6 +2391,8 @@ export class SnakeScene extends Phaser.Scene {
 
     updateMotes(this.cleanEffects, width, height);
     updateRipples(this.cleanEffects);
+    updateTears(this.cleanEffects, height);
+    updateBlood(this.cleanEffects, height);
 
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
@@ -2424,6 +2432,9 @@ export class SnakeScene extends Phaser.Scene {
     drawCleanFood(g, foodX, foodY, CELL_SIZE, this.frameCount);
 
     drawCleanSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount);
+
+    drawTears(g, this.cleanEffects);
+    drawBlood(g, this.cleanEffects);
 
     drawCleanVignette(g, width, height);
 
@@ -3306,6 +3317,14 @@ export class SnakeScene extends Phaser.Scene {
       const rank = this.saveHighScore(score);
       this.newHighScoreRank = rank > 0 ? rank : -1;
       this.scoreboardRevealProgress = 0;
+
+      const head = this.currentState.snake[0];
+      if (head) {
+        const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+        const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+        spawnBlood(this.cleanEffects, headX, headY, 15);
+        spawnTears(this.cleanEffects, headX, headY - 10, 6);
+      }
     }
     this.lastGameOverState = this.currentState.gameOver;
 
