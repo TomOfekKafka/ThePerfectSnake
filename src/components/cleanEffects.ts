@@ -76,6 +76,15 @@ export interface BloodPuddle {
   age: number;
 }
 
+export interface FoodOrbit {
+  angle: number;
+  distance: number;
+  speed: number;
+  size: number;
+  pulsePhase: number;
+  color: number;
+}
+
 export interface RedFogParticle {
   x: number;
   y: number;
@@ -155,6 +164,7 @@ const SNOWBALL_SPAWN_CHANCE = 0.008;
 const MAX_BLOOD_PUDDLES = 40;
 const BLOOD_PUDDLE_FADE_RATE = 0.003;
 const MAX_RED_FOG = 15;
+const FOOD_ORBIT_COUNT = 6;
 
 export function createCleanEffectsState() {
   return {
@@ -168,6 +178,7 @@ export function createCleanEffectsState() {
     snowballs: [] as Snowball[],
     bloodPuddles: [] as BloodPuddle[],
     redFog: [] as RedFogParticle[],
+    foodOrbits: [] as FoodOrbit[],
     screenShake: 0,
     frameCount: 0,
   };
@@ -970,6 +981,61 @@ export function drawRedFog(
 
     g.fillStyle(0x660000, alpha * 0.5);
     g.fillCircle(fog.x, fog.y, fog.size * 0.6);
+  }
+}
+
+const ORBIT_COLORS = [0xff4444, 0xff6633, 0xcc0000, 0xff2222, 0xdd3311, 0xaa0000];
+
+export function createFoodOrbit(index: number): FoodOrbit {
+  const angle = (index / FOOD_ORBIT_COUNT) * Math.PI * 2;
+  const speed = 0.025 + (index % 3) * 0.008;
+  const distance = 0.6 + (index % 2) * 0.25;
+  return {
+    angle,
+    distance,
+    speed: index % 2 === 0 ? speed : -speed,
+    size: 1.5 + (index % 3) * 0.5,
+    pulsePhase: (index / FOOD_ORBIT_COUNT) * Math.PI * 2,
+    color: ORBIT_COLORS[index % ORBIT_COLORS.length],
+  };
+}
+
+export function initFoodOrbits(state: CleanEffectsState): void {
+  state.foodOrbits = [];
+  for (let i = 0; i < FOOD_ORBIT_COUNT; i++) {
+    state.foodOrbits.push(createFoodOrbit(i));
+  }
+}
+
+export function updateFoodOrbits(state: CleanEffectsState): void {
+  for (const orbit of state.foodOrbits) {
+    orbit.angle += orbit.speed;
+    orbit.pulsePhase += 0.04;
+  }
+}
+
+export function drawFoodOrbits(
+  g: Phaser.GameObjects.Graphics,
+  state: CleanEffectsState,
+  foodX: number,
+  foodY: number,
+  cellSize: number
+): void {
+  for (const orbit of state.foodOrbits) {
+    const r = cellSize * orbit.distance;
+    const x = foodX + Math.cos(orbit.angle) * r;
+    const y = foodY + Math.sin(orbit.angle) * r;
+    const pulse = 0.5 + Math.sin(orbit.pulsePhase) * 0.5;
+    const alpha = 0.4 + pulse * 0.5;
+
+    g.fillStyle(orbit.color, alpha * 0.3);
+    g.fillCircle(x, y, orbit.size * 3);
+
+    g.fillStyle(orbit.color, alpha * 0.7);
+    g.fillCircle(x, y, orbit.size * 1.5);
+
+    g.fillStyle(0xffffff, alpha * 0.6);
+    g.fillCircle(x, y, orbit.size * 0.6);
   }
 }
 

@@ -38,6 +38,9 @@ import {
   drawRedFog,
   drawBeatingHeart,
   drawHorrorSnake,
+  initFoodOrbits,
+  updateFoodOrbits,
+  drawFoodOrbits,
   CLEAN_COLORS,
   CleanEffectsState,
 } from './cleanEffects';
@@ -504,6 +507,7 @@ export class SnakeScene extends Phaser.Scene {
     initMotes(this.cleanEffects, width, height);
     initSnowflakes(this.cleanEffects, width, height);
     initRedFog(this.cleanEffects, width, height);
+    initFoodOrbits(this.cleanEffects);
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -2419,6 +2423,7 @@ export class SnakeScene extends Phaser.Scene {
     updateBlood(this.cleanEffects, height);
     updateBloodPuddles(this.cleanEffects);
     updateRedFog(this.cleanEffects, width, height);
+    updateFoodOrbits(this.cleanEffects);
 
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
@@ -2465,6 +2470,7 @@ export class SnakeScene extends Phaser.Scene {
     const food = this.currentState.food;
     const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
     const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
+    drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
     drawBeatingHeart(g, foodX, foodY, CELL_SIZE, this.frameCount);
 
     drawHorrorSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount);
