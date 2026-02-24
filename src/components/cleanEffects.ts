@@ -68,6 +68,15 @@ export interface Snowball {
   trail: { x: number; y: number; alpha: number }[];
 }
 
+export interface DramaRing {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  life: number;
+  thickness: number;
+}
+
 export const CLEAN_COLORS = {
   bgDark: 0x0d1f2d,
   bgMid: 0x1a3a4a,
@@ -109,9 +118,14 @@ export const CLEAN_COLORS = {
   candyWhite: 0xfdf6f0,
   candyRedGlow: 0xff4444,
   candyWhiteGlow: 0xffffff,
+
+  dramaRed: 0xff3355,
+  dramaBlue: 0x3388ff,
+  dramaWhite: 0xffffff,
 };
 
 const MAX_RIPPLES = 5;
+const MAX_DRAMA_RINGS = 6;
 const MAX_MOTES = 20;
 const MAX_TRAIL_LENGTH = 15;
 const MAX_TEARS = 12;
@@ -124,12 +138,14 @@ const SNOWBALL_SPAWN_CHANCE = 0.008;
 export function createCleanEffectsState() {
   return {
     ripples: [] as CleanRipple[],
+    dramaRings: [] as DramaRing[],
     motes: [] as FloatingMote[],
     glowTrail: [] as SnakeGlowTrail[],
     tears: [] as TearDrop[],
     blood: [] as BloodSplatter[],
     snowflakes: [] as Snowflake[],
     snowballs: [] as Snowball[],
+    screenShake: 0,
     frameCount: 0,
   };
 }
@@ -189,6 +205,72 @@ export function updateRipples(state: CleanEffectsState): void {
     if (ripple.alpha < 0.02 || ripple.radius > ripple.maxRadius) {
       state.ripples.splice(i, 1);
     }
+  }
+}
+
+export function spawnDramaRings(state: CleanEffectsState, x: number, y: number): void {
+  const ringCount = 3;
+  for (let i = 0; i < ringCount; i++) {
+    if (state.dramaRings.length >= MAX_DRAMA_RINGS) {
+      state.dramaRings.shift();
+    }
+    state.dramaRings.push({
+      x,
+      y,
+      radius: 3 + i * 4,
+      maxRadius: 50 + i * 20,
+      life: 1.0,
+      thickness: 3 - i * 0.5,
+    });
+  }
+  state.screenShake = 6;
+}
+
+export function updateDramaRings(state: CleanEffectsState): void {
+  for (let i = state.dramaRings.length - 1; i >= 0; i--) {
+    const ring = state.dramaRings[i];
+    const speed = 2.5 + (1 - ring.life) * 2;
+    ring.radius += speed;
+    ring.life -= 0.03;
+    ring.thickness *= 0.97;
+
+    if (ring.life <= 0 || ring.radius > ring.maxRadius) {
+      state.dramaRings.splice(i, 1);
+    }
+  }
+
+  if (state.screenShake > 0) {
+    state.screenShake *= 0.85;
+    if (state.screenShake < 0.3) {
+      state.screenShake = 0;
+    }
+  }
+}
+
+export function dramaShakeOffset(state: CleanEffectsState): { x: number; y: number } {
+  if (state.screenShake <= 0) return { x: 0, y: 0 };
+  return {
+    x: (Math.random() - 0.5) * state.screenShake,
+    y: (Math.random() - 0.5) * state.screenShake,
+  };
+}
+
+export function drawDramaRings(
+  g: Phaser.GameObjects.Graphics,
+  state: CleanEffectsState
+): void {
+  for (const ring of state.dramaRings) {
+    const alpha = ring.life * 0.7;
+    const offset = (1 - ring.life) * 3;
+
+    g.lineStyle(ring.thickness, CLEAN_COLORS.dramaRed, alpha * 0.6);
+    g.strokeCircle(ring.x - offset, ring.y, ring.radius);
+
+    g.lineStyle(ring.thickness, CLEAN_COLORS.dramaBlue, alpha * 0.6);
+    g.strokeCircle(ring.x + offset, ring.y, ring.radius);
+
+    g.lineStyle(ring.thickness * 0.6, CLEAN_COLORS.dramaWhite, alpha);
+    g.strokeCircle(ring.x, ring.y, ring.radius);
   }
 }
 

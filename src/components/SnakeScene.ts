@@ -13,6 +13,10 @@ import {
   initSnowflakes,
   updateSnowflakes,
   updateSnowballs,
+  spawnDramaRings,
+  updateDramaRings,
+  dramaShakeOffset,
+  drawDramaRings,
   drawSnowflakes,
   drawSnowballs,
   drawCleanBackground,
@@ -2051,6 +2055,7 @@ export class SnakeScene extends Phaser.Scene {
       this.screenFlashAlpha = 0.8; // More intense flash for armageddon
       this.chromaticIntensity = 1.5; // Stronger chromatic aberration
       this.energyFieldPulse = 1.0; // Trigger energy field expansion
+      spawnDramaRings(this.cleanEffects, headX, headY);
     }
     this.lastSnakeLength = state.snake.length;
 
@@ -2400,6 +2405,7 @@ export class SnakeScene extends Phaser.Scene {
     updateSnowflakes(this.cleanEffects, width, height);
     updateSnowballs(this.cleanEffects, width, height);
     updateRipples(this.cleanEffects);
+    updateDramaRings(this.cleanEffects);
     updateTears(this.cleanEffects, height);
     updateBlood(this.cleanEffects, height);
 
@@ -2424,7 +2430,9 @@ export class SnakeScene extends Phaser.Scene {
 
     const g = this.graphics;
     g.clear();
-    g.setPosition(0, 0);
+
+    const shake = dramaShakeOffset(this.cleanEffects);
+    g.setPosition(shake.x, shake.y);
 
     drawCleanBackground(g, width, height, this.frameCount);
     drawCleanGrid(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
@@ -2436,6 +2444,7 @@ export class SnakeScene extends Phaser.Scene {
 
     drawGlowTrail(g, this.cleanEffects);
     drawRipples(g, this.cleanEffects);
+    drawDramaRings(g, this.cleanEffects);
 
     const food = this.currentState.food;
     const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
