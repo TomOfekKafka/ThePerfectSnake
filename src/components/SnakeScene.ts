@@ -20,12 +20,9 @@ import {
   drawSnowflakes,
   drawSnowballs,
   drawCleanBackground,
-  drawCleanGrid,
   drawMotes,
   drawRipples,
   drawGlowTrail,
-  drawCleanFood,
-  drawCleanSnake,
   drawCleanVignette,
   drawCleanHUD,
   drawTears,
@@ -36,8 +33,6 @@ import {
   initRedFog,
   updateRedFog,
   drawRedFog,
-  drawBeatingHeart,
-  drawHorrorSnake,
   initFoodOrbits,
   updateFoodOrbits,
   drawFoodOrbits,
@@ -58,6 +53,11 @@ import {
   drawGlitchGrid,
   HorrorEffectsState,
 } from './horrorEffects';
+import {
+  drawSnake3D,
+  drawFood3D,
+  drawGrid3D,
+} from './depth3d';
 
 interface Position {
   x: number;
@@ -2475,7 +2475,7 @@ export class SnakeScene extends Phaser.Scene {
     g.setPosition(shake.x, shake.y);
 
     drawCleanBackground(g, width, height, this.frameCount);
-    drawCleanGrid(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
+    drawGrid3D(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
     drawVeins(g, this.horrorEffects, this.frameCount);
     drawGlitchGrid(g, this.horrorEffects, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
     drawTendrils(g, this.horrorEffects);
@@ -2495,10 +2495,10 @@ export class SnakeScene extends Phaser.Scene {
     const food = this.currentState.food;
     const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
     const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
+    drawFood3D(g, foodX, foodY, CELL_SIZE, this.frameCount);
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
-    drawBeatingHeart(g, foodX, foodY, CELL_SIZE, this.frameCount);
 
-    drawHorrorSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount);
+    drawSnake3D(g, this.currentState.snake, CELL_SIZE, this.frameCount);
 
     drawTears(g, this.cleanEffects);
     drawBlood(g, this.cleanEffects);
