@@ -92,6 +92,11 @@ export const CLEAN_COLORS = {
   snowmanNose: 0xff6b35,
   snowmanCoal: 0x1a1a2e,
   snowmanScarf: 0xcc2936,
+
+  candyRed: 0xd42426,
+  candyWhite: 0xfdf6f0,
+  candyRedGlow: 0xff4444,
+  candyWhiteGlow: 0xffffff,
 };
 
 const MAX_RIPPLES = 5;
@@ -482,6 +487,13 @@ export function drawCleanFood(
   g.fillCircle(foodX + m.wobble * 0.3, foodY + m.bodyY + buttonSpacing * 0.3, m.bodyRadius * 0.08);
 }
 
+export function candyCaneSegmentColor(index: number, stripeWidth: number): { fill: number; glow: number } {
+  const stripe = Math.floor(index / stripeWidth) % 2;
+  return stripe === 0
+    ? { fill: CLEAN_COLORS.candyRed, glow: CLEAN_COLORS.candyRedGlow }
+    : { fill: CLEAN_COLORS.candyWhite, glow: CLEAN_COLORS.candyWhiteGlow };
+}
+
 export function drawCleanSnake(
   g: Phaser.GameObjects.Graphics,
   snake: { x: number; y: number }[],
@@ -491,15 +503,18 @@ export function drawCleanSnake(
   const snakeLen = snake.length;
   if (snakeLen === 0) return;
 
+  const stripeWidth = 2;
+
   for (let i = snakeLen - 1; i >= 0; i--) {
     const segment = snake[i];
     const centerX = segment.x * cellSize + cellSize / 2;
     const centerY = segment.y * cellSize + cellSize / 2;
     const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
 
+    const { glow } = candyCaneSegmentColor(i, stripeWidth);
     const glowAlpha = 0.15 * (1 - t * 0.5);
     const glowSize = (cellSize / 2 + 6) * (0.6 + t * 0.4);
-    g.fillStyle(CLEAN_COLORS.snakeGlow, glowAlpha);
+    g.fillStyle(glow, glowAlpha);
     g.fillCircle(centerX, centerY, glowSize);
   }
 
@@ -510,27 +525,20 @@ export function drawCleanSnake(
     const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
     const radius = (cellSize / 2 - 2) * (0.8 + t * 0.2);
 
-    const r1 = (CLEAN_COLORS.snakeTail >> 16) & 0xff;
-    const g1 = (CLEAN_COLORS.snakeTail >> 8) & 0xff;
-    const b1 = CLEAN_COLORS.snakeTail & 0xff;
-    const r2 = (CLEAN_COLORS.snakeHead >> 16) & 0xff;
-    const g2 = (CLEAN_COLORS.snakeHead >> 8) & 0xff;
-    const b2 = CLEAN_COLORS.snakeHead & 0xff;
+    const { fill } = candyCaneSegmentColor(i, stripeWidth);
 
-    const r = Math.round(r1 + (r2 - r1) * t);
-    const gVal = Math.round(g1 + (g2 - g1) * t);
-    const b = Math.round(b1 + (b2 - b1) * t);
-    const color = (r << 16) | (gVal << 8) | b;
-
-    g.fillStyle(color, 0.95);
+    g.fillStyle(fill, 0.95);
     g.fillCircle(centerX, centerY, radius);
+
+    g.fillStyle(0xffffff, 0.15);
+    g.fillCircle(centerX - radius * 0.2, centerY - radius * 0.15, radius * 0.4);
 
     if (i === 0) {
       const pulse = 0.3 + Math.sin(frameCount * 0.1) * 0.1;
-      g.fillStyle(CLEAN_COLORS.snakeGlow, pulse);
+      g.fillStyle(CLEAN_COLORS.candyRedGlow, pulse);
       g.fillCircle(centerX, centerY, radius + 4);
 
-      g.fillStyle(CLEAN_COLORS.snakeHead, 1);
+      g.fillStyle(CLEAN_COLORS.candyRed, 1);
       g.fillCircle(centerX, centerY, radius);
 
       g.fillStyle(0xffffff, 0.7);
