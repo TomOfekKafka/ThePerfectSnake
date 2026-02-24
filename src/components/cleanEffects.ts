@@ -533,7 +533,8 @@ export function drawCleanHUD(
   snakeLength: number,
   width: number,
   frameCount: number,
-  drawDigit: (g: Phaser.GameObjects.Graphics, digit: string, x: number, y: number, size: number) => void
+  drawDigit: (g: Phaser.GameObjects.Graphics, digit: string, x: number, y: number, size: number) => void,
+  foodEaten?: number
 ): void {
   const padding = 15;
   const digitSize = 12;
@@ -549,6 +550,24 @@ export function drawCleanHUD(
     g.fillStyle(CLEAN_COLORS.text, pulse);
     drawDigit(g, digit, xPos, padding, digitSize);
     xPos += digitSpacing;
+  }
+
+  if (foodEaten !== undefined && foodEaten > 0) {
+    const countStr = String(foodEaten);
+    const countY = padding + digitSize + 8;
+    xPos = padding;
+
+    for (let i = 0; i < countStr.length; i++) {
+      const digit = countStr[i];
+      g.fillStyle(CLEAN_COLORS.food, pulse * 0.9);
+      drawDigit(g, digit, xPos, countY, digitSize * 0.7);
+      xPos += digitSpacing * 0.7;
+    }
+
+    const dotSize = 2;
+    const dotY = countY - digitSize * 0.7 * 0.25;
+    g.fillStyle(CLEAN_COLORS.foodGlow, pulse * 0.8);
+    g.fillCircle(xPos + 4, dotY, dotSize);
   }
 
   const lengthStr = String(snakeLength);

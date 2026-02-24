@@ -39,6 +39,7 @@ interface GameState {
   gameOver: boolean;
   gameStarted?: boolean;
   score?: number;
+  foodEaten?: number;
 }
 
 interface Star {
@@ -2446,7 +2447,8 @@ export class SnakeScene extends Phaser.Scene {
 
     const score = this.currentState.score || 0;
     const snakeLength = this.currentState.snake.length;
-    drawCleanHUD(g, score, snakeLength, width, this.frameCount, this.drawDigit.bind(this));
+    const foodEaten = this.currentState.foodEaten || 0;
+    drawCleanHUD(g, score, snakeLength, width, this.frameCount, this.drawDigit.bind(this), foodEaten);
 
     if (this.currentState.gameOver) {
       this.drawGameOver(g, width, height);

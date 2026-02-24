@@ -34,6 +34,7 @@ export const createInitialState = (): GameState => ({
   gameOver: false,
   gameStarted: false,
   score: 0,
+  foodEaten: 0,
   powerUp: null,
   activePowerUps: [],
   tickCount: 0,

@@ -28,6 +28,7 @@ export interface GameState {
   gameOver: boolean;
   gameStarted: boolean;
   score: number;
+  foodEaten: number;
   powerUp: PowerUp | null;
   activePowerUps: ActivePowerUp[];
   tickCount: number;
