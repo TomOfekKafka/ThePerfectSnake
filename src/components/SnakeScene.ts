@@ -54,10 +54,10 @@ import {
   HorrorEffectsState,
 } from './horrorEffects';
 import {
-  drawSnake3D,
   drawFood3D,
   drawGrid3D,
 } from './depth3d';
+import { drawPureSnake } from './pureSnake';
 
 interface Position {
   x: number;
@@ -2432,18 +2432,8 @@ export class SnakeScene extends Phaser.Scene {
     const height = this.scale.height;
 
     updateMotes(this.cleanEffects, width, height);
-    updateSnowflakes(this.cleanEffects, width, height);
-    updateSnowballs(this.cleanEffects, width, height);
     updateRipples(this.cleanEffects);
-    updateDramaRings(this.cleanEffects);
-    updateTears(this.cleanEffects, height);
-    updateBlood(this.cleanEffects, height);
-    updateBloodPuddles(this.cleanEffects);
-    updateRedFog(this.cleanEffects, width, height);
     updateFoodOrbits(this.cleanEffects);
-    updateTendrils(this.horrorEffects, this.frameCount);
-    updateGlitch(this.horrorEffects);
-    updateIchorDrips(this.horrorEffects);
 
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
@@ -2451,9 +2441,6 @@ export class SnakeScene extends Phaser.Scene {
       const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
 
       if (this.lastHeadPos && (this.lastHeadPos.x !== head.x || this.lastHeadPos.y !== head.y)) {
-        updateGlowTrail(this.cleanEffects, headX, headY);
-        spawnBloodPuddle(this.cleanEffects, headX, headY);
-        spawnIchorDrip(this.horrorEffects, headX, headY);
       }
       this.lastHeadPos = { x: head.x, y: head.y };
 
@@ -2462,8 +2449,6 @@ export class SnakeScene extends Phaser.Scene {
         const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
         const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
         spawnRipple(this.cleanEffects, foodX, foodY);
-        spawnBlood(this.cleanEffects, foodX, foodY, 8);
-        spawnDramaRings(this.cleanEffects, foodX, foodY);
       }
       this.lastSnakeLength = this.currentState.snake.length;
     }
@@ -2476,21 +2461,11 @@ export class SnakeScene extends Phaser.Scene {
 
     drawCleanBackground(g, width, height, this.frameCount);
     drawGrid3D(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
-    drawVeins(g, this.horrorEffects, this.frameCount);
-    drawGlitchGrid(g, this.horrorEffects, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
-    drawTendrils(g, this.horrorEffects);
-    drawRedFog(g, this.cleanEffects);
     drawMotes(g, this.cleanEffects);
-    drawSnowflakes(g, this.cleanEffects);
-    drawSnowballs(g, this.cleanEffects);
 
     if (!this.currentState) return;
 
-    drawBloodPuddles(g, this.cleanEffects);
-    drawIchorDrips(g, this.horrorEffects);
-    drawGlowTrail(g, this.cleanEffects);
     drawRipples(g, this.cleanEffects);
-    drawDramaRings(g, this.cleanEffects);
 
     const food = this.currentState.food;
     const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
@@ -2498,10 +2473,7 @@ export class SnakeScene extends Phaser.Scene {
     drawFood3D(g, foodX, foodY, CELL_SIZE, this.frameCount);
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
 
-    drawSnake3D(g, this.currentState.snake, CELL_SIZE, this.frameCount);
-
-    drawTears(g, this.cleanEffects);
-    drawBlood(g, this.cleanEffects);
+    drawPureSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount);
 
     drawCleanVignette(g, width, height);
 
