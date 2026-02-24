@@ -56,7 +56,7 @@ import {
   drawFood3D,
   drawGrid3D,
 } from './depth3d';
-import { drawDragonSnake } from './dragonScales';
+import { drawSolidSnake } from './solidSnake';
 import {
   createDragonBreathState,
   updateDragonBreath,
@@ -2522,7 +2522,7 @@ export class SnakeScene extends Phaser.Scene {
     drawFood3D(g, foodX, foodY, CELL_SIZE, this.frameCount);
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
 
-    drawDragonSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount);
+    drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount);
     drawDragonBreath(g, this.dragonBreath);
     drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
 
