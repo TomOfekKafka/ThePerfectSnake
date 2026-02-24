@@ -44,6 +44,20 @@ import {
   CLEAN_COLORS,
   CleanEffectsState,
 } from './cleanEffects';
+import {
+  createHorrorEffectsState,
+  initVeins,
+  initTendrils,
+  updateTendrils,
+  updateGlitch,
+  spawnIchorDrip,
+  updateIchorDrips,
+  drawVeins,
+  drawTendrils,
+  drawIchorDrips,
+  drawGlitchGrid,
+  HorrorEffectsState,
+} from './horrorEffects';
 
 interface Position {
   x: number;
@@ -495,6 +509,7 @@ export class SnakeScene extends Phaser.Scene {
   private armageddonPulse = 0;
   private chaosIntensity = 0;
   private cleanEffects: CleanEffectsState = createCleanEffectsState();
+  private horrorEffects: HorrorEffectsState = createHorrorEffectsState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -508,6 +523,8 @@ export class SnakeScene extends Phaser.Scene {
     initSnowflakes(this.cleanEffects, width, height);
     initRedFog(this.cleanEffects, width, height);
     initFoodOrbits(this.cleanEffects);
+    initVeins(this.horrorEffects, width, height);
+    initTendrils(this.horrorEffects, width, height);
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -2424,6 +2441,9 @@ export class SnakeScene extends Phaser.Scene {
     updateBloodPuddles(this.cleanEffects);
     updateRedFog(this.cleanEffects, width, height);
     updateFoodOrbits(this.cleanEffects);
+    updateTendrils(this.horrorEffects, this.frameCount);
+    updateGlitch(this.horrorEffects);
+    updateIchorDrips(this.horrorEffects);
 
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
@@ -2433,6 +2453,7 @@ export class SnakeScene extends Phaser.Scene {
       if (this.lastHeadPos && (this.lastHeadPos.x !== head.x || this.lastHeadPos.y !== head.y)) {
         updateGlowTrail(this.cleanEffects, headX, headY);
         spawnBloodPuddle(this.cleanEffects, headX, headY);
+        spawnIchorDrip(this.horrorEffects, headX, headY);
       }
       this.lastHeadPos = { x: head.x, y: head.y };
 
@@ -2455,6 +2476,9 @@ export class SnakeScene extends Phaser.Scene {
 
     drawCleanBackground(g, width, height, this.frameCount);
     drawCleanGrid(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
+    drawVeins(g, this.horrorEffects, this.frameCount);
+    drawGlitchGrid(g, this.horrorEffects, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
+    drawTendrils(g, this.horrorEffects);
     drawRedFog(g, this.cleanEffects);
     drawMotes(g, this.cleanEffects);
     drawSnowflakes(g, this.cleanEffects);
@@ -2463,6 +2487,7 @@ export class SnakeScene extends Phaser.Scene {
     if (!this.currentState) return;
 
     drawBloodPuddles(g, this.cleanEffects);
+    drawIchorDrips(g, this.horrorEffects);
     drawGlowTrail(g, this.cleanEffects);
     drawRipples(g, this.cleanEffects);
     drawDramaRings(g, this.cleanEffects);
