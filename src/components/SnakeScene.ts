@@ -56,7 +56,13 @@ import {
   drawFood3D,
   drawGrid3D,
 } from './depth3d';
-import { drawPureSnake } from './pureSnake';
+import { drawDragonSnake } from './dragonScales';
+import {
+  createDragonBreathState,
+  updateDragonBreath,
+  drawDragonBreath,
+  DragonBreathState,
+} from './dragonBreath';
 import {
   createMathParticlesState,
   initMathSymbols,
@@ -531,6 +537,7 @@ export class SnakeScene extends Phaser.Scene {
   private horrorEffects: HorrorEffectsState = createHorrorEffectsState();
   private mathParticles: MathParticlesState = createMathParticlesState();
   private spaceBackground: SpaceBackgroundState = createSpaceBackgroundState();
+  private dragonBreath: DragonBreathState = createDragonBreathState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2468,9 +2475,19 @@ export class SnakeScene extends Phaser.Scene {
       const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
       const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
 
-      if (this.lastHeadPos && (this.lastHeadPos.x !== head.x || this.lastHeadPos.y !== head.y)) {
+      let dirX = 1;
+      let dirY = 0;
+      if (this.lastHeadPos) {
+        const dx = head.x - this.lastHeadPos.x;
+        const dy = head.y - this.lastHeadPos.y;
+        if (dx !== 0 || dy !== 0) {
+          dirX = dx;
+          dirY = dy;
+        }
       }
       this.lastHeadPos = { x: head.x, y: head.y };
+
+      updateDragonBreath(this.dragonBreath, headX, headY, dirX * -1, dirY * -1);
 
       if (this.lastSnakeLength > 0 && this.currentState.snake.length > this.lastSnakeLength) {
         const food = this.currentState.food;
@@ -2505,7 +2522,8 @@ export class SnakeScene extends Phaser.Scene {
     drawFood3D(g, foodX, foodY, CELL_SIZE, this.frameCount);
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
 
-    drawPureSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount);
+    drawDragonSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount);
+    drawDragonBreath(g, this.dragonBreath);
     drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
 
     drawCleanVignette(g, width, height);

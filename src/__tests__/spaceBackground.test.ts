@@ -58,6 +58,10 @@ describe('spaceBackground', () => {
     it('moves stars closer (decreases z)', () => {
       const state = createSpaceBackgroundState();
       initSpaceBackground(state, 400, 400);
+      state.warpStars[0].x = 10;
+      state.warpStars[0].y = 10;
+      state.warpStars[0].z = 200;
+      state.warpStars[0].speed = 2;
       const initialZ = state.warpStars[0].z;
       updateWarpStars(state, 400, 400);
       expect(state.warpStars[0].z).toBeLessThan(initialZ);
