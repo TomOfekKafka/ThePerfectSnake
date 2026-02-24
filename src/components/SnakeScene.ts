@@ -19,7 +19,6 @@ import {
   drawDramaRings,
   drawSnowflakes,
   drawSnowballs,
-  drawCleanBackground,
   drawMotes,
   drawRipples,
   drawGlowTrail,
@@ -71,6 +70,13 @@ import {
   drawScoreBursts,
   MathParticlesState,
 } from './mathParticles';
+import {
+  createSpaceBackgroundState,
+  initSpaceBackground,
+  updateSpaceBackground,
+  drawSpaceBackground,
+  SpaceBackgroundState,
+} from './spaceBackground';
 
 interface Position {
   x: number;
@@ -524,6 +530,7 @@ export class SnakeScene extends Phaser.Scene {
   private cleanEffects: CleanEffectsState = createCleanEffectsState();
   private horrorEffects: HorrorEffectsState = createHorrorEffectsState();
   private mathParticles: MathParticlesState = createMathParticlesState();
+  private spaceBackground: SpaceBackgroundState = createSpaceBackgroundState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -541,6 +548,7 @@ export class SnakeScene extends Phaser.Scene {
     initTendrils(this.horrorEffects, width, height);
     initMathSymbols(this.mathParticles, width, height);
     initMathWaves(this.mathParticles, height);
+    initSpaceBackground(this.spaceBackground, width, height);
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -2447,6 +2455,7 @@ export class SnakeScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
 
+    updateSpaceBackground(this.spaceBackground, width, height);
     updateMotes(this.cleanEffects, width, height);
     updateRipples(this.cleanEffects);
     updateFoodOrbits(this.cleanEffects);
@@ -2480,7 +2489,7 @@ export class SnakeScene extends Phaser.Scene {
     const shake = dramaShakeOffset(this.cleanEffects);
     g.setPosition(shake.x, shake.y);
 
-    drawCleanBackground(g, width, height, this.frameCount);
+    drawSpaceBackground(g, this.spaceBackground, width, height);
     drawMathWaves(g, this.mathParticles, width);
     drawGrid3D(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
     drawMotes(g, this.cleanEffects);
