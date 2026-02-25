@@ -245,3 +245,21 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
   wormhole: null,
   lastWormholeDespawn: 0,
 });
+
+/** Revive the snake after a correct trivia answer. Trims half the tail and spawns safe. */
+export const reviveSnake = (state: GameState): GameState => {
+  const snake = state.snake;
+  const keepLength = Math.max(1, Math.floor(snake.length / 2));
+  const revived = snake.slice(0, keepLength);
+  return {
+    ...state,
+    snake: revived,
+    food: generateFood(revived),
+    gameOver: false,
+    direction: state.direction,
+    powerUp: null,
+    activePowerUps: [],
+    portalPair: null,
+    wormhole: null,
+  };
+};

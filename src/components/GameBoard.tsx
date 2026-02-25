@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import './GameBoard.css';
 import type { SnakeScene } from './SnakeScene';
+import type { TriviaState } from '../game/trivia';
 
 interface Position {
   x: number;
@@ -35,6 +36,8 @@ interface GameState {
 interface GameBoardProps {
   gameState: GameState;
   gridSize: number;
+  triviaState?: TriviaState;
+  onTriviaAnswer?: (index: number) => void;
 }
 
 const CELL_SIZE = 20;

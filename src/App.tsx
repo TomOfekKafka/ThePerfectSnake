@@ -3,14 +3,14 @@ import { GameBoard } from './components/GameBoard';
 import './App.css';
 
 function App() {
-  const { gameState, resetGame, changeDirection, gridSize, isEmbedded } = useSnakeGame();
+  const { gameState, triviaState, resetGame, changeDirection, answerTrivia, gridSize, isEmbedded } = useSnakeGame();
 
   // When embedded, render only the game board (platform handles UI)
   if (isEmbedded) {
     return (
       <div className="app embedded">
         <div className="game-container">
-          <GameBoard gameState={gameState} gridSize={gridSize} />
+          <GameBoard gameState={gameState} gridSize={gridSize} triviaState={triviaState} onTriviaAnswer={answerTrivia} />
         </div>
       </div>
     );
@@ -40,7 +40,7 @@ function App() {
           </div>
         )}
 
-        <GameBoard gameState={gameState} gridSize={gridSize} />
+        <GameBoard gameState={gameState} gridSize={gridSize} triviaState={triviaState} onTriviaAnswer={answerTrivia} />
 
         <MobileControls
           onDirection={changeDirection}
