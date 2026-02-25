@@ -164,6 +164,12 @@ import {
   FlagDisplayState,
 } from './countryFlags';
 import {
+  createCountryMapState,
+  updateCountryMap,
+  drawCountryMap,
+  CountryMapState,
+} from './countryMaps';
+import {
   createOlympicsState,
   initOlympicRings,
   initTorch,
@@ -682,6 +688,7 @@ export class SnakeScene extends Phaser.Scene {
   private patronusTrail: PatronusTrailState = createPatronusTrailState();
   private laserBeam: LaserBeamState = createLaserBeamState();
   private flagDisplay: FlagDisplayState = createFlagDisplayState();
+  private countryMap: CountryMapState = createCountryMapState();
   private olympics: OlympicsState = createOlympicsState();
 
   constructor() {
@@ -2619,6 +2626,7 @@ export class SnakeScene extends Phaser.Scene {
     updateSpellTexts(this.wizardEffects);
     updateHogwartsBackground(this.hogwartsBackground);
     updateOlympics(this.olympics, width);
+    updateCountryMap(this.countryMap, this.flagDisplay.currentFlag.code, this.frameCount);
 
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
