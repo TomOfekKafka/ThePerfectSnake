@@ -106,12 +106,12 @@ import {
   NuclearBlastState,
 } from './nuclearBlast';
 import {
-  createFunFactsState,
-  spawnCustomFact,
-  updateFunFacts,
-  drawFunFacts,
-  FunFactsState,
-} from './funFacts';
+  createComboStreakState,
+  triggerCombo,
+  updateComboStreak,
+  drawComboStreak,
+  ComboStreakState,
+} from './comboStreak';
 import {
   createPortalEffectsState,
   updatePortalEffects,
@@ -623,7 +623,7 @@ export class SnakeScene extends Phaser.Scene {
   private dragonBreath: DragonBreathState = createDragonBreathState();
   private pulseGlow: PulseGlowState = createPulseGlowState();
   private nuclearBlast: NuclearBlastState = createNuclearBlastState();
-  private funFacts: FunFactsState = createFunFactsState();
+  private comboStreak: ComboStreakState = createComboStreakState();
   private portalEffects: PortalEffectsState = createPortalEffectsState();
   private lastPortalPair: { a: { x: number; y: number }; b: { x: number; y: number } } | null = null;
   private faceState: FaceState = createFaceState();
@@ -2205,14 +2205,7 @@ export class SnakeScene extends Phaser.Scene {
       this.energyFieldPulse = 1.0;
       spawnDramaRings(this.cleanEffects, headX, headY);
       spawnPulseGlow(this.pulseGlow, headX, headY, 1.0, this.hueOffset);
-      const eatenFlag = this.flagDisplay.currentFlag;
-      spawnCustomFact(
-        this.funFacts,
-        GRID_SIZE * CELL_SIZE,
-        eatenFlag.country,
-        eatenFlag.fact,
-        120
-      );
+      triggerCombo(this.comboStreak, headX, headY, this.frameCount);
       advanceFlag(this.flagDisplay);
       fireLaser(this.laserBeam, headX, headY, headX, headY);
     }
@@ -2567,7 +2560,7 @@ export class SnakeScene extends Phaser.Scene {
     updateMathWaves(this.mathParticles);
     updateScoreBursts(this.mathParticles);
     updateNuclearBlasts(this.nuclearBlast);
-    updateFunFacts(this.funFacts);
+    updateComboStreak(this.comboStreak);
     updateWandSparkles(this.wizardEffects);
     updateSnitchWings(this.wizardEffects);
     updateSpellTexts(this.wizardEffects);
@@ -2674,7 +2667,7 @@ export class SnakeScene extends Phaser.Scene {
 
     drawCleanVignette(g, width, height);
     drawSpellTexts(g, this.wizardEffects, this.drawText.bind(this));
-    drawFunFacts(g, this.funFacts, this.drawText.bind(this));
+    drawComboStreak(g, this.comboStreak, width, height, this.drawText.bind(this));
 
     const score = this.currentState.score || 0;
     const snakeLength = this.currentState.snake.length;
