@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { THEME } from './gameTheme';
 
 export interface WarpStar {
   x: number;
@@ -46,21 +47,9 @@ const NUM_DUST = 25;
 const CENTER_X = 200;
 const CENTER_Y = 200;
 
-const NEBULA_COLORS = [
-  0x4422aa,
-  0x2244cc,
-  0x6633bb,
-  0x3355aa,
-  0x553399,
-];
+const NEBULA_COLORS = THEME.nebula;
 
-const DUST_COLORS = [
-  0x8899cc,
-  0xaabbee,
-  0x7788bb,
-  0x99aadd,
-  0x6677aa,
-];
+const DUST_COLORS: number[] = [...THEME.dust];
 
 export function createSpaceBackgroundState(): SpaceBackgroundState {
   return {

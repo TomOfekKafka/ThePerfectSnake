@@ -104,28 +104,30 @@ export interface DramaRing {
   thickness: number;
 }
 
+import { THEME } from './gameTheme';
+
 export const CLEAN_COLORS = {
-  bgDark: 0x0d1f2d,
-  bgMid: 0x1a3a4a,
-  bgLight: 0x2a5a6a,
+  bgDark: THEME.bg.deep,
+  bgMid: THEME.bg.mid,
+  bgLight: THEME.bg.light,
 
-  gridLine: 0x1e4a5e,
-  gridAccent: 0x2e6a7e,
+  gridLine: THEME.grid.line,
+  gridAccent: THEME.grid.accent,
 
-  snakeHead: 0xcc2936,
-  snakeBody: 0x228b22,
-  snakeTail: 0x1a6b1a,
-  snakeGlow: 0xff6b6b,
+  snakeHead: THEME.snake.head,
+  snakeBody: THEME.snake.body,
+  snakeTail: THEME.snake.tail,
+  snakeGlow: THEME.snake.glow,
 
-  food: 0xffd700,
-  foodCore: 0xffec8b,
-  foodGlow: 0xffa500,
+  food: THEME.food.body,
+  foodCore: THEME.food.core,
+  foodGlow: THEME.food.glow,
 
-  ripple: 0xffd700,
-  mote: 0xe8e8e8,
+  ripple: THEME.effects.ripple,
+  mote: THEME.effects.mote,
 
-  text: 0xe2e8f0,
-  textDim: 0x94a3b8,
+  text: THEME.hud.text,
+  textDim: THEME.hud.textDim,
 
   blood: 0xdc2626,
   bloodDark: 0x991b1b,
@@ -138,16 +140,16 @@ export const CLEAN_COLORS = {
   snowmanBody: 0xf0f8ff,
   snowmanShadow: 0xd0e8f0,
   snowmanNose: 0xff6b35,
-  snowmanCoal: 0x1a1a2e,
-  snowmanScarf: 0xcc2936,
+  snowmanCoal: THEME.bg.deep,
+  snowmanScarf: THEME.snake.head,
 
-  candyRed: 0xd42426,
+  candyRed: THEME.snake.head,
   candyWhite: 0xfdf6f0,
-  candyRedGlow: 0xff4444,
+  candyRedGlow: THEME.snake.glow,
   candyWhiteGlow: 0xffffff,
 
-  dramaRed: 0xff3355,
-  dramaBlue: 0x3388ff,
+  dramaRed: THEME.food.glow,
+  dramaBlue: THEME.wall.glow,
   dramaWhite: 0xffffff,
 };
 

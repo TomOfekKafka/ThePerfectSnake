@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { THEME } from './gameTheme';
 
 export interface WallSpark {
   x: number;
@@ -65,9 +66,9 @@ export const drawWallBorder = (
   frameCount: number
 ): void => {
   const pulse = 0.6 + Math.sin(state.pulsePhase) * 0.3;
-  const dangerColor = 0xff2200;
-  const warningColor = 0xff6600;
-  const coreColor = 0xff0000;
+  const dangerColor = THEME.wall.glow;
+  const warningColor = THEME.wall.highlight;
+  const coreColor = THEME.wall.core;
 
   g.fillStyle(coreColor, 0.7 * pulse);
   g.fillRect(0, 0, width, WALL_THICKNESS);
@@ -109,7 +110,7 @@ export const drawWallBorder = (
   for (const spark of state.sparks) {
     const alpha = spark.life * 0.8;
     const size = 2 + spark.life * 3;
-    g.fillStyle(0xffff00, alpha);
+    g.fillStyle(THEME.wall.spark, alpha);
     g.fillCircle(spark.x, spark.y, size);
     g.fillStyle(0xffffff, alpha * 0.5);
     g.fillCircle(spark.x, spark.y, size * 0.5);
@@ -117,13 +118,13 @@ export const drawWallBorder = (
 
   const cornerSize = 10;
   const cornerAlpha = 0.8 * pulse;
-  g.fillStyle(0xff0000, cornerAlpha);
+  g.fillStyle(THEME.wall.corner, cornerAlpha);
   g.fillRect(0, 0, cornerSize, cornerSize);
   g.fillRect(width - cornerSize, 0, cornerSize, cornerSize);
   g.fillRect(0, height - cornerSize, cornerSize, cornerSize);
   g.fillRect(width - cornerSize, height - cornerSize, cornerSize, cornerSize);
 
-  g.fillStyle(0xffffff, cornerAlpha * 0.6);
+  g.fillStyle(0xffffff, cornerAlpha * 0.4);
   g.fillRect(1, 1, cornerSize - 2, cornerSize - 2);
   g.fillRect(width - cornerSize + 1, 1, cornerSize - 2, cornerSize - 2);
   g.fillRect(1, height - cornerSize + 1, cornerSize - 2, cornerSize - 2);
