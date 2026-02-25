@@ -1009,6 +1009,12 @@ export function updateFoodOrbits(state: CleanEffectsState): void {
   }
 }
 
+export function recolorFoodOrbits(state: CleanEffectsState, colors: number[]): void {
+  for (let i = 0; i < state.foodOrbits.length; i++) {
+    state.foodOrbits[i].color = colors[i % colors.length];
+  }
+}
+
 export function drawFoodOrbits(
   g: Phaser.GameObjects.Graphics,
   state: CleanEffectsState,

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { FoodType } from './foodVariety';
 
 const SHADOW_OFFSET_X = 3;
 const SHADOW_OFFSET_Y = 4;
@@ -179,6 +180,148 @@ export function drawFood3D(
   g.fillStyle(0xffffff, 0.5);
   g.fillCircle(hlX, hlY, radius * 0.2);
   g.fillStyle(0xffffff, 0.3);
+  g.fillCircle(hlX - radius * 0.15, hlY - radius * 0.1, radius * 0.1);
+}
+
+function drawDiamondShape(
+  g: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  radius: number,
+  color: number,
+  alpha: number
+): void {
+  g.fillStyle(color, alpha);
+  g.fillTriangle(x, y - radius, x + radius, y, x, y + radius);
+  g.fillTriangle(x, y - radius, x - radius, y, x, y + radius);
+}
+
+function drawStarShape(
+  g: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  radius: number,
+  color: number,
+  alpha: number,
+  rotation: number
+): void {
+  g.fillStyle(color, alpha);
+  const points = 5;
+  const innerRadius = radius * 0.45;
+  for (let i = 0; i < points; i++) {
+    const outerAngle = rotation + (i / points) * Math.PI * 2 - Math.PI / 2;
+    const nextAngle = rotation + ((i + 1) / points) * Math.PI * 2 - Math.PI / 2;
+    const innerAngle = rotation + ((i + 0.5) / points) * Math.PI * 2 - Math.PI / 2;
+    const ox = x + Math.cos(outerAngle) * radius;
+    const oy = y + Math.sin(outerAngle) * radius;
+    const ix = x + Math.cos(innerAngle) * innerRadius;
+    const iy = y + Math.sin(innerAngle) * innerRadius;
+    const nx = x + Math.cos(nextAngle) * radius;
+    const ny = y + Math.sin(nextAngle) * radius;
+    g.fillTriangle(ox, oy, ix, iy, x, y);
+    g.fillTriangle(ix, iy, nx, ny, x, y);
+  }
+}
+
+function drawHexagonShape(
+  g: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  radius: number,
+  color: number,
+  alpha: number,
+  rotation: number
+): void {
+  g.fillStyle(color, alpha);
+  for (let i = 0; i < 6; i++) {
+    const a1 = rotation + (i / 6) * Math.PI * 2;
+    const a2 = rotation + ((i + 1) / 6) * Math.PI * 2;
+    g.fillTriangle(
+      x, y,
+      x + Math.cos(a1) * radius, y + Math.sin(a1) * radius,
+      x + Math.cos(a2) * radius, y + Math.sin(a2) * radius
+    );
+  }
+}
+
+function drawCrescentShape(
+  g: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  radius: number,
+  color: number,
+  alpha: number
+): void {
+  g.fillStyle(color, alpha);
+  g.fillCircle(x, y, radius);
+  g.fillStyle(0x000811, alpha * 0.85);
+  g.fillCircle(x + radius * 0.4, y - radius * 0.15, radius * 0.75);
+}
+
+function drawFoodShape(
+  g: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  radius: number,
+  color: number,
+  alpha: number,
+  shape: FoodType['shape'],
+  rotation: number
+): void {
+  switch (shape) {
+    case 'diamond':
+      drawDiamondShape(g, x, y, radius, color, alpha);
+      break;
+    case 'star':
+      drawStarShape(g, x, y, radius, color, alpha, rotation);
+      break;
+    case 'hexagon':
+      drawHexagonShape(g, x, y, radius, color, alpha, rotation);
+      break;
+    case 'crescent':
+      drawCrescentShape(g, x, y, radius, color, alpha);
+      break;
+    default:
+      g.fillStyle(color, alpha);
+      g.fillCircle(x, y, radius);
+  }
+}
+
+export function drawVariedFood(
+  g: Phaser.GameObjects.Graphics,
+  foodX: number,
+  foodY: number,
+  cellSize: number,
+  frameCount: number,
+  foodType: FoodType
+): void {
+  const hover = Math.sin(frameCount * 0.08) * 3;
+  const floatY = foodY + hover;
+  const baseRadius = cellSize * 0.38;
+  const pulse = 1.0 + Math.sin(frameCount * 0.1) * 0.08;
+  const radius = baseRadius * pulse;
+  const rotation = frameCount * 0.02;
+
+  const shadowScale = 1.0 - hover / 20;
+  const shadowAlpha = 0.25 * Math.max(0.3, shadowScale);
+  g.fillStyle(SHADOW_COLOR, shadowAlpha);
+  g.fillEllipse(foodX + 2, foodY + 5, radius * 2 * shadowScale, radius * 0.8 * shadowScale);
+
+  g.fillStyle(foodType.glowColor, 0.18);
+  g.fillCircle(foodX, floatY, radius * 2.2);
+  g.fillStyle(foodType.glowColor, 0.12);
+  g.fillCircle(foodX, floatY, radius * 1.6);
+
+  drawFoodShape(g, foodX, floatY + 1, radius, darkenColor(foodType.bodyColor, 0.7), 0.9, foodType.shape, rotation);
+  drawFoodShape(g, foodX, floatY, radius, foodType.bodyColor, 1.0, foodType.shape, rotation);
+
+  const hlX = foodX + LIGHT_COS * radius * 0.3;
+  const hlY = floatY + LIGHT_SIN * radius * 0.3;
+  g.fillStyle(foodType.highlightColor, 0.55);
+  g.fillCircle(hlX, hlY, radius * 0.55);
+  g.fillStyle(0xffffff, 0.45);
+  g.fillCircle(hlX, hlY, radius * 0.18);
+  g.fillStyle(0xffffff, 0.25);
   g.fillCircle(hlX - radius * 0.15, hlY - radius * 0.1, radius * 0.1);
 }
 

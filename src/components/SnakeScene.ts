@@ -35,6 +35,7 @@ import {
   initFoodOrbits,
   updateFoodOrbits,
   drawFoodOrbits,
+  recolorFoodOrbits,
   CLEAN_COLORS,
   CleanEffectsState,
 } from './cleanEffects';
@@ -54,8 +55,10 @@ import {
 } from './horrorEffects';
 import {
   drawFood3D,
+  drawVariedFood,
   drawGrid3D,
 } from './depth3d';
+import { pickFoodType, FoodType } from './foodVariety';
 import { drawSolidSnake } from './solidSnake';
 import {
   FaceState,
