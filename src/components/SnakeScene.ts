@@ -106,6 +106,13 @@ import {
   drawNuclearBlasts,
   NuclearBlastState,
 } from './nuclearBlast';
+import {
+  createFunFactsState,
+  spawnFunFact,
+  updateFunFacts,
+  drawFunFacts,
+  FunFactsState,
+} from './funFacts';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -570,6 +577,7 @@ export class SnakeScene extends Phaser.Scene {
   private dragonBreath: DragonBreathState = createDragonBreathState();
   private pulseGlow: PulseGlowState = createPulseGlowState();
   private nuclearBlast: NuclearBlastState = createNuclearBlastState();
+  private funFacts: FunFactsState = createFunFactsState();
   private faceState: FaceState = createFaceState();
   private snakeDirection: FaceDirection = 'RIGHT';
 
@@ -2496,6 +2504,7 @@ export class SnakeScene extends Phaser.Scene {
     updateMathWaves(this.mathParticles);
     updateScoreBursts(this.mathParticles);
     updateNuclearBlasts(this.nuclearBlast);
+    updateFunFacts(this.funFacts);
 
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
@@ -3659,8 +3668,78 @@ export class SnakeScene extends Phaser.Scene {
         g.fillRect(x + w / 2 - t / 2, y, t, h / 2);
         g.fillRect(x, y + h / 2 - t, w, t);
         break;
+      case 'A':
+        g.fillRect(x, y - h / 2, w, t);
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h);
+        g.fillRect(x, y - t / 2, w, t);
+        break;
+      case 'B':
+        g.fillRect(x, y - h / 2, w, t);
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h / 2);
+        g.fillRect(x, y - t / 2, w, t);
+        g.fillRect(x + w - t / 2, y, t, h / 2);
+        g.fillRect(x, y + h / 2 - t, w, t);
+        break;
+      case 'D':
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x, y - h / 2, w * 0.7, t);
+        g.fillRect(x + w - t / 2, y - h / 2 + t, t, h - t * 2);
+        g.fillRect(x, y + h / 2 - t, w * 0.7, t);
+        break;
+      case 'F':
+        g.fillRect(x, y - h / 2, w, t);
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x, y - t / 2, w * 0.7, t);
+        break;
+      case 'J':
+        g.fillRect(x + w - t / 2, y - h / 2, t, h);
+        g.fillRect(x, y + h / 2 - t, w, t);
+        g.fillRect(x - t / 2, y, t, h / 2);
+        break;
+      case 'K':
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h / 2);
+        g.fillRect(x, y - t / 2, w, t);
+        g.fillRect(x + w - t / 2, y, t, h / 2);
+        break;
+      case 'M':
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w / 2 - t / 2, y - h / 2, t, h / 2);
+        g.fillRect(x, y - h / 2, w, t);
+        break;
+      case 'P':
+        g.fillRect(x, y - h / 2, w, t);
+        g.fillRect(x - t / 2, y - h / 2, t, h);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h / 2);
+        g.fillRect(x, y - t / 2, w, t);
+        break;
+      case 'V':
+        g.fillRect(x - t / 2, y - h / 2, t, h * 0.7);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h * 0.7);
+        g.fillRect(x + w / 2 - t / 2, y + h * 0.2, t, h * 0.3);
+        break;
+      case 'X':
+        g.fillRect(x - t / 2, y - h / 2, t, h / 2);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h / 2);
+        g.fillRect(x, y - t / 2, w, t);
+        g.fillRect(x - t / 2, y, t, h / 2);
+        g.fillRect(x + w - t / 2, y, t, h / 2);
+        break;
+      case 'Z':
+        g.fillRect(x, y - h / 2, w, t);
+        g.fillRect(x + w - t / 2, y - h / 2, t, h / 2);
+        g.fillRect(x, y - t / 2, w, t);
+        g.fillRect(x - t / 2, y, t, h / 2);
+        g.fillRect(x, y + h / 2 - t, w, t);
+        break;
       case '!':
         g.fillRect(x + w / 2 - t / 2, y - h / 2, t, h * 0.6);
+        g.fillRect(x + w / 2 - t / 2, y + h / 2 - t * 2, t, t);
+        break;
+      case '.':
         g.fillRect(x + w / 2 - t / 2, y + h / 2 - t * 2, t, t);
         break;
       case ' ':
