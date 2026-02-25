@@ -9,7 +9,7 @@ import { createInitialState, INITIAL_SNAKE, GAME_SPEED_MS, GRID_SIZE, SPEED_BOOS
 import { tick, createNewGame, hasPowerUp } from './logic';
 import { usePostMessage } from './usePostMessage';
 import { useKeyboard } from './useKeyboard';
-import { useTouch } from './useTouch';
+import { useTouch, TapEvent } from './useTouch';
 import { useDirectionQueue } from './useDirectionQueue';
 
 export type { Direction, GameState, Position } from './types';
@@ -20,6 +20,7 @@ export function useSnakeGame() {
   const gameLoopRef = useRef<number>();
   const directionQueue = useDirectionQueue();
   const sparkCallbackRef = useRef<((direction: Direction) => void) | null>(null);
+  const tapCallbackRef = useRef<((event: TapEvent) => void) | null>(null);
 
   const isEmbedded = typeof window !== 'undefined' && window.parent !== window;
 
@@ -40,6 +41,16 @@ export function useSnakeGame() {
     sparkCallbackRef.current = cb;
   }, []);
 
+  const onTapTrigger = useCallback((cb: (event: TapEvent) => void) => {
+    tapCallbackRef.current = cb;
+  }, []);
+
+  const handleTap = useCallback((event: TapEvent) => {
+    if (tapCallbackRef.current) {
+      tapCallbackRef.current(event);
+    }
+  }, []);
+
   // PostMessage communication (origin-agnostic)
   const { broadcastState, broadcastReady } = usePostMessage({
     isEmbedded,
@@ -57,12 +68,15 @@ export function useSnakeGame() {
     onStartOrReset: resetGame
   });
 
-  // Touch/swipe input (standalone mode only)
+  // Touch/swipe + tap-to-turn input (standalone mode only)
   useTouch({
     enabled: !isEmbedded,
     gameStarted: gameState.gameStarted,
     gameOver: gameState.gameOver,
-    onDirectionChange: changeDirection
+    snakeHead: gameState.snake.length > 0 ? gameState.snake[0] : null,
+    currentDirection: gameState.direction,
+    onDirectionChange: changeDirection,
+    onTap: handleTap
   });
 
   // Game loop
@@ -108,6 +122,7 @@ export function useSnakeGame() {
     changeDirection,
     gridSize: GRID_SIZE,
     isEmbedded,
-    onSparkTrigger
+    onSparkTrigger,
+    onTapTrigger
   };
 }
