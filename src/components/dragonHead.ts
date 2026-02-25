@@ -328,19 +328,121 @@ function drawDragonMouth(
   }
 }
 
+function drawHugeFangs(
+  g: Phaser.GameObjects.Graphics,
+  cx: number,
+  cy: number,
+  headSize: number,
+  direction: FaceDirection,
+  biteAngle: number
+): void {
+  const v = getDirectionVectors(direction);
+  const jawForward = headSize * 0.45;
+  const jawSpread = headSize * 0.35;
+  const fangLen = headSize * 0.4 + Math.abs(biteAngle) * headSize * 0.15;
+  const jawOpen = biteAngle * headSize * 0.3;
+
+  const jawCx = cx + v.fx * jawForward;
+  const jawCy = cy + v.fy * jawForward;
+
+  const upperY = jawCy - v.ry * jawOpen - v.rx * jawOpen;
+  const upperX = jawCx - v.rx * jawOpen + v.ry * jawOpen;
+  const lowerY = jawCy + v.ry * jawOpen + v.rx * jawOpen;
+  const lowerX = jawCx + v.rx * jawOpen - v.ry * jawOpen;
+
+  for (let f = -1; f <= 1; f += 2) {
+    const fangBaseX = upperX + v.rx * jawSpread * 0.5 * f;
+    const fangBaseY = upperY + v.ry * jawSpread * 0.5 * f;
+    const fangTipX = fangBaseX + v.fx * fangLen * 0.5 + v.ry * fangLen * 0.3 * f;
+    const fangTipY = fangBaseY + v.fy * fangLen * 0.5 + v.rx * fangLen * 0.3 * f;
+
+    g.fillStyle(0xffffff, 0.95);
+    g.fillTriangle(
+      fangBaseX + v.rx * headSize * 0.06 * f, fangBaseY + v.ry * headSize * 0.06 * f,
+      fangBaseX - v.rx * headSize * 0.03 * f, fangBaseY - v.ry * headSize * 0.03 * f,
+      fangTipX, fangTipY
+    );
+
+    g.fillStyle(0xffeecc, 0.6);
+    g.fillTriangle(
+      fangBaseX, fangBaseY,
+      fangBaseX - v.rx * headSize * 0.02 * f, fangBaseY - v.ry * headSize * 0.02 * f,
+      fangTipX, fangTipY
+    );
+  }
+
+  for (let f = -1; f <= 1; f += 2) {
+    const fangBaseX = lowerX + v.rx * jawSpread * 0.35 * f;
+    const fangBaseY = lowerY + v.ry * jawSpread * 0.35 * f;
+    const fangTipX = fangBaseX + v.fx * fangLen * 0.35 - v.ry * fangLen * 0.2 * f;
+    const fangTipY = fangBaseY + v.fy * fangLen * 0.35 - v.rx * fangLen * 0.2 * f;
+
+    g.fillStyle(0xeeddcc, 0.9);
+    g.fillTriangle(
+      fangBaseX + v.rx * headSize * 0.04 * f, fangBaseY + v.ry * headSize * 0.04 * f,
+      fangBaseX - v.rx * headSize * 0.02 * f, fangBaseY - v.ry * headSize * 0.02 * f,
+      fangTipX, fangTipY
+    );
+  }
+}
+
+function drawBitingJaw(
+  g: Phaser.GameObjects.Graphics,
+  cx: number,
+  cy: number,
+  headSize: number,
+  direction: FaceDirection,
+  biteAngle: number,
+  frameCount: number
+): void {
+  const v = getDirectionVectors(direction);
+  const jawForward = headSize * 0.38;
+  const jawW = headSize * 0.5;
+  const jawOpen = Math.abs(biteAngle) * headSize * 0.3;
+
+  const jawCx = cx + v.fx * jawForward;
+  const jawCy = cy + v.fy * jawForward;
+
+  g.fillStyle(0x882222, 0.7 + Math.abs(biteAngle) * 0.3);
+  const mouthW = jawW * (0.8 + Math.abs(biteAngle) * 0.4);
+  const mouthH = jawOpen * 2 + headSize * 0.06;
+  if (Math.abs(v.fx) > 0) {
+    g.fillRect(jawCx - mouthH / 2, jawCy - mouthW / 2, mouthH, mouthW);
+  } else {
+    g.fillRect(jawCx - mouthW / 2, jawCy - mouthH / 2, mouthW, mouthH);
+  }
+
+  const tongueLen = headSize * 0.3 * (0.5 + Math.abs(biteAngle));
+  const tongueWave = Math.sin(frameCount * 0.2) * headSize * 0.05;
+  const tongueTipX = jawCx + v.fx * tongueLen;
+  const tongueTipY = jawCy + v.fy * tongueLen + tongueWave;
+  g.fillStyle(0xcc3344, 0.8);
+  g.fillTriangle(
+    jawCx + v.rx * headSize * 0.06, jawCy + v.ry * headSize * 0.06,
+    jawCx - v.rx * headSize * 0.06, jawCy - v.ry * headSize * 0.06,
+    tongueTipX, tongueTipY
+  );
+
+  drawHugeFangs(g, cx, cy, headSize, direction, biteAngle);
+}
+
 export function drawDragonHead(
   g: Phaser.GameObjects.Graphics,
   seg: SolidSegment,
   frameCount: number,
   direction: FaceDirection,
-  faceState: FaceState
+  faceState: FaceState,
+  biteAngle?: number
 ): void {
   const breathe = 1.0 + Math.sin(frameCount * 0.08) * 0.02;
   const headSize = seg.size * breathe;
   const half = headSize / 2;
 
-  g.fillStyle(0xff6600, 0.06);
-  g.fillCircle(seg.cx, seg.cy, half + 4);
+  g.fillStyle(0xff6600, 0.08);
+  g.fillCircle(seg.cx, seg.cy, half + 6);
+
+  g.fillStyle(0xff4400, 0.04);
+  g.fillCircle(seg.cx, seg.cy, half + 10);
 
   drawDragonHorns(g, seg.cx, seg.cy, headSize, direction, frameCount);
 
@@ -356,10 +458,14 @@ export function drawDragonHead(
 
   drawScalePattern(g, seg.cx, seg.cy, headSize, frameCount);
 
-  drawDragonSnout(g, seg.cx, seg.cy, headSize, direction, frameCount);
+  if (biteAngle !== undefined) {
+    drawBitingJaw(g, seg.cx, seg.cy, headSize, direction, biteAngle, frameCount);
+  } else {
+    drawDragonSnout(g, seg.cx, seg.cy, headSize, direction, frameCount);
+    drawDragonMouth(g, seg.cx, seg.cy, headSize, direction, faceState);
+  }
 
   drawDragonBrow(g, seg.cx, seg.cy, headSize, direction);
   drawDragonEyes(g, seg.cx, seg.cy, headSize, direction, frameCount, faceState);
   drawDragonNostrils(g, seg.cx, seg.cy, headSize, direction, frameCount);
-  drawDragonMouth(g, seg.cx, seg.cy, headSize, direction, faceState);
 }

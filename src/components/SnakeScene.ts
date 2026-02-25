@@ -193,6 +193,12 @@ import {
 import {
   computeBounceDirection,
 } from '../game/pinball';
+import {
+  createHugeHeadState,
+  updateHugeHead,
+  triggerChomp,
+  HugeHeadState,
+} from './hugeHead';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -670,6 +676,7 @@ export class SnakeScene extends Phaser.Scene {
   private lastPortalPair: { a: { x: number; y: number }; b: { x: number; y: number } } | null = null;
   private faceState: FaceState = createFaceState();
   private snakeDirection: FaceDirection = 'RIGHT';
+  private hugeHead: HugeHeadState = createHugeHeadState();
   private wizardEffects: WizardEffectsState = createWizardEffectsState();
   private hogwartsBackground: HogwartsBackgroundState = createHogwartsBackground(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
   private patronusTrail: PatronusTrailState = createPatronusTrailState();
@@ -2253,6 +2260,7 @@ export class SnakeScene extends Phaser.Scene {
       triggerCombo(this.comboStreak, headX, headY, this.frameCount);
       advanceFlag(this.flagDisplay);
       fireLaser(this.laserBeam, headX, headY, headX, headY);
+      this.hugeHead = triggerChomp(this.hugeHead);
     }
     this.lastSnakeLength = state.snake.length;
 
@@ -2640,6 +2648,7 @@ export class SnakeScene extends Phaser.Scene {
       const snoutTip = computeSnoutTip(headX, headY, headSize * 1.12, this.snakeDirection);
       const breathVec = getDirectionVectors(this.snakeDirection);
       updateDragonBreath(this.dragonBreath, snoutTip.tipX, snoutTip.tipY, breathVec.fx, breathVec.fy);
+      this.hugeHead = updateHugeHead(this.hugeHead, snoutTip.tipX, snoutTip.tipY);
       updatePatronusTrail(this.patronusTrail, headX, headY);
 
       const foodPos = this.currentState.food;
@@ -2711,7 +2720,8 @@ export class SnakeScene extends Phaser.Scene {
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
 
     drawPatronusTrail(g, this.patronusTrail);
-    drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState);
+    drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState, this.hugeHead);
+    this.drawDroolDrops(g);
     drawWandSparkles(g, this.wizardEffects);
     drawDragonBreath(g, this.dragonBreath);
     drawLaserBeams(g, this.laserBeam, this.frameCount);
@@ -2735,6 +2745,18 @@ export class SnakeScene extends Phaser.Scene {
 
     this.checkAndSaveHighScore();
     this.needsRedraw = false;
+  }
+
+  private drawDroolDrops(g: Phaser.GameObjects.Graphics): void {
+    for (const drop of this.hugeHead.droolDrops) {
+      const alpha = drop.life * 0.6;
+      g.fillStyle(0x88ccff, alpha * 0.3);
+      g.fillCircle(drop.x, drop.y, drop.size + 1);
+      g.fillStyle(0xaaddff, alpha);
+      g.fillCircle(drop.x, drop.y, drop.size);
+      g.fillStyle(0xffffff, alpha * 0.5);
+      g.fillCircle(drop.x - drop.size * 0.2, drop.y - drop.size * 0.3, drop.size * 0.3);
+    }
   }
 
   private drawStars(g: Phaser.GameObjects.Graphics): void {

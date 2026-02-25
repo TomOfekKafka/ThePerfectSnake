@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { FaceDirection, FaceState } from './snakeFace';
 import { getHouseColors } from './wizardEffects';
 import { drawDragonHead } from './dragonHead';
+import { HugeHeadState, computeHugeHeadScale, computeBiteAngle } from './hugeHead';
 
 export interface SolidSegment {
   cx: number;
@@ -108,9 +109,17 @@ function drawSolidHeadAsDragon(
   seg: SolidSegment,
   frameCount: number,
   direction: FaceDirection,
-  faceState: FaceState
+  faceState: FaceState,
+  hugeHead?: HugeHeadState
 ): void {
-  drawDragonHead(g, seg, frameCount, direction, faceState);
+  if (hugeHead) {
+    const scale = computeHugeHeadScale(frameCount, hugeHead);
+    const biteAngle = computeBiteAngle(frameCount, hugeHead);
+    const hugeSeg = { ...seg, size: seg.size * scale };
+    drawDragonHead(g, hugeSeg, frameCount, direction, faceState, biteAngle);
+  } else {
+    drawDragonHead(g, seg, frameCount, direction, faceState);
+  }
 }
 
 function drawSolidConnectors(
@@ -172,7 +181,8 @@ export function drawSolidSnake(
   cellSize: number,
   frameCount: number,
   direction: FaceDirection,
-  faceState: FaceState
+  faceState: FaceState,
+  hugeHead?: HugeHeadState
 ): void {
   const len = snake.length;
   if (len === 0) return;
@@ -197,5 +207,5 @@ export function drawSolidSnake(
     drawArmorPlate(g, segments[i], frameCount);
   }
 
-  drawSolidHeadAsDragon(g, segments[0], frameCount, direction, faceState);
+  drawSolidHeadAsDragon(g, segments[0], frameCount, direction, faceState, hugeHead);
 }
