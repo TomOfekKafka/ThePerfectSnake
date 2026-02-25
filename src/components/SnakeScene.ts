@@ -113,6 +113,13 @@ import {
   drawFunFacts,
   FunFactsState,
 } from './funFacts';
+import {
+  createPortalEffectsState,
+  updatePortalEffects,
+  drawPortals,
+  spawnWarpFlash,
+  PortalEffectsState,
+} from './portalEffects';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -578,6 +585,8 @@ export class SnakeScene extends Phaser.Scene {
   private pulseGlow: PulseGlowState = createPulseGlowState();
   private nuclearBlast: NuclearBlastState = createNuclearBlastState();
   private funFacts: FunFactsState = createFunFactsState();
+  private portalEffects: PortalEffectsState = createPortalEffectsState();
+  private lastPortalPair: { a: { x: number; y: number }; b: { x: number; y: number } } | null = null;
   private faceState: FaceState = createFaceState();
   private snakeDirection: FaceDirection = 'RIGHT';
 

@@ -21,6 +21,13 @@ export interface ActivePowerUp {
   endTime: number;
 }
 
+export interface PortalPair {
+  a: Position;
+  b: Position;
+  spawnTick: number;
+  cooldown: number;
+}
+
 export interface GameState {
   snake: Position[];
   food: Position;
@@ -32,6 +39,8 @@ export interface GameState {
   powerUp: PowerUp | null;
   activePowerUps: ActivePowerUp[];
   tickCount: number;
+  portalPair: PortalPair | null;
+  lastPortalDespawn: number;
 }
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';

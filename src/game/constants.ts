@@ -38,4 +38,6 @@ export const createInitialState = (): GameState => ({
   powerUp: null,
   activePowerUps: [],
   tickCount: 0,
+  portalPair: null,
+  lastPortalDespawn: 0,
 });

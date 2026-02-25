@@ -5,6 +5,7 @@
 
 import { Position, Direction, GameState, OPPOSITE_DIRECTIONS, PowerUp, PowerUpType, ActivePowerUp } from './types';
 import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE } from './constants';
+import { checkTeleport, shouldSpawnPortals, shouldDespawnPortals, generatePortalPair, applyTeleportCooldown, decrementCooldown } from './portals';
 
 /** Check if two positions are equal */
 export const positionsEqual = (a: Position, b: Position): boolean =>
@@ -102,7 +103,7 @@ export const tick = (state: GameState, direction: Direction): GameState => {
 
   const tickCount = state.tickCount + 1;
   const head = state.snake[0];
-  const newHead = getNextHead(head, direction);
+  let newHead = getNextHead(head, direction);
 
   // Check collision - invincibility protects against self-collision only
   const isInvincible = hasPowerUp(state.activePowerUps, 'INVINCIBILITY');
@@ -113,7 +114,22 @@ export const tick = (state: GameState, direction: Direction): GameState => {
     return { ...state, gameOver: true, tickCount };
   }
 
-  const newSnake = [newHead, ...state.snake];
+  // Check portal teleportation
+  let portalPair = state.portalPair;
+  let lastPortalDespawn = state.lastPortalDespawn;
+  let teleported = false;
+
+  if (portalPair) {
+    portalPair = decrementCooldown(portalPair);
+    const result = checkTeleport(newHead, portalPair);
+    if (result.teleported) {
+      newHead = result.newHead;
+      portalPair = applyTeleportCooldown(portalPair);
+      teleported = true;
+    }
+  }
+
+  const newSnake = teleported ? [newHead, ...state.snake] : [newHead, ...state.snake];
   const ateFood = positionsEqual(newHead, state.food);
 
   // Check power-up collection
@@ -135,6 +151,18 @@ export const tick = (state: GameState, direction: Direction): GameState => {
     newPowerUp = generatePowerUp(newSnake, state.food, tickCount);
   }
 
+  // Portal lifecycle
+  if (portalPair && shouldDespawnPortals(portalPair, tickCount)) {
+    portalPair = null;
+    lastPortalDespawn = tickCount;
+  }
+
+  const foodEatenCount = ateFood ? state.foodEaten + 1 : state.foodEaten;
+
+  if (shouldSpawnPortals(portalPair, foodEatenCount, tickCount, lastPortalDespawn)) {
+    portalPair = generatePortalPair(newSnake, state.food, tickCount);
+  }
+
   // Calculate score with multiplier
   const hasMultiplier = hasPowerUp(newActivePowerUps, 'SCORE_MULTIPLIER');
   const scoreGain = ateFood ? (hasMultiplier ? POINTS_PER_FOOD * SCORE_MULTIPLIER_VALUE : POINTS_PER_FOOD) : 0;
@@ -145,11 +173,13 @@ export const tick = (state: GameState, direction: Direction): GameState => {
       snake: newSnake,
       food: generateFood(newSnake, newPowerUp?.position),
       score: state.score + scoreGain,
-      foodEaten: state.foodEaten + 1,
+      foodEaten: foodEatenCount,
       direction,
       powerUp: newPowerUp,
       activePowerUps: newActivePowerUps,
       tickCount,
+      portalPair,
+      lastPortalDespawn,
     };
   }
 
@@ -161,6 +191,8 @@ export const tick = (state: GameState, direction: Direction): GameState => {
     powerUp: newPowerUp,
     activePowerUps: newActivePowerUps,
     tickCount,
+    portalPair,
+    lastPortalDespawn,
   };
 };
 
@@ -176,4 +208,6 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
   powerUp: null,
   activePowerUps: [],
   tickCount: 0,
+  portalPair: null,
+  lastPortalDespawn: 0,
 });
