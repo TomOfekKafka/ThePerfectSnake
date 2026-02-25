@@ -59,6 +59,7 @@ import {
 } from './depth3d';
 import { pickFoodType, FoodType } from './foodVariety';
 import { drawSolidSnake } from './solidSnake';
+import { computeSnoutTip, getDirectionVectors } from './dragonHead';
 import {
   FaceState,
   FaceDirection,
@@ -2628,7 +2629,10 @@ export class SnakeScene extends Phaser.Scene {
         this.currentState.foodEaten || 0
       );
 
-      updateDragonBreath(this.dragonBreath, headX, headY, dirX * -1, dirY * -1);
+      const headSize = CELL_SIZE - 2;
+      const snoutTip = computeSnoutTip(headX, headY, headSize * 1.12, this.snakeDirection);
+      const breathVec = getDirectionVectors(this.snakeDirection);
+      updateDragonBreath(this.dragonBreath, snoutTip.tipX, snoutTip.tipY, breathVec.fx, breathVec.fy);
       updatePatronusTrail(this.patronusTrail, headX, headY);
 
       const foodPos = this.currentState.food;

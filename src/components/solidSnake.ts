@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { FaceDirection, FaceState, drawSnakeFace } from './snakeFace';
+import { FaceDirection, FaceState } from './snakeFace';
 import { getHouseColors } from './wizardEffects';
+import { drawDragonHead } from './dragonHead';
 
 export interface SolidSegment {
   cx: number;
@@ -102,43 +103,14 @@ function drawSolidBody(
   g.fillRect(seg.cx - half + bevel + 1, seg.cy - half + bevel + 1, specSize, specSize);
 }
 
-function drawSolidHead(
+function drawSolidHeadAsDragon(
   g: Phaser.GameObjects.Graphics,
   seg: SolidSegment,
   frameCount: number,
   direction: FaceDirection,
   faceState: FaceState
 ): void {
-  const breathe = 1.0 + Math.sin(frameCount * 0.08) * 0.02;
-  const headSize = seg.size * breathe;
-  const half = headSize / 2;
-  const headHouse = getHouseColors(0, 1);
-  const base = headHouse.base;
-  const highlight = headHouse.highlight;
-  const edge = headHouse.edge;
-  const bevel = Math.max(2, headSize * 0.12);
-
-  g.fillStyle(0xffd700, 0.1);
-  g.fillRect(seg.cx - half - 3, seg.cy - half - 3, headSize + 6, headSize + 6);
-
-  g.fillStyle(edge, 0.97);
-  g.fillRect(seg.cx - half, seg.cy - half, headSize, headSize);
-
-  g.fillStyle(base, 0.97);
-  g.fillRect(seg.cx - half + bevel, seg.cy - half + bevel, headSize - bevel * 2, headSize - bevel * 2);
-
-  g.fillStyle(highlight, 0.35);
-  g.fillRect(seg.cx - half + bevel, seg.cy - half + bevel, headSize - bevel * 2, bevel);
-
-  g.fillStyle(highlight, 0.25);
-  g.fillRect(seg.cx - half + bevel, seg.cy - half + bevel, bevel, headSize - bevel * 2);
-
-  const specPulse = 0.2 + Math.sin(frameCount * 0.1) * 0.1;
-  g.fillStyle(0xffffff, specPulse);
-  const specSize = headSize * 0.18;
-  g.fillRect(seg.cx - half + bevel + 1, seg.cy - half + bevel + 1, specSize, specSize);
-
-  drawSnakeFace(g, seg, headSize, frameCount, direction, faceState);
+  drawDragonHead(g, seg, frameCount, direction, faceState);
 }
 
 function drawSolidConnectors(
@@ -225,5 +197,5 @@ export function drawSolidSnake(
     drawArmorPlate(g, segments[i], frameCount);
   }
 
-  drawSolidHead(g, segments[0], frameCount, direction, faceState);
+  drawSolidHeadAsDragon(g, segments[0], frameCount, direction, faceState);
 }
