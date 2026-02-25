@@ -59,8 +59,16 @@ describe('solidSnake', () => {
 
     it('uses rectangular size based on cellSize', () => {
       const seg = computeSolidSegment(0, 0, 20, 0, 1);
-      expect(seg.size).toBeLessThanOrEqual(22);
+      expect(seg.size).toBeLessThanOrEqual(20);
       expect(seg.size).toBeGreaterThan(10);
+    });
+
+    it('head size is proportional to body (no oversized head)', () => {
+      const head = computeSolidSegment(0, 0, 20, 0, 5);
+      const neck = computeSolidSegment(1, 0, 20, 1, 5, 0, 0);
+      const ratio = head.size / neck.size;
+      expect(ratio).toBeGreaterThan(0.95);
+      expect(ratio).toBeLessThan(1.15);
     });
   });
 

@@ -27,7 +27,7 @@ export function computeSolidSegment(
   const cx = x * cellSize + cellSize / 2;
   const cy = y * cellSize + cellSize / 2;
   const t = snakeLen > 1 ? index / (snakeLen - 1) : 0;
-  const headScale = index === 0 ? 1.12 : 1.0;
+  const headScale = index === 0 ? 1.0 : 1.0;
   const taperScale = 0.82 + (1 - t) * 0.18;
   const size = (cellSize - 2) * taperScale * headScale;
   const angle = computeSegmentAngle(x, y, prevX, prevY);

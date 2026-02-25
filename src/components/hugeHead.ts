@@ -17,7 +17,7 @@ interface DroolDrop {
 }
 
 const MAX_DROOL = 12;
-const HEAD_SCALE_MULTIPLIER = 2.4;
+const HEAD_SCALE_MULTIPLIER = 1.6;
 const CHOMP_DURATION = 18;
 
 export function createHugeHeadState(): HugeHeadState {

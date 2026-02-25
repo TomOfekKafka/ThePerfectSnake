@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { SolidSegment } from './solidSnake';
 import { FaceDirection, FaceState, computePupilOffset } from './snakeFace';
+import { drawCrown } from './crownHead';
 
 const DRAGON_GREEN_BASE = 0x2a7a3a;
 const DRAGON_GREEN_LIGHT = 0x44aa55;
@@ -35,7 +36,7 @@ export function computeSnoutTip(
   direction: FaceDirection
 ): { tipX: number; tipY: number } {
   const v = getDirectionVectors(direction);
-  const snoutLen = headSize * 0.55;
+  const snoutLen = headSize * 0.42;
   return {
     tipX: cx + v.fx * snoutLen,
     tipY: cy + v.fy * snoutLen,
@@ -50,10 +51,10 @@ export function computeHornPositions(
   frameCount: number
 ): { left: { bx: number; by: number; tx: number; ty: number }; right: { bx: number; by: number; tx: number; ty: number } } {
   const v = getDirectionVectors(direction);
-  const hornSpread = headSize * 0.35;
-  const hornBack = headSize * 0.2;
-  const hornHeight = headSize * 0.55;
-  const sway = Math.sin(frameCount * 0.04) * 0.5;
+  const hornSpread = headSize * 0.28;
+  const hornBack = headSize * 0.18;
+  const hornHeight = headSize * 0.32;
+  const sway = Math.sin(frameCount * 0.04) * 0.3;
 
   const lbx = cx - v.fx * hornBack + v.rx * hornSpread;
   const lby = cy - v.fy * hornBack + v.ry * hornSpread;
@@ -116,8 +117,8 @@ function drawDragonSnout(
 ): void {
   const v = getDirectionVectors(direction);
   const half = headSize / 2;
-  const snoutLen = headSize * 0.55;
-  const snoutW = headSize * 0.38;
+  const snoutLen = headSize * 0.42;
+  const snoutW = headSize * 0.32;
   const breathe = 1.0 + Math.sin(frameCount * 0.08) * 0.015;
 
   const tipX = cx + v.fx * snoutLen * breathe;
@@ -438,11 +439,11 @@ export function drawDragonHead(
   const headSize = seg.size * breathe;
   const half = headSize / 2;
 
-  g.fillStyle(0xff6600, 0.08);
-  g.fillCircle(seg.cx, seg.cy, half + 6);
+  g.fillStyle(0xffd700, 0.06);
+  g.fillCircle(seg.cx, seg.cy, half + 4);
 
-  g.fillStyle(0xff4400, 0.04);
-  g.fillCircle(seg.cx, seg.cy, half + 10);
+  g.fillStyle(0xffd700, 0.03);
+  g.fillCircle(seg.cx, seg.cy, half + 7);
 
   drawDragonHorns(g, seg.cx, seg.cy, headSize, direction, frameCount);
 
@@ -468,4 +469,5 @@ export function drawDragonHead(
   drawDragonBrow(g, seg.cx, seg.cy, headSize, direction);
   drawDragonEyes(g, seg.cx, seg.cy, headSize, direction, frameCount, faceState);
   drawDragonNostrils(g, seg.cx, seg.cy, headSize, direction, frameCount);
+  drawCrown(g, seg.cx, seg.cy, headSize, direction, frameCount);
 }
