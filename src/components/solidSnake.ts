@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { FaceDirection, FaceState, drawSnakeFace } from './snakeFace';
+import { getHouseColors } from './wizardEffects';
 
 export interface SolidSegment {
   cx: number;
@@ -8,6 +9,8 @@ export interface SolidSegment {
   taper: number;
   isHead: boolean;
   angle: number;
+  index: number;
+  snakeLen: number;
 }
 
 export function computeSolidSegment(
@@ -26,7 +29,7 @@ export function computeSolidSegment(
   const taperScale = 0.82 + (1 - t) * 0.18;
   const size = (cellSize - 2) * taperScale * headScale;
   const angle = computeSegmentAngle(x, y, prevX, prevY);
-  return { cx, cy, size, taper: t, isHead: index === 0, angle };
+  return { cx, cy, size, taper: t, isHead: index === 0, angle, index, snakeLen };
 }
 
 function computeSegmentAngle(
@@ -75,9 +78,10 @@ function drawSolidBody(
   frameCount: number
 ): void {
   const half = seg.size / 2;
-  const base = solidBaseColor(seg.taper);
-  const highlight = solidHighlightColor(seg.taper);
-  const edge = solidEdgeColor(seg.taper);
+  const house = getHouseColors(seg.index, seg.snakeLen);
+  const base = house.base;
+  const highlight = house.highlight;
+  const edge = house.edge;
   const bevel = Math.max(2, seg.size * 0.12);
 
   g.fillStyle(edge, 0.95);
@@ -108,12 +112,13 @@ function drawSolidHead(
   const breathe = 1.0 + Math.sin(frameCount * 0.08) * 0.02;
   const headSize = seg.size * breathe;
   const half = headSize / 2;
-  const base = solidBaseColor(0);
-  const highlight = solidHighlightColor(0);
-  const edge = solidEdgeColor(0);
+  const headHouse = getHouseColors(0, 1);
+  const base = headHouse.base;
+  const highlight = headHouse.highlight;
+  const edge = headHouse.edge;
   const bevel = Math.max(2, headSize * 0.12);
 
-  g.fillStyle(0x66ff88, 0.1);
+  g.fillStyle(0xffd700, 0.1);
   g.fillRect(seg.cx - half - 3, seg.cy - half - 3, headSize + 6, headSize + 6);
 
   g.fillStyle(edge, 0.97);
@@ -150,7 +155,8 @@ function drawSolidConnectors(
     if (dist < 1 || dist > a.size * 2) continue;
 
     const connW = Math.min(a.size, b.size) * 0.65;
-    const color = solidBaseColor((a.taper + b.taper) / 2);
+    const connHouse = getHouseColors(a.index, a.snakeLen);
+    const color = connHouse.base;
     const midX = (a.cx + b.cx) / 2;
     const midY = (a.cy + b.cy) / 2;
 

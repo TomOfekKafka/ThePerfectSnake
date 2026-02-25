@@ -63,51 +63,54 @@ export function drawSnakeFace(
   direction: FaceDirection,
   faceState: FaceState
 ): void {
-  drawCrown(g, seg, headSize, frameCount);
+  drawLightningBolt(g, seg, headSize, frameCount);
   drawEyes(g, seg, headSize, frameCount, direction, faceState);
   drawMouth(g, seg, headSize, direction, faceState);
 }
 
-function drawCrown(
+function drawLightningBolt(
   g: Phaser.GameObjects.Graphics,
   seg: SolidSegment,
   headSize: number,
   frameCount: number
 ): void {
-  const crownW = headSize * 0.7;
-  const crownH = headSize * 0.22;
-  const crownX = seg.cx - crownW / 2;
-  const crownY = seg.cy - headSize / 2 - crownH * 0.7;
-  const bob = Math.sin(frameCount * 0.06) * 1.0;
+  const boltH = headSize * 0.55;
+  const boltW = headSize * 0.28;
+  const boltX = seg.cx - boltW * 0.3;
+  const boltY = seg.cy - headSize / 2 - boltH * 0.45;
+  const bob = Math.sin(frameCount * 0.06) * 0.8;
+  const pulse = 0.8 + Math.sin(frameCount * 0.1) * 0.2;
 
-  g.fillStyle(0xffd700, 0.9);
-  g.fillRect(crownX, crownY + bob, crownW, crownH);
+  g.fillStyle(0xffd700, 0.15 * pulse);
+  g.fillCircle(boltX + boltW * 0.3, boltY + bob + boltH * 0.4, boltH * 0.5);
 
-  const peakCount = 3;
-  const peakW = crownW / peakCount;
-  const peakH = crownH * 0.6;
-  for (let i = 0; i < peakCount; i++) {
-    const px = crownX + peakW * i + peakW / 2;
-    const py = crownY + bob - peakH;
-    g.fillStyle(0xffd700, 0.9);
-    g.fillTriangle(
-      px - peakW * 0.35, crownY + bob,
-      px + peakW * 0.35, crownY + bob,
-      px, py
-    );
-  }
+  const s = boltH / 5;
+  const x0 = boltX;
+  const y0 = boltY + bob;
 
-  g.fillStyle(0xffee88, 0.5);
-  g.fillRect(crownX + 1, crownY + bob + 1, crownW - 2, crownH * 0.35);
+  g.fillStyle(0xffd700, 0.9 * pulse);
+  g.fillTriangle(
+    x0 + boltW * 0.3, y0,
+    x0 + boltW, y0 + s * 2,
+    x0 + boltW * 0.15, y0 + s * 2
+  );
+  g.fillTriangle(
+    x0 + boltW * 0.8, y0 + s * 1.7,
+    x0 + boltW * 0.5, y0 + s * 3.5,
+    x0, y0 + s * 1.7
+  );
+  g.fillTriangle(
+    x0 + boltW * 0.45, y0 + s * 3,
+    x0 + boltW * 0.2, y0 + s * 5,
+    x0 - boltW * 0.05, y0 + s * 3
+  );
 
-  const gemSize = headSize * 0.06;
-  const gemColors = [0xff4444, 0x44aaff, 0xff4444];
-  for (let i = 0; i < 3; i++) {
-    const gx = crownX + crownW * (0.2 + i * 0.3);
-    const gy = crownY + bob + crownH * 0.55;
-    g.fillStyle(gemColors[i], 0.85);
-    g.fillRect(gx - gemSize / 2, gy - gemSize / 2, gemSize, gemSize);
-  }
+  g.fillStyle(0xffee88, 0.5 * pulse);
+  g.fillTriangle(
+    x0 + boltW * 0.35, y0 + s * 0.3,
+    x0 + boltW * 0.7, y0 + s * 1.8,
+    x0 + boltW * 0.25, y0 + s * 1.8
+  );
 }
 
 function drawEyes(
