@@ -96,6 +96,13 @@ import {
   drawPulseGlows,
   PulseGlowState,
 } from './pulseGlow';
+import {
+  createNuclearBlastState,
+  spawnNuclearBlast,
+  updateNuclearBlasts,
+  drawNuclearBlasts,
+  NuclearBlastState,
+} from './nuclearBlast';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -559,6 +566,7 @@ export class SnakeScene extends Phaser.Scene {
   private spaceBackground: SpaceBackgroundState = createSpaceBackgroundState();
   private dragonBreath: DragonBreathState = createDragonBreathState();
   private pulseGlow: PulseGlowState = createPulseGlowState();
+  private nuclearBlast: NuclearBlastState = createNuclearBlastState();
   private faceState: FaceState = createFaceState();
   private snakeDirection: FaceDirection = 'RIGHT';
 
@@ -2126,7 +2134,8 @@ export class SnakeScene extends Phaser.Scene {
       this.spawnShockWave(headX, headY);
       this.spawnLightningBurst(headX, headY);
       this.spawnFoodBurst(headX, headY);
-      this.spawnChaosExplosion(headX, headY); // Armageddon chaos explosion
+      this.spawnChaosExplosion(headX, headY);
+      spawnNuclearBlast(this.nuclearBlast, headX, headY);
       this.screenFlashAlpha = 0.25;
       this.chromaticIntensity = 1.5;
       this.energyFieldPulse = 1.0;
@@ -2483,6 +2492,7 @@ export class SnakeScene extends Phaser.Scene {
     updateMathSymbols(this.mathParticles, width, height);
     updateMathWaves(this.mathParticles);
     updateScoreBursts(this.mathParticles);
+    updateNuclearBlasts(this.nuclearBlast);
 
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
@@ -2545,6 +2555,7 @@ export class SnakeScene extends Phaser.Scene {
 
     drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState);
     drawDragonBreath(g, this.dragonBreath);
+    drawNuclearBlasts(g, this.nuclearBlast);
     drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
 
     drawCleanVignette(g, width, height);
