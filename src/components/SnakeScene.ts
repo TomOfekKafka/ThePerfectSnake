@@ -114,11 +114,14 @@ import {
 } from './comboStreak';
 import {
   createPortalEffectsState,
-  updatePortalEffects,
-  drawPortals,
-  spawnWarpFlash,
   PortalEffectsState,
 } from './portalEffects';
+import {
+  createWallBorderState,
+  updateWallBorder,
+  drawWallBorder,
+  WallBorderState,
+} from './wallBorder';
 import {
   createWizardEffectsState,
   spawnWandSparkles,

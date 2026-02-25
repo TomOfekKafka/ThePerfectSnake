@@ -5,8 +5,6 @@
 
 import { Position, Direction, GameState, OPPOSITE_DIRECTIONS, PowerUp, PowerUpType, ActivePowerUp } from './types';
 import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE } from './constants';
-import { checkTeleport, shouldSpawnPortals, shouldDespawnPortals, generatePortalPair, applyTeleportCooldown, decrementCooldown } from './portals';
-import { generateWormhole, shouldSpawnWormhole, shouldDespawnWormhole, checkWormholeTeleport, WORMHOLE_BONUS_POINTS } from './wormhole';
 import { tickPhantom } from './phantomSnake';
 
 /** Check if two positions are equal */
@@ -113,11 +111,9 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
   const head = state.snake[0];
   let newHead = getNextHead(head, direction);
 
-  // Immortal mode: wrap through walls and pass through self
   if (immortal) {
     newHead = wrapPosition(newHead);
   } else {
-    // Check collision - invincibility protects against self-collision only
     const isInvincible = hasPowerUp(state.activePowerUps, 'INVINCIBILITY');
     const hitWall = !isInBounds(newHead);
     const hitSelf = collidesWithSnake(newHead, state.snake);
@@ -127,40 +123,9 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     }
   }
 
-  // Check portal teleportation
-  let portalPair = state.portalPair;
-  let lastPortalDespawn = state.lastPortalDespawn;
-  let teleported = false;
-
-  if (portalPair) {
-    portalPair = decrementCooldown(portalPair);
-    const result = checkTeleport(newHead, portalPair);
-    if (result.teleported) {
-      newHead = result.newHead;
-      portalPair = applyTeleportCooldown(portalPair);
-      teleported = true;
-    }
-  }
-
-  // Check wormhole teleportation (optional - player chooses to enter)
-  let wormhole = state.wormhole;
-  let lastWormholeDespawn = state.lastWormholeDespawn;
-  let wormholeBonus = 0;
-
-  if (wormhole && !teleported) {
-    const wormResult = checkWormholeTeleport(newHead, wormhole);
-    if (wormResult.teleported) {
-      newHead = wormResult.newHead;
-      wormhole = { ...wormhole, used: true };
-      wormholeBonus = WORMHOLE_BONUS_POINTS;
-      teleported = true;
-    }
-  }
-
   const newSnake = [newHead, ...state.snake];
   const ateFood = positionsEqual(newHead, state.food);
 
-  // Check power-up collection
   let newPowerUp = state.powerUp;
   let newActivePowerUps = updateActivePowerUps(state.activePowerUps, tickCount);
 
@@ -169,42 +134,18 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     newPowerUp = null;
   }
 
-  // Despawn power-up after time limit
   if (newPowerUp && (tickCount - newPowerUp.spawnTime) > POWERUP_DESPAWN_TICKS) {
     newPowerUp = null;
   }
 
-  // Maybe spawn a new power-up
   if (!newPowerUp && Math.random() < POWERUP_SPAWN_CHANCE) {
     newPowerUp = generatePowerUp(newSnake, state.food, tickCount);
   }
 
-  // Portal lifecycle
-  if (portalPair && shouldDespawnPortals(portalPair, tickCount)) {
-    portalPair = null;
-    lastPortalDespawn = tickCount;
-  }
-
   const foodEatenCount = ateFood ? state.foodEaten + 1 : state.foodEaten;
 
-  if (shouldSpawnPortals(portalPair, foodEatenCount, tickCount, lastPortalDespawn)) {
-    portalPair = generatePortalPair(newSnake, state.food, tickCount);
-  }
-
-  // Wormhole lifecycle
-  if (wormhole && shouldDespawnWormhole(wormhole, tickCount)) {
-    lastWormholeDespawn = tickCount;
-    wormhole = null;
-  }
-
-  if (shouldSpawnWormhole(wormhole, foodEatenCount, tickCount, lastWormholeDespawn)) {
-    wormhole = generateWormhole(newSnake, state.food, tickCount);
-  }
-
-  // Calculate score with multiplier
   const hasMultiplier = hasPowerUp(newActivePowerUps, 'SCORE_MULTIPLIER');
-  const baseScore = ateFood ? (hasMultiplier ? POINTS_PER_FOOD * SCORE_MULTIPLIER_VALUE : POINTS_PER_FOOD) : 0;
-  const scoreGain = baseScore + wormholeBonus;
+  const scoreGain = ateFood ? (hasMultiplier ? POINTS_PER_FOOD * SCORE_MULTIPLIER_VALUE : POINTS_PER_FOOD) : 0;
 
   if (ateFood) {
     const newFood = generateFood(newSnake, newPowerUp?.position);
@@ -219,10 +160,10 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       powerUp: newPowerUp,
       activePowerUps: newActivePowerUps,
       tickCount,
-      portalPair,
-      lastPortalDespawn,
-      wormhole,
-      lastWormholeDespawn,
+      portalPair: null,
+      lastPortalDespawn: 0,
+      wormhole: null,
+      lastWormholeDespawn: 0,
       phantom: phantomResult.phantom,
     };
   }
@@ -238,15 +179,15 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     ...state,
     snake: newSnake,
     food: finalFood,
-    score: state.score + wormholeBonus,
+    score: state.score,
     direction,
     powerUp: newPowerUp,
     activePowerUps: newActivePowerUps,
     tickCount,
-    portalPair,
-    lastPortalDespawn,
-    wormhole,
-    lastWormholeDespawn,
+    portalPair: null,
+    lastPortalDespawn: 0,
+    wormhole: null,
+    lastWormholeDespawn: 0,
     phantom: phantomResult.phantom,
   };
 };
