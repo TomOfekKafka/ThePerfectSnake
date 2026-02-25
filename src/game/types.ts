@@ -42,6 +42,12 @@ export interface BonusFood {
   lifetime: number;
 }
 
+export interface FlagFood {
+  position: Position;
+  spawnTick: number;
+  lifetime: number;
+}
+
 export interface PhantomSnake {
   segments: Position[];
   direction: Direction;
@@ -68,6 +74,7 @@ export interface GameState {
   lastWormholeDespawn: number;
   phantom: PhantomSnake;
   bonusFood: BonusFood | null;
+  flagFood: FlagFood | null;
   immortalActive: boolean;
   immortalProgress: number;
   immortalCharges: number;

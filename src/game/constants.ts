@@ -33,6 +33,10 @@ export const BONUS_FOOD_SHRINK_AMOUNT = 3;
 export const BONUS_FOOD_SCORE = 15;
 export const BONUS_FOOD_MIN_SNAKE_LENGTH = 4;
 
+export const FLAG_FOOD_INTERVAL = 5;
+export const FLAG_FOOD_LIFETIME = 100;
+export const FLAG_FOOD_MULTIPLIER = 5;
+
 export const createInitialState = (): GameState => ({
   snake: [...INITIAL_SNAKE],
   food: { ...INITIAL_FOOD },
@@ -57,6 +61,7 @@ export const createInitialState = (): GameState => ({
     spawnCooldown: 0,
   },
   bonusFood: null,
+  flagFood: null,
   immortalActive: false,
   immortalProgress: 0,
   immortalCharges: 1,

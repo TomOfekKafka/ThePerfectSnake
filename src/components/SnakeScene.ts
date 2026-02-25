@@ -206,6 +206,12 @@ interface Position {
   y: number;
 }
 
+interface FlagFoodData {
+  position: Position;
+  spawnTick: number;
+  lifetime: number;
+}
+
 interface GameState {
   snake: Position[];
   food: Position;
@@ -214,6 +220,7 @@ interface GameState {
   score?: number;
   foodEaten?: number;
   tickCount?: number;
+  flagFood?: FlagFoodData | null;
 }
 
 interface Star {
