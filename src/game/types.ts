@@ -61,6 +61,10 @@ export interface GameState {
   wormhole: Wormhole | null;
   lastWormholeDespawn: number;
   phantom: PhantomSnake;
+  immortalActive: boolean;
+  immortalProgress: number;
+  immortalCharges: number;
+  immortalRechargeProgress: number;
 }
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';

@@ -50,4 +50,8 @@ export const createInitialState = (): GameState => ({
     moveTimer: 0,
     spawnCooldown: 0,
   },
+  immortalActive: false,
+  immortalProgress: 0,
+  immortalCharges: 1,
+  immortalRechargeProgress: 0,
 });

@@ -97,8 +97,14 @@ export const activatePowerUp = (activePowerUps: ActivePowerUp[], type: PowerUpTy
   return [...activePowerUps, { type, endTime: tickCount + duration }];
 };
 
+/** Wrap position around the grid edges */
+export const wrapPosition = (pos: Position): Position => ({
+  x: ((pos.x % GRID_SIZE) + GRID_SIZE) % GRID_SIZE,
+  y: ((pos.y % GRID_SIZE) + GRID_SIZE) % GRID_SIZE,
+});
+
 /** Calculate next game state after one tick */
-export const tick = (state: GameState, direction: Direction): GameState => {
+export const tick = (state: GameState, direction: Direction, immortal = false): GameState => {
   if (state.gameOver || !state.gameStarted) {
     return state;
   }
@@ -107,13 +113,18 @@ export const tick = (state: GameState, direction: Direction): GameState => {
   const head = state.snake[0];
   let newHead = getNextHead(head, direction);
 
-  // Check collision - invincibility protects against self-collision only
-  const isInvincible = hasPowerUp(state.activePowerUps, 'INVINCIBILITY');
-  const hitWall = !isInBounds(newHead);
-  const hitSelf = collidesWithSnake(newHead, state.snake);
+  // Immortal mode: wrap through walls and pass through self
+  if (immortal) {
+    newHead = wrapPosition(newHead);
+  } else {
+    // Check collision - invincibility protects against self-collision only
+    const isInvincible = hasPowerUp(state.activePowerUps, 'INVINCIBILITY');
+    const hitWall = !isInBounds(newHead);
+    const hitSelf = collidesWithSnake(newHead, state.snake);
 
-  if (hitWall || (hitSelf && !isInvincible)) {
-    return { ...state, gameOver: true, tickCount };
+    if (hitWall || (hitSelf && !isInvincible)) {
+      return { ...state, gameOver: true, tickCount };
+    }
   }
 
   // Check portal teleportation
@@ -264,6 +275,10 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
     moveTimer: 0,
     spawnCooldown: 0,
   },
+  immortalActive: false,
+  immortalProgress: 0,
+  immortalCharges: 1,
+  immortalRechargeProgress: 0,
 });
 
 /** Revive the snake after a correct trivia answer. Trims half the tail and spawns safe. */
@@ -287,5 +302,7 @@ export const reviveSnake = (state: GameState): GameState => {
       active: false,
       spawnCooldown: 0,
     },
+    immortalActive: false,
+    immortalProgress: 0,
   };
 };
