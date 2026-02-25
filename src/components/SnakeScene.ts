@@ -145,6 +145,14 @@ import {
   drawPatronusTrail,
   PatronusTrailState,
 } from './patronusTrail';
+import {
+  createLaserBeamState,
+  updateLaserBeams,
+  drawTargetingLine,
+  drawLaserBeams,
+  fireLaser,
+  LaserBeamState,
+} from './laserBeam';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -617,6 +625,7 @@ export class SnakeScene extends Phaser.Scene {
   private wizardEffects: WizardEffectsState = createWizardEffectsState();
   private hogwartsBackground: HogwartsBackgroundState = createHogwartsBackground(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
   private patronusTrail: PatronusTrailState = createPatronusTrailState();
+  private laserBeam: LaserBeamState = createLaserBeamState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2190,6 +2199,7 @@ export class SnakeScene extends Phaser.Scene {
       spawnDramaRings(this.cleanEffects, headX, headY);
       spawnPulseGlow(this.pulseGlow, headX, headY, 1.0, this.hueOffset);
       spawnFunFact(this.funFacts, GRID_SIZE * CELL_SIZE, this.hueOffset);
+      fireLaser(this.laserBeam, headX, headY, headX, headY);
     }
     this.lastSnakeLength = state.snake.length;
 
@@ -2575,6 +2585,20 @@ export class SnakeScene extends Phaser.Scene {
       updateDragonBreath(this.dragonBreath, headX, headY, dirX * -1, dirY * -1);
       updatePatronusTrail(this.patronusTrail, headX, headY);
 
+      const foodPos = this.currentState.food;
+      const laserFoodX = foodPos.x * CELL_SIZE + CELL_SIZE / 2;
+      const laserFoodY = foodPos.y * CELL_SIZE + CELL_SIZE / 2;
+      const laserHit = updateLaserBeams(
+        this.laserBeam,
+        headX, headY,
+        laserFoodX, laserFoodY,
+        this.currentState.gameStarted !== false,
+        this.currentState.gameOver
+      );
+      if (laserHit) {
+        spawnPulseGlow(this.pulseGlow, laserFoodX, laserFoodY, 0.6, this.hueOffset);
+      }
+
       if (this.frameCount % 3 === 0) {
         spawnWandSparkles(this.wizardEffects, headX, headY, 1);
       }
@@ -2612,6 +2636,14 @@ export class SnakeScene extends Phaser.Scene {
     const food = this.currentState.food;
     const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
     const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
+
+    if (this.currentState.snake.length > 0 && !this.currentState.gameOver) {
+      const head = this.currentState.snake[0];
+      const headPx = head.x * CELL_SIZE + CELL_SIZE / 2;
+      const headPy = head.y * CELL_SIZE + CELL_SIZE / 2;
+      drawTargetingLine(g, this.laserBeam, headPx, headPy, foodX, foodY, this.frameCount);
+    }
+
     drawFood3D(g, foodX, foodY, CELL_SIZE, this.frameCount);
     drawSnitchWings(g, this.wizardEffects, foodX, foodY, CELL_SIZE);
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
@@ -2620,6 +2652,7 @@ export class SnakeScene extends Phaser.Scene {
     drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState);
     drawWandSparkles(g, this.wizardEffects);
     drawDragonBreath(g, this.dragonBreath);
+    drawLaserBeams(g, this.laserBeam, this.frameCount);
     drawNuclearBlasts(g, this.nuclearBlast);
     drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
 
