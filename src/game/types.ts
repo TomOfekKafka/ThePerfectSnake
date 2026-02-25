@@ -28,6 +28,14 @@ export interface PortalPair {
   cooldown: number;
 }
 
+export interface Wormhole {
+  entry: Position;
+  exit: Position;
+  spawnTick: number;
+  lifetime: number;
+  used: boolean;
+}
+
 export interface GameState {
   snake: Position[];
   food: Position;
@@ -41,6 +49,8 @@ export interface GameState {
   tickCount: number;
   portalPair: PortalPair | null;
   lastPortalDespawn: number;
+  wormhole: Wormhole | null;
+  lastWormholeDespawn: number;
 }
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';

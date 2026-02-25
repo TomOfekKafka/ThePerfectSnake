@@ -40,4 +40,6 @@ export const createInitialState = (): GameState => ({
   tickCount: 0,
   portalPair: null,
   lastPortalDespawn: 0,
+  wormhole: null,
+  lastWormholeDespawn: 0,
 });

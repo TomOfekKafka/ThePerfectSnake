@@ -6,6 +6,7 @@
 import { Position, Direction, GameState, OPPOSITE_DIRECTIONS, PowerUp, PowerUpType, ActivePowerUp } from './types';
 import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE } from './constants';
 import { checkTeleport, shouldSpawnPortals, shouldDespawnPortals, generatePortalPair, applyTeleportCooldown, decrementCooldown } from './portals';
+import { generateWormhole, shouldSpawnWormhole, shouldDespawnWormhole, checkWormholeTeleport, WORMHOLE_BONUS_POINTS } from './wormhole';
 
 /** Check if two positions are equal */
 export const positionsEqual = (a: Position, b: Position): boolean =>
@@ -129,7 +130,22 @@ export const tick = (state: GameState, direction: Direction): GameState => {
     }
   }
 
-  const newSnake = teleported ? [newHead, ...state.snake] : [newHead, ...state.snake];
+  // Check wormhole teleportation (optional - player chooses to enter)
+  let wormhole = state.wormhole;
+  let lastWormholeDespawn = state.lastWormholeDespawn;
+  let wormholeBonus = 0;
+
+  if (wormhole && !teleported) {
+    const wormResult = checkWormholeTeleport(newHead, wormhole);
+    if (wormResult.teleported) {
+      newHead = wormResult.newHead;
+      wormhole = { ...wormhole, used: true };
+      wormholeBonus = WORMHOLE_BONUS_POINTS;
+      teleported = true;
+    }
+  }
+
+  const newSnake = [newHead, ...state.snake];
   const ateFood = positionsEqual(newHead, state.food);
 
   // Check power-up collection
@@ -163,9 +179,20 @@ export const tick = (state: GameState, direction: Direction): GameState => {
     portalPair = generatePortalPair(newSnake, state.food, tickCount);
   }
 
+  // Wormhole lifecycle
+  if (wormhole && shouldDespawnWormhole(wormhole, tickCount)) {
+    lastWormholeDespawn = tickCount;
+    wormhole = null;
+  }
+
+  if (shouldSpawnWormhole(wormhole, foodEatenCount, tickCount, lastWormholeDespawn)) {
+    wormhole = generateWormhole(newSnake, state.food, tickCount);
+  }
+
   // Calculate score with multiplier
   const hasMultiplier = hasPowerUp(newActivePowerUps, 'SCORE_MULTIPLIER');
-  const scoreGain = ateFood ? (hasMultiplier ? POINTS_PER_FOOD * SCORE_MULTIPLIER_VALUE : POINTS_PER_FOOD) : 0;
+  const baseScore = ateFood ? (hasMultiplier ? POINTS_PER_FOOD * SCORE_MULTIPLIER_VALUE : POINTS_PER_FOOD) : 0;
+  const scoreGain = baseScore + wormholeBonus;
 
   if (ateFood) {
     return {
@@ -180,6 +207,8 @@ export const tick = (state: GameState, direction: Direction): GameState => {
       tickCount,
       portalPair,
       lastPortalDespawn,
+      wormhole,
+      lastWormholeDespawn,
     };
   }
 
@@ -187,12 +216,15 @@ export const tick = (state: GameState, direction: Direction): GameState => {
   return {
     ...state,
     snake: newSnake,
+    score: state.score + wormholeBonus,
     direction,
     powerUp: newPowerUp,
     activePowerUps: newActivePowerUps,
     tickCount,
     portalPair,
     lastPortalDespawn,
+    wormhole,
+    lastWormholeDespawn,
   };
 };
 
@@ -210,4 +242,6 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
   tickCount: 0,
   portalPair: null,
   lastPortalDespawn: 0,
+  wormhole: null,
+  lastWormholeDespawn: 0,
 });
