@@ -159,6 +159,18 @@ import {
   drawCountryLabel,
   FlagDisplayState,
 } from './countryFlags';
+import {
+  createOlympicsState,
+  initOlympicRings,
+  initTorch,
+  updateOlympics,
+  spawnMedalBurst,
+  drawOlympicRings,
+  drawTorchFlame,
+  drawTrackLanes,
+  drawMedalBursts,
+  OlympicsState,
+} from './olympicsEffects';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -633,6 +645,7 @@ export class SnakeScene extends Phaser.Scene {
   private patronusTrail: PatronusTrailState = createPatronusTrailState();
   private laserBeam: LaserBeamState = createLaserBeamState();
   private flagDisplay: FlagDisplayState = createFlagDisplayState();
+  private olympics: OlympicsState = createOlympicsState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -651,6 +664,8 @@ export class SnakeScene extends Phaser.Scene {
     initMathSymbols(this.mathParticles, width, height);
     initMathWaves(this.mathParticles, height);
     initSpaceBackground(this.spaceBackground, width, height);
+    initOlympicRings(this.olympics, width, height);
+    initTorch(this.olympics, width, height);
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -2565,6 +2580,7 @@ export class SnakeScene extends Phaser.Scene {
     updateSnitchWings(this.wizardEffects);
     updateSpellTexts(this.wizardEffects);
     updateHogwartsBackground(this.hogwartsBackground);
+    updateOlympics(this.olympics, width);
 
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
@@ -2620,6 +2636,7 @@ export class SnakeScene extends Phaser.Scene {
         spawnSpellText(this.wizardEffects, width);
         const points = (this.currentState.score || 0) - this.lastHudScore;
         spawnScoreBurst(this.mathParticles, headX, headY - CELL_SIZE, points > 0 ? points : 10);
+        spawnMedalBurst(this.olympics, foodX, foodY, this.currentState.foodEaten || 0);
       }
       this.lastSnakeLength = this.currentState.snake.length;
     }
@@ -2634,6 +2651,9 @@ export class SnakeScene extends Phaser.Scene {
     drawMathWaves(g, this.mathParticles, width);
     drawHogwartsGrid(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
     drawFloatingCandles(g, this.hogwartsBackground);
+    drawTrackLanes(g, width, height, CELL_SIZE, this.frameCount);
+    drawOlympicRings(g, this.olympics);
+    drawTorchFlame(g, this.olympics.torch);
     drawMotes(g, this.cleanEffects);
     drawMathSymbols(g, this.mathParticles);
 
@@ -2664,6 +2684,7 @@ export class SnakeScene extends Phaser.Scene {
     drawLaserBeams(g, this.laserBeam, this.frameCount);
     drawNuclearBlasts(g, this.nuclearBlast);
     drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
+    drawMedalBursts(g, this.olympics, this.drawText.bind(this));
 
     drawCleanVignette(g, width, height);
     drawSpellTexts(g, this.wizardEffects, this.drawText.bind(this));
