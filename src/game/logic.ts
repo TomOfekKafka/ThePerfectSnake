@@ -4,8 +4,9 @@
  */
 
 import { Position, Direction, GameState, OPPOSITE_DIRECTIONS, PowerUp, PowerUpType, ActivePowerUp } from './types';
-import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE } from './constants';
+import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE, BONUS_FOOD_SCORE } from './constants';
 import { tickPhantom } from './phantomSnake';
+import { shouldSpawnBonusFood, generateBonusFood, isBonusFoodExpired, shrinkSnake } from './bonusFood';
 
 /** Check if two positions are equal */
 export const positionsEqual = (a: Position, b: Position): boolean =>
@@ -142,19 +143,35 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     newPowerUp = generatePowerUp(newSnake, state.food, tickCount);
   }
 
+  let newBonusFood = state.bonusFood;
+  if (newBonusFood && isBonusFoodExpired(newBonusFood, tickCount)) {
+    newBonusFood = null;
+  }
+
+  const ateBonusFood = newBonusFood !== null && positionsEqual(newHead, newBonusFood.position);
+
   const foodEatenCount = ateFood ? state.foodEaten + 1 : state.foodEaten;
 
   const hasMultiplier = hasPowerUp(newActivePowerUps, 'SCORE_MULTIPLIER');
   const scoreGain = ateFood ? (hasMultiplier ? POINTS_PER_FOOD * SCORE_MULTIPLIER_VALUE : POINTS_PER_FOOD) : 0;
+  const bonusScoreGain = ateBonusFood ? BONUS_FOOD_SCORE : 0;
+
+  if (ateBonusFood) {
+    newBonusFood = null;
+  }
 
   if (ateFood) {
-    const newFood = generateFood(newSnake, newPowerUp?.position);
-    const phantomResult = tickPhantom(state.phantom, newFood, newSnake, foodEatenCount, false);
+    let resultSnake = newSnake;
+    if (ateBonusFood) {
+      resultSnake = shrinkSnake(resultSnake);
+    }
+    const newFood = generateFood(resultSnake, newPowerUp?.position);
+    const phantomResult = tickPhantom(state.phantom, newFood, resultSnake, foodEatenCount, false);
     return {
       ...state,
-      snake: newSnake,
+      snake: resultSnake,
       food: newFood,
-      score: state.score + scoreGain,
+      score: state.score + scoreGain + bonusScoreGain,
       foodEaten: foodEatenCount,
       direction,
       powerUp: newPowerUp,
@@ -165,21 +182,31 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       wormhole: null,
       lastWormholeDespawn: 0,
       phantom: phantomResult.phantom,
+      bonusFood: newBonusFood,
     };
   }
 
   newSnake.pop();
 
-  const phantomResult = tickPhantom(state.phantom, state.food, newSnake, foodEatenCount, false);
+  let resultSnake = newSnake;
+  if (ateBonusFood) {
+    resultSnake = shrinkSnake(resultSnake);
+  }
+
+  if (!newBonusFood && shouldSpawnBonusFood(newBonusFood, resultSnake.length, foodEatenCount)) {
+    newBonusFood = generateBonusFood(resultSnake, state.food, tickCount, newPowerUp?.position);
+  }
+
+  const phantomResult = tickPhantom(state.phantom, state.food, resultSnake, foodEatenCount, false);
   const finalFood = phantomResult.foodStolen
-    ? generateFood(newSnake, newPowerUp?.position)
+    ? generateFood(resultSnake, newPowerUp?.position)
     : state.food;
 
   return {
     ...state,
-    snake: newSnake,
+    snake: resultSnake,
     food: finalFood,
-    score: state.score,
+    score: state.score + bonusScoreGain,
     direction,
     powerUp: newPowerUp,
     activePowerUps: newActivePowerUps,
@@ -189,6 +216,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     wormhole: null,
     lastWormholeDespawn: 0,
     phantom: phantomResult.phantom,
+    bonusFood: newBonusFood,
   };
 };
 
@@ -216,6 +244,7 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
     moveTimer: 0,
     spawnCooldown: 0,
   },
+  bonusFood: null,
   immortalActive: false,
   immortalProgress: 0,
   immortalCharges: 1,
@@ -243,6 +272,7 @@ export const reviveSnake = (state: GameState): GameState => {
       active: false,
       spawnCooldown: 0,
     },
+    bonusFood: null,
     immortalActive: false,
     immortalProgress: 0,
   };

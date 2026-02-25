@@ -27,6 +27,12 @@ export const POWERUP_TYPES: PowerUpType[] = ['SPEED_BOOST', 'INVINCIBILITY', 'SC
 export const SCORE_MULTIPLIER_VALUE = 3;
 export const SPEED_BOOST_MS = 80;
 
+export const BONUS_FOOD_SPAWN_CHANCE = 0.025;
+export const BONUS_FOOD_LIFETIME = 80;
+export const BONUS_FOOD_SHRINK_AMOUNT = 3;
+export const BONUS_FOOD_SCORE = 15;
+export const BONUS_FOOD_MIN_SNAKE_LENGTH = 4;
+
 export const createInitialState = (): GameState => ({
   snake: [...INITIAL_SNAKE],
   food: { ...INITIAL_FOOD },
@@ -50,6 +56,7 @@ export const createInitialState = (): GameState => ({
     moveTimer: 0,
     spawnCooldown: 0,
   },
+  bonusFood: null,
   immortalActive: false,
   immortalProgress: 0,
   immortalCharges: 1,
