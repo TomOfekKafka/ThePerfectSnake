@@ -146,18 +146,22 @@ let hudPulsePhase = 0;
 let lastHudScore = 0;
 let scoreFlashIntensity = 0;
 
-// Scoreboard state
-interface HighScoreEntry {
-  score: number;
-  date: number;
-  rank: number;
-}
-const MAX_HIGH_SCORES = 5;
-let cachedHighScores: HighScoreEntry[] = [];
-let highScoresLoaded = false;
-let newHighScoreRank = -1;
-let scoreboardAnimPhase = 0;
-let scoreboardRevealProgress = 0;
+// Game over display state
+const DEATH_MESSAGES = [
+  'THE SNAKE FALLS',
+  'A VALIANT EFFORT',
+  'DARKNESS DESCENDS',
+  'SILENCE FOLLOWS',
+  'THE HUNT ENDS',
+  'REST IN PIECES',
+  'CURTAIN CALL',
+  'FINAL ACT',
+  'NO MORE MOVES',
+  'FADE TO BLACK',
+];
+let currentDeathMessage = '';
+let gameOverRevealProgress = 0;
+let gameOverScoreAnimPhase = 0;
 let lastGameOverState = false;
 
 function initEffects(): void {
@@ -293,59 +297,17 @@ function spawnCollectionBurst(x: number, y: number): void {
   screenShakeIntensity = 5;
 }
 
-function loadHighScores(): HighScoreEntry[] {
-  if (highScoresLoaded && cachedHighScores.length > 0) {
-    return cachedHighScores;
-  }
-  try {
-    const stored = localStorage.getItem('snake_high_scores');
-    if (stored) {
-      const parsed = JSON.parse(stored) as HighScoreEntry[];
-      cachedHighScores = parsed.slice(0, MAX_HIGH_SCORES);
-      highScoresLoaded = true;
-      return cachedHighScores;
-    }
-  } catch {
-    // localStorage not available
-  }
-  cachedHighScores = [];
-  highScoresLoaded = true;
-  return cachedHighScores;
+function pickDeathMessage(): string {
+  return DEATH_MESSAGES[Math.floor(Math.random() * DEATH_MESSAGES.length)];
 }
 
-function saveHighScore(score: number): number {
-  const highScores = loadHighScores();
-  const newEntry: HighScoreEntry = { score, date: Date.now(), rank: 0 };
-
-  let insertIndex = highScores.findIndex(entry => score > entry.score);
-  if (insertIndex === -1) insertIndex = highScores.length;
-
-  if (insertIndex < MAX_HIGH_SCORES && score > 0) {
-    highScores.splice(insertIndex, 0, newEntry);
-    highScores.forEach((entry, i) => { entry.rank = i + 1; });
-    cachedHighScores = highScores.slice(0, MAX_HIGH_SCORES);
-
-    try {
-      localStorage.setItem('snake_high_scores', JSON.stringify(cachedHighScores));
-    } catch {
-      // localStorage not available
-    }
-    return insertIndex + 1;
-  }
-  return -1;
-}
-
-function checkAndSaveHighScore(gameState: GameState): void {
+function checkGameOverTransition(gameState: GameState): void {
   if (gameState.gameOver && !lastGameOverState) {
-    const rank = saveHighScore(gameState.score);
-    newHighScoreRank = rank > 0 ? rank : -1;
-    scoreboardRevealProgress = 0;
+    currentDeathMessage = pickDeathMessage();
+    gameOverRevealProgress = 0;
+    gameOverScoreAnimPhase = 0;
   }
   lastGameOverState = gameState.gameOver;
-
-  if (gameState.gameStarted && !gameState.gameOver) {
-    newHighScoreRank = -1;
-  }
 }
 
 function drawHUD(ctx: CanvasRenderingContext2D, gameState: GameState, width: number, height: number): void {
@@ -491,141 +453,80 @@ function drawHUD(ctx: CanvasRenderingContext2D, gameState: GameState, width: num
   ctx.restore();
 }
 
-function drawScoreboard(ctx: CanvasRenderingContext2D, gameState: GameState, width: number, height: number): void {
+function drawGameOverScore(ctx: CanvasRenderingContext2D, gameState: GameState, width: number, height: number): void {
   if (!gameState.gameOver) return;
 
-  scoreboardAnimPhase += 0.06;
-  scoreboardRevealProgress = Math.min(1, scoreboardRevealProgress + 0.02);
+  gameOverScoreAnimPhase += 0.06;
+  gameOverRevealProgress = Math.min(1, gameOverRevealProgress + 0.025);
 
-  const highScores = loadHighScores();
-  const centerX = width / 2;
-  const baseY = height * 0.22;
+  const cX = width / 2;
   const panelWidth = 200;
-  const panelHeight = 180;
-  const panelX = centerX - panelWidth / 2;
-  const panelY = baseY;
-  const slideOffset = (1 - scoreboardRevealProgress) * 50;
-  const alphaMultiplier = scoreboardRevealProgress;
+  const panelHeight = 120;
+  const panelX = cX - panelWidth / 2;
+  const panelY = height * 0.22;
+  const slideOffset = (1 - gameOverRevealProgress) * 40;
+  const alpha = gameOverRevealProgress;
 
   ctx.save();
   ctx.translate(0, -slideOffset);
-  ctx.globalAlpha = alphaMultiplier;
+  ctx.globalAlpha = alpha;
 
-  // Panel background - deep ocean
+  // Panel background
   const panelGradient = ctx.createLinearGradient(panelX, panelY, panelX + panelWidth, panelY + panelHeight);
   panelGradient.addColorStop(0, 'rgba(4, 21, 45, 0.95)');
   panelGradient.addColorStop(0.5, 'rgba(8, 32, 60, 0.92)');
   panelGradient.addColorStop(1, 'rgba(4, 21, 45, 0.95)');
-
-  ctx.shadowColor = newHighScoreRank > 0 ? '#ffcc00' : '#00ffaa';
-  ctx.shadowBlur = 20 + Math.sin(scoreboardAnimPhase) * 5;
 
   ctx.fillStyle = panelGradient;
   ctx.beginPath();
   ctx.roundRect(panelX, panelY, panelWidth, panelHeight, 12);
   ctx.fill();
 
-  const borderHue = newHighScoreRank > 0 ? 45 : (160 + Math.sin(scoreboardAnimPhase) * 20);
-  ctx.strokeStyle = `hsl(${borderHue}, 100%, 60%)`;
+  // Pulsing border
+  const borderPulse = 0.5 + Math.sin(gameOverScoreAnimPhase) * 0.3;
+  ctx.strokeStyle = `rgba(255, 96, 144, ${borderPulse})`;
   ctx.lineWidth = 3;
-  ctx.shadowColor = `hsl(${borderHue}, 100%, 60%)`;
+  ctx.shadowColor = '#ff6090';
   ctx.shadowBlur = 12;
   ctx.stroke();
   ctx.shadowBlur = 0;
 
-  // Title
-  const titleY = panelY + 25;
-  ctx.font = 'bold 14px monospace';
+  // Death message
+  ctx.font = 'bold 12px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.shadowColor = '#00e0ff';
-  ctx.shadowBlur = 10;
-  ctx.fillStyle = '#00e0ff';
-  ctx.fillText('HIGH SCORES', centerX, titleY);
+  ctx.shadowColor = '#ff6090';
+  ctx.shadowBlur = 8;
+  ctx.fillStyle = '#ff80b0';
+  ctx.fillText(currentDeathMessage, cX, panelY + 25);
+  ctx.shadowBlur = 0;
 
-  ctx.strokeStyle = 'rgba(0, 224, 255, 0.5)';
+  // Divider
+  ctx.strokeStyle = 'rgba(0, 255, 170, 0.4)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(panelX + 30, titleY + 12);
-  ctx.lineTo(panelX + panelWidth - 30, titleY + 12);
+  ctx.moveTo(panelX + 30, panelY + 38);
+  ctx.lineTo(panelX + panelWidth - 30, panelY + 38);
   ctx.stroke();
-  ctx.shadowBlur = 0;
 
-  const entryStartY = titleY + 30;
-  const entryHeight = 24;
-
-  if (highScores.length === 0) {
-    ctx.font = '10px monospace';
-    ctx.fillStyle = 'rgba(100, 200, 220, 0.8)';
-    ctx.fillText('No scores yet', centerX, entryStartY + 40);
-    ctx.fillText('Be the first!', centerX, entryStartY + 55);
-  } else {
-    for (let i = 0; i < Math.min(highScores.length, 5); i++) {
-      const entry = highScores[i];
-      const entryY = entryStartY + i * entryHeight;
-      const isNewScore = newHighScoreRank === i + 1;
-      const entryDelay = i * 0.15;
-      const entryProgress = Math.max(0, Math.min(1, (scoreboardRevealProgress - entryDelay) * 2));
-      if (entryProgress <= 0) continue;
-
-      ctx.globalAlpha = alphaMultiplier * entryProgress;
-
-      if (isNewScore) {
-        const flashIntensity = 0.3 + Math.sin(scoreboardAnimPhase * 3) * 0.2;
-        ctx.fillStyle = `rgba(255, 204, 0, ${flashIntensity})`;
-        ctx.beginPath();
-        ctx.roundRect(panelX + 10, entryY - 8, panelWidth - 20, entryHeight - 2, 4);
-        ctx.fill();
-      }
-
-      const rankColors = ['#ffd700', '#c0c0c0', '#cd7f32', '#00ffaa', '#00e0ff'];
-      const rankColor = rankColors[i] || '#888888';
-
-      ctx.font = 'bold 12px monospace';
-      ctx.textAlign = 'left';
-      ctx.shadowColor = rankColor;
-      ctx.shadowBlur = isNewScore ? 8 : 4;
-      ctx.fillStyle = rankColor;
-      ctx.fillText(`${i + 1}.`, panelX + 20, entryY);
-      ctx.shadowBlur = 0;
-
-      ctx.font = isNewScore ? 'bold 13px monospace' : '12px monospace';
-      ctx.textAlign = 'right';
-      ctx.fillStyle = isNewScore ? '#ffffff' : '#aaddff';
-
-      if (isNewScore) {
-        ctx.shadowColor = '#ffcc00';
-        ctx.shadowBlur = 6;
-      }
-      ctx.fillText(String(entry.score).padStart(5, '0'), panelX + panelWidth - 20, entryY);
-      ctx.shadowBlur = 0;
-
-      if (isNewScore) {
-        ctx.font = 'bold 8px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = `rgba(255, 204, 0, ${0.8 + Math.sin(scoreboardAnimPhase * 4) * 0.2})`;
-        ctx.shadowColor = '#ffcc00';
-        ctx.shadowBlur = 6;
-        ctx.fillText('NEW!', panelX + 65, entryY);
-        ctx.shadowBlur = 0;
-      }
-    }
-  }
-
-  ctx.globalAlpha = alphaMultiplier;
-
-  const currentScoreY = panelY + panelHeight - 20;
+  // Score label
   ctx.font = '10px monospace';
-  ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(150, 220, 255, 0.8)';
-  ctx.fillText('YOUR SCORE', centerX, currentScoreY - 12);
+  ctx.fillText('FINAL SCORE', cX, panelY + 52);
 
-  ctx.font = 'bold 16px monospace';
-  ctx.shadowColor = newHighScoreRank > 0 ? '#ffcc00' : '#00ffaa';
-  ctx.shadowBlur = 10;
-  ctx.fillStyle = newHighScoreRank > 0 ? '#ffcc00' : '#00ffaa';
-  ctx.fillText(String(gameState.score).padStart(5, '0'), centerX, currentScoreY + 2);
+  // Large score
+  const scorePulse = 0.8 + Math.sin(gameOverScoreAnimPhase * 2) * 0.2;
+  ctx.font = 'bold 24px monospace';
+  ctx.shadowColor = '#00ffaa';
+  ctx.shadowBlur = 10 * scorePulse;
+  ctx.fillStyle = '#00ffaa';
+  ctx.fillText(String(gameState.score).padStart(5, '0'), cX, panelY + 78);
   ctx.shadowBlur = 0;
+
+  // Snake length stat
+  ctx.font = '10px monospace';
+  ctx.fillStyle = 'rgba(100, 200, 220, 0.7)';
+  ctx.fillText(`LENGTH: ${gameState.snake.length}`, cX, panelY + 102);
 
   ctx.restore();
 }
@@ -979,10 +880,10 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
 
-    drawScoreboard(ctx, gameState, width, height);
+    drawGameOverScore(ctx, gameState, width, height);
   }
 
-  checkAndSaveHighScore(gameState);
+  checkGameOverTransition(gameState);
 
   // Subtle vignette
   const vignetteGrad = ctx.createRadialGradient(

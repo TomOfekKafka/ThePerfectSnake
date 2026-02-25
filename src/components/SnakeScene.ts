@@ -543,14 +543,7 @@ const MAX_FIRE_RAIN = 30;
 const MAX_CHAOS_EXPLOSIONS = 3;
 const NUM_SKULLS = 4;
 
-// High score entry for scoreboard
-interface HighScoreEntry {
-  score: number;
-  date: number;
-  rank: number;
-}
-
-const MAX_HIGH_SCORES = 5;
+import { pickDeathMessage } from '../game/deathMessages';
 
 // Color palette - HALLOWEEN theme: spooky purple/orange, ghostly greens, pumpkin glow
 const COLORS = {
@@ -653,13 +646,10 @@ export class SnakeScene extends Phaser.Scene {
   private bees: MysticalBee[] = [];
   // Rival snake - spectral AI nemesis
   private rivalSnake: RivalSnake | null = null;
-  // Scoreboard system
-  private highScores: HighScoreEntry[] = [];
-  private highScoresLoaded = false;
-  private newHighScoreRank = -1;
-  private scoreboardAnimPhase = 0;
-  private scoreboardRevealProgress = 0;
-  private lastGameOverState = false;
+  // Game over display
+  private deathMessage = '';
+  private gameOverRevealProgress = 0;
+  private gameOverScoreAnimPhase = 0;
   private hudPulsePhase = 0;
   private lastHudScore = 0;
   private scoreFlashIntensity = 0;
@@ -2293,10 +2283,13 @@ export class SnakeScene extends Phaser.Scene {
     // Detect game over transition - ARMAGEDDON CHAOS death sequence
     if (state.gameOver && this.currentState && !this.currentState.gameOver) {
       this.screenShakeIntensity = 0;
-      this.chromaticIntensity = 3.0; // Maximum chromatic aberration on death
-      this.chaosIntensity = 1.0; // Full chaos overlay
-      this.spawnDeathExplosion(); // Dramatic death explosion
-      // Spawn chaos explosions across the snake body
+      this.chromaticIntensity = 3.0;
+      this.chaosIntensity = 1.0;
+      this.spawnDeathExplosion();
+      this.deathMessage = pickDeathMessage();
+      this.gameOverRevealProgress = 0;
+      this.gameOverScoreAnimPhase = 0;
+      this.spawnGameOverEffects();
       for (let i = 0; i < Math.min(3, state.snake.length); i++) {
         const seg = state.snake[Math.floor(i * state.snake.length / 3)];
         setTimeout(() => {
@@ -2748,10 +2741,8 @@ export class SnakeScene extends Phaser.Scene {
 
     if (this.currentState.gameOver) {
       this.drawGameOver(g, width, height);
-      this.drawScoreboard(g, width, height);
+      this.drawGameOverScore(g, width, height);
     }
-
-    this.checkAndSaveHighScore();
     this.needsRedraw = false;
   }
 
@@ -3583,69 +3574,14 @@ export class SnakeScene extends Phaser.Scene {
     return (Math.round(r * 255) << 16) | (Math.round(g * 255) << 8) | Math.round(b * 255);
   }
 
-  private loadHighScores(): HighScoreEntry[] {
-    if (this.highScoresLoaded && this.highScores.length > 0) {
-      return this.highScores;
-    }
-    try {
-      const stored = localStorage.getItem('snake_high_scores');
-      if (stored) {
-        const parsed = JSON.parse(stored) as HighScoreEntry[];
-        this.highScores = parsed.slice(0, MAX_HIGH_SCORES);
-        this.highScoresLoaded = true;
-        return this.highScores;
-      }
-    } catch {
-      // localStorage not available
-    }
-    this.highScores = [];
-    this.highScoresLoaded = true;
-    return this.highScores;
-  }
-
-  private saveHighScore(score: number): number {
-    const highScores = this.loadHighScores();
-    const newEntry: HighScoreEntry = { score, date: Date.now(), rank: 0 };
-
-    let insertIndex = highScores.findIndex(entry => score > entry.score);
-    if (insertIndex === -1) insertIndex = highScores.length;
-
-    if (insertIndex < MAX_HIGH_SCORES && score > 0) {
-      highScores.splice(insertIndex, 0, newEntry);
-      highScores.forEach((entry, i) => { entry.rank = i + 1; });
-      this.highScores = highScores.slice(0, MAX_HIGH_SCORES);
-
-      try {
-        localStorage.setItem('snake_high_scores', JSON.stringify(this.highScores));
-      } catch {
-        // localStorage not available
-      }
-      return insertIndex + 1;
-    }
-    return -1;
-  }
-
-  private checkAndSaveHighScore(): void {
+  private spawnGameOverEffects(): void {
     if (!this.currentState) return;
-
-    if (this.currentState.gameOver && !this.lastGameOverState) {
-      const score = this.currentState.score || 0;
-      const rank = this.saveHighScore(score);
-      this.newHighScoreRank = rank > 0 ? rank : -1;
-      this.scoreboardRevealProgress = 0;
-
-      const head = this.currentState.snake[0];
-      if (head) {
-        const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
-        const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
-        spawnBlood(this.cleanEffects, headX, headY, 15);
-        spawnTears(this.cleanEffects, headX, headY - 10, 6);
-      }
-    }
-    this.lastGameOverState = this.currentState.gameOver;
-
-    if (this.currentState.gameStarted && !this.currentState.gameOver) {
-      this.newHighScoreRank = -1;
+    const head = this.currentState.snake[0];
+    if (head) {
+      const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+      const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+      spawnBlood(this.cleanEffects, headX, headY, 15);
+      spawnTears(this.cleanEffects, headX, headY - 10, 6);
     }
   }
 
@@ -3930,90 +3866,57 @@ export class SnakeScene extends Phaser.Scene {
     }
   }
 
-  private drawScoreboard(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
+  private drawGameOverScore(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
     if (!this.currentState || !this.currentState.gameOver) return;
 
-    this.scoreboardAnimPhase += 0.06;
-    this.scoreboardRevealProgress = Math.min(1, this.scoreboardRevealProgress + 0.02);
+    this.gameOverScoreAnimPhase += 0.06;
+    this.gameOverRevealProgress = Math.min(1, this.gameOverRevealProgress + 0.025);
 
-    const highScores = this.loadHighScores();
     const centerX = width / 2;
-    const baseY = height * 0.18;
-    const panelWidth = 180;
-    const panelHeight = 170;
+    const panelWidth = 200;
+    const panelHeight = 120;
     const panelX = centerX - panelWidth / 2;
-    const panelY = baseY;
-    const slideOffset = (1 - this.scoreboardRevealProgress) * 50;
-    const alphaMultiplier = this.scoreboardRevealProgress;
+    const panelY = height * 0.2;
+    const slideOffset = (1 - this.gameOverRevealProgress) * 40;
+    const alpha = this.gameOverRevealProgress;
 
-    // Panel background - volcanic lava glow
-    g.fillStyle(0x150510, 0.95 * alphaMultiplier);
+    // Panel background
+    g.fillStyle(0x150510, 0.92 * alpha);
     g.fillRoundedRect(panelX, panelY - slideOffset, panelWidth, panelHeight, 12);
 
-    // Glowing border - animated
-    const borderHue = this.newHighScoreRank > 0 ? 45 : 0;
-    const borderPulse = 0.6 + Math.sin(this.scoreboardAnimPhase) * 0.2;
-    const borderColor = this.newHighScoreRank > 0 ? 0xffcc00 : COLORS.snakeGlow;
-    g.lineStyle(3, borderColor, borderPulse * alphaMultiplier);
+    // Glowing border with pulsing animation
+    const borderPulse = 0.5 + Math.sin(this.gameOverScoreAnimPhase) * 0.3;
+    g.lineStyle(3, COLORS.food, borderPulse * alpha);
     g.strokeRoundedRect(panelX, panelY - slideOffset, panelWidth, panelHeight, 12);
 
-    // Title
-    const titleY = panelY - slideOffset + 22;
-    this.drawText(g, 'HIGH SCORES', centerX - 55, titleY, 10, COLORS.foodCore, alphaMultiplier);
+    // Death message at top
+    const messageY = panelY - slideOffset + 25;
+    const msgWidth = this.deathMessage.length * 7;
+    this.drawText(g, this.deathMessage, centerX - msgWidth / 2, messageY, 9, COLORS.foodGlow, 0.9 * alpha);
 
-    // Divider line
-    g.lineStyle(1, COLORS.snakeGlow, 0.5 * alphaMultiplier);
-    g.lineBetween(panelX + 20, titleY + 8, panelX + panelWidth - 20, titleY + 8);
+    // Divider
+    g.lineStyle(1, COLORS.snakeGlow, 0.4 * alpha);
+    g.lineBetween(panelX + 25, messageY + 12, panelX + panelWidth - 25, messageY + 12);
 
-    const entryStartY = titleY + 25;
-    const entryHeight = 22;
+    // Large score display
+    const score = this.currentState.score || 0;
+    const scoreStr = String(score);
+    const scoreY = panelY - slideOffset + 65;
 
-    if (highScores.length === 0) {
-      this.drawText(g, 'NO SCORES YET', centerX - 50, entryStartY + 30, 8, COLORS.noirGray, 0.8 * alphaMultiplier);
-    } else {
-      for (let i = 0; i < Math.min(highScores.length, 5); i++) {
-        const entry = highScores[i];
-        const entryY = entryStartY + i * entryHeight;
-        const isNewScore = this.newHighScoreRank === i + 1;
-        const entryDelay = i * 0.15;
-        const entryProgress = Math.max(0, Math.min(1, (this.scoreboardRevealProgress - entryDelay) * 2));
-        if (entryProgress <= 0) continue;
+    // Score label
+    this.drawText(g, 'FINAL SCORE', centerX - 44, scoreY - 16, 8, COLORS.noirGray, 0.8 * alpha);
 
-        const entryAlpha = alphaMultiplier * entryProgress;
+    // Large score with pulsing glow
+    const scorePulse = 0.8 + Math.sin(this.gameOverScoreAnimPhase * 2) * 0.2;
+    const scoreWidth = scoreStr.length * 14;
+    g.fillStyle(COLORS.snakeGlow, 0.15 * scorePulse * alpha);
+    g.fillRoundedRect(centerX - scoreWidth / 2 - 10, scoreY - 6, scoreWidth + 20, 28, 6);
+    this.drawText(g, scoreStr.padStart(5, '0'), centerX - scoreWidth / 2, scoreY, 20, COLORS.foodCore, alpha);
 
-        // Highlight new high score row
-        if (isNewScore) {
-          const flashIntensity = 0.3 + Math.sin(this.scoreboardAnimPhase * 3) * 0.2;
-          g.fillStyle(0xffcc00, flashIntensity * entryAlpha);
-          g.fillRoundedRect(panelX + 8, entryY - slideOffset - 8, panelWidth - 16, entryHeight - 2, 4);
-        }
-
-        // Rank colors: gold, silver, bronze, then volcanic colors
-        const rankColors = [0xffd700, 0xc0c0c0, 0xcd7f32, COLORS.snakeGlow, COLORS.foodGlow];
-        const rankColor = rankColors[i] || 0x888888;
-
-        // Rank number
-        this.drawText(g, `${i + 1}`, panelX + 18, entryY - slideOffset, 10, rankColor, entryAlpha);
-
-        // Score value
-        const scoreColor = isNewScore ? 0xffffff : COLORS.foodCore;
-        this.drawText(g, String(entry.score).padStart(5, '0'), panelX + panelWidth - 70, entryY - slideOffset, 10, scoreColor, entryAlpha);
-
-        // NEW! label
-        if (isNewScore) {
-          const newAlpha = 0.8 + Math.sin(this.scoreboardAnimPhase * 4) * 0.2;
-          this.drawText(g, 'NEW', panelX + 50, entryY - slideOffset, 7, 0xffcc00, newAlpha * entryAlpha);
-        }
-      }
-    }
-
-    // Current score at bottom
-    const currentScoreY = panelY - slideOffset + panelHeight - 30;
-    this.drawText(g, 'YOUR SCORE', centerX - 40, currentScoreY - 10, 8, COLORS.noirGray, 0.8 * alphaMultiplier);
-
-    const currentScore = this.currentState.score || 0;
-    const scoreColor = this.newHighScoreRank > 0 ? 0xffcc00 : COLORS.snakeGlow;
-    this.drawText(g, String(currentScore).padStart(5, '0'), centerX - 25, currentScoreY + 8, 14, scoreColor, alphaMultiplier);
+    // Snake length stat at bottom
+    const snakeLen = this.currentState.snake.length;
+    const statY = panelY - slideOffset + panelHeight - 22;
+    this.drawText(g, `LENGTH: ${snakeLen}`, centerX - 35, statY, 8, COLORS.noirGray, 0.7 * alpha);
   }
 
   private drawGrid(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
