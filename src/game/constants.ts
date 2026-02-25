@@ -42,4 +42,12 @@ export const createInitialState = (): GameState => ({
   lastPortalDespawn: 0,
   wormhole: null,
   lastWormholeDespawn: 0,
+  phantom: {
+    segments: [],
+    direction: 'LEFT',
+    active: false,
+    stealCount: 0,
+    moveTimer: 0,
+    spawnCooldown: 0,
+  },
 });

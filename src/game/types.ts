@@ -36,6 +36,15 @@ export interface Wormhole {
   used: boolean;
 }
 
+export interface PhantomSnake {
+  segments: Position[];
+  direction: Direction;
+  active: boolean;
+  stealCount: number;
+  moveTimer: number;
+  spawnCooldown: number;
+}
+
 export interface GameState {
   snake: Position[];
   food: Position;
@@ -51,6 +60,7 @@ export interface GameState {
   lastPortalDespawn: number;
   wormhole: Wormhole | null;
   lastWormholeDespawn: number;
+  phantom: PhantomSnake;
 }
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';

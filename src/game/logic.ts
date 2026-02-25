@@ -7,6 +7,7 @@ import { Position, Direction, GameState, OPPOSITE_DIRECTIONS, PowerUp, PowerUpTy
 import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE } from './constants';
 import { checkTeleport, shouldSpawnPortals, shouldDespawnPortals, generatePortalPair, applyTeleportCooldown, decrementCooldown } from './portals';
 import { generateWormhole, shouldSpawnWormhole, shouldDespawnWormhole, checkWormholeTeleport, WORMHOLE_BONUS_POINTS } from './wormhole';
+import { tickPhantom } from './phantomSnake';
 
 /** Check if two positions are equal */
 export const positionsEqual = (a: Position, b: Position): boolean =>
@@ -195,10 +196,12 @@ export const tick = (state: GameState, direction: Direction): GameState => {
   const scoreGain = baseScore + wormholeBonus;
 
   if (ateFood) {
+    const newFood = generateFood(newSnake, newPowerUp?.position);
+    const phantomResult = tickPhantom(state.phantom, newFood, newSnake, foodEatenCount, false);
     return {
       ...state,
       snake: newSnake,
-      food: generateFood(newSnake, newPowerUp?.position),
+      food: newFood,
       score: state.score + scoreGain,
       foodEaten: foodEatenCount,
       direction,
@@ -209,13 +212,21 @@ export const tick = (state: GameState, direction: Direction): GameState => {
       lastPortalDespawn,
       wormhole,
       lastWormholeDespawn,
+      phantom: phantomResult.phantom,
     };
   }
 
   newSnake.pop();
+
+  const phantomResult = tickPhantom(state.phantom, state.food, newSnake, foodEatenCount, false);
+  const finalFood = phantomResult.foodStolen
+    ? generateFood(newSnake, newPowerUp?.position)
+    : state.food;
+
   return {
     ...state,
     snake: newSnake,
+    food: finalFood,
     score: state.score + wormholeBonus,
     direction,
     powerUp: newPowerUp,
@@ -225,6 +236,7 @@ export const tick = (state: GameState, direction: Direction): GameState => {
     lastPortalDespawn,
     wormhole,
     lastWormholeDespawn,
+    phantom: phantomResult.phantom,
   };
 };
 
@@ -244,6 +256,14 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
   lastPortalDespawn: 0,
   wormhole: null,
   lastWormholeDespawn: 0,
+  phantom: {
+    segments: [],
+    direction: 'LEFT',
+    active: false,
+    stealCount: 0,
+    moveTimer: 0,
+    spawnCooldown: 0,
+  },
 });
 
 /** Revive the snake after a correct trivia answer. Trims half the tail and spawns safe. */
@@ -261,5 +281,11 @@ export const reviveSnake = (state: GameState): GameState => {
     activePowerUps: [],
     portalPair: null,
     wormhole: null,
+    phantom: {
+      ...state.phantom,
+      segments: [],
+      active: false,
+      spawnCooldown: 0,
+    },
   };
 };
