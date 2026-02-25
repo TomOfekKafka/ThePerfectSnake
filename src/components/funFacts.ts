@@ -65,10 +65,17 @@ const CATEGORY_HUES: Record<string, number> = {
 
 const MAX_ACTIVE_FACTS = 1;
 const FACT_LIFETIME = 200;
-const FLOAT_SPEED = 0.2;
+const FLOAT_SPEED = 0.15;
 const FADE_IN_FRAMES = 25;
 const FADE_OUT_START = 160;
 const TYPEWRITER_SPEED = 2;
+
+const CATEGORY_FONT_SIZE = 6;
+const TEXT_FONT_SIZE = 8;
+const MAX_LINE_CHARS = 28;
+const LINE_SPACING = 3;
+const BG_PADDING = 10;
+const SHADOW_OFFSET = 1;
 
 export interface ActiveFact {
   text: string;
@@ -80,6 +87,7 @@ export interface ActiveFact {
   maxAge: number;
   hue: number;
   revealedChars: number;
+  lines: string[];
 }
 
 export interface FunFactsState {
@@ -100,6 +108,25 @@ export function pickFact(state: FunFactsState): FunFact {
   return fact;
 }
 
+export function wrapText(text: string, maxChars: number): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let current = '';
+  for (const word of words) {
+    const candidate = current.length === 0 ? word : `${current} ${word}`;
+    if (candidate.length > maxChars && current.length > 0) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current.length > 0) {
+    lines.push(current);
+  }
+  return lines;
+}
+
 export function spawnFunFact(
   state: FunFactsState,
   canvasWidth: number,
@@ -110,16 +137,18 @@ export function spawnFunFact(
   }
   const fact = pickFact(state);
   const categoryHue = CATEGORY_HUES[fact.category] ?? _hue;
+  const lines = wrapText(fact.text, MAX_LINE_CHARS);
   state.activeFacts.push({
     text: fact.text,
     category: fact.category,
     x: canvasWidth / 2,
-    y: canvasWidth * 0.82,
-    startY: canvasWidth * 0.82,
+    y: canvasWidth * 0.78,
+    startY: canvasWidth * 0.78,
     age: 0,
     maxAge: FACT_LIFETIME,
     hue: categoryHue,
     revealedChars: 0,
+    lines,
   });
 }
 
@@ -143,6 +172,19 @@ function factAlpha(fact: ActiveFact): number {
   return 1;
 }
 
+function revealedLines(fact: ActiveFact): string[] {
+  let charsLeft = fact.revealedChars;
+  const result: string[] = [];
+  for (const line of fact.lines) {
+    if (charsLeft <= 0) break;
+    const lineCharsAvailable = Math.min(line.length, charsLeft);
+    result.push(line.slice(0, lineCharsAvailable));
+    charsLeft -= line.length;
+    if (charsLeft > 0) charsLeft--;
+  }
+  return result;
+}
+
 export function drawFunFacts(
   g: Phaser.GameObjects.Graphics,
   state: FunFactsState,
@@ -157,52 +199,69 @@ export function drawFunFacts(
   ) => void
 ): void {
   for (const fact of state.activeFacts) {
-    const alpha = factAlpha(fact) * 0.9;
+    const alpha = factAlpha(fact) * 0.95;
     if (alpha <= 0) continue;
 
-    const revealed = fact.text.slice(0, fact.revealedChars);
-
-    const categorySize = 4;
-    const textSize = 5;
-    const catCharWidth = categorySize * 0.6;
-    const textCharWidth = textSize * 0.6;
+    const catCharWidth = CATEGORY_FONT_SIZE * 0.7;
+    const textCharWidth = TEXT_FONT_SIZE * 0.7;
     const catLabel = `[ ${fact.category} ]`;
     const catWidth = catLabel.length * catCharWidth;
-    const textWidth = revealed.length * textCharWidth;
-    const totalWidth = Math.max(catWidth, textWidth);
 
-    const catX = fact.x - catWidth / 2;
-    const textX = fact.x - textWidth / 2;
-    const catY = fact.y - textSize - 4;
-    const textY = fact.y + 2;
+    const visLines = revealedLines(fact);
+    const allLineWidths = fact.lines.map(l => l.length * textCharWidth);
+    const maxLineWidth = Math.max(...allLineWidths, catWidth);
 
-    const bgPad = 6;
-    const bgX = fact.x - totalWidth / 2 - bgPad;
-    const bgW = totalWidth + bgPad * 2;
-    const bgY = catY - categorySize / 2 - bgPad;
-    const bgH = (textY + textSize / 2 + bgPad) - bgY;
+    const totalTextHeight =
+      fact.lines.length * TEXT_FONT_SIZE +
+      (fact.lines.length - 1) * LINE_SPACING;
+
+    const catY = fact.y;
+    const firstLineY = catY + CATEGORY_FONT_SIZE + 6;
+
+    const bgX = fact.x - maxLineWidth / 2 - BG_PADDING;
+    const bgW = maxLineWidth + BG_PADDING * 2;
+    const bgY = catY - CATEGORY_FONT_SIZE / 2 - BG_PADDING;
+    const bgH = CATEGORY_FONT_SIZE + 6 + totalTextHeight + BG_PADDING * 2;
 
     const borderColor = hueToColor(fact.hue);
-    g.fillStyle(0x000000, alpha * 0.5);
-    g.fillRect(bgX, bgY, bgW, bgH);
-    g.lineStyle(1, borderColor, alpha * 0.6);
-    g.strokeRect(bgX, bgY, bgW, bgH);
 
+    g.fillStyle(0x000000, alpha * 0.75);
+    g.fillRoundedRect(bgX, bgY, bgW, bgH, 4);
+
+    g.lineStyle(2, borderColor, alpha * 0.8);
+    g.strokeRoundedRect(bgX, bgY, bgW, bgH, 4);
+
+    const catX = fact.x - catWidth / 2;
     const catColor = hueToColor(fact.hue);
-    drawText(g, catLabel, catX, catY, categorySize, catColor, alpha * 0.7);
+    drawText(g, catLabel, catX + SHADOW_OFFSET, catY + SHADOW_OFFSET, CATEGORY_FONT_SIZE, 0x000000, alpha * 0.5);
+    drawText(g, catLabel, catX, catY, CATEGORY_FONT_SIZE, catColor, alpha * 0.9);
 
-    const textColor = 0xffffff;
-    drawText(g, revealed, textX, textY, textSize, textColor, alpha);
+    for (let i = 0; i < visLines.length; i++) {
+      const line = visLines[i];
+      const lineY = firstLineY + i * (TEXT_FONT_SIZE + LINE_SPACING);
+      const lineWidth = line.length * textCharWidth;
+      const lineX = fact.x - lineWidth / 2;
+
+      drawText(g, line, lineX + SHADOW_OFFSET, lineY + SHADOW_OFFSET, TEXT_FONT_SIZE, 0x000000, alpha * 0.6);
+      drawText(g, line, lineX, lineY, TEXT_FONT_SIZE, 0xffffff, alpha);
+    }
 
     if (fact.revealedChars < fact.text.length && fact.age % 6 < 3) {
-      const cursorX = textX + revealed.length * textCharWidth;
-      g.fillStyle(textColor, alpha * 0.8);
-      g.fillRect(cursorX, textY - textSize / 2, textCharWidth * 0.8, textSize);
+      const lastLineIdx = visLines.length - 1;
+      if (lastLineIdx >= 0) {
+        const lastLine = visLines[lastLineIdx];
+        const lastLineY = firstLineY + lastLineIdx * (TEXT_FONT_SIZE + LINE_SPACING);
+        const lastLineWidth = lastLine.length * textCharWidth;
+        const lastLineX = fact.x - lastLineWidth / 2;
+        const cursorX = lastLineX + lastLine.length * textCharWidth;
+        g.fillStyle(0xffffff, alpha * 0.9);
+        g.fillRect(cursorX, lastLineY - TEXT_FONT_SIZE / 2, textCharWidth * 0.6, TEXT_FONT_SIZE);
+      }
     }
   }
 }
 
-function hueToColor(hue: number): number {
+export function hueToColor(hue: number): number {
   const h = ((hue % 360) + 360) % 360;
   const s = 0.7;
   const l = 0.75;

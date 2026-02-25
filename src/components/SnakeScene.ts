@@ -3536,8 +3536,8 @@ export class SnakeScene extends Phaser.Scene {
     this.scoreFlashIntensity *= 0.92;
 
     const padding = 12;
-    const scorePanelWidth = 120;
-    const scorePanelHeight = 50;
+    const scorePanelWidth = 135;
+    const scorePanelHeight = 54;
 
     // Score panel background - volcanic lava theme
     g.fillStyle(0x150508, 0.9);
@@ -3562,8 +3562,8 @@ export class SnakeScene extends Phaser.Scene {
     }
 
     // Length panel on the right
-    const lengthPanelWidth = 80;
-    const lengthPanelHeight = 50;
+    const lengthPanelWidth = 95;
+    const lengthPanelHeight = 54;
     const lengthX = width - padding - lengthPanelWidth;
 
     g.fillStyle(0x150508, 0.9);
@@ -3585,8 +3585,7 @@ export class SnakeScene extends Phaser.Scene {
     color: number,
     alpha: number
   ): void {
-    // Use simple block characters for text rendering
-    const charWidth = size * 0.6;
+    const charWidth = size * 0.7;
     const charHeight = size;
 
     for (let i = 0; i < text.length; i++) {
@@ -3607,7 +3606,7 @@ export class SnakeScene extends Phaser.Scene {
   private drawDigit(g: Phaser.GameObjects.Graphics, digit: string, x: number, y: number, size: number): void {
     const w = size * 0.5;
     const h = size;
-    const t = size * 0.15; // thickness
+    const t = size * 0.2;
 
     // 7-segment style digits
     const segments: Record<string, number[]> = {
@@ -3644,7 +3643,7 @@ export class SnakeScene extends Phaser.Scene {
   private drawLetter(g: Phaser.GameObjects.Graphics, letter: string, x: number, y: number, size: number): void {
     const w = size * 0.5;
     const h = size;
-    const t = size * 0.15;
+    const t = size * 0.2;
 
     // Simple block letters
     switch (letter.toUpperCase()) {

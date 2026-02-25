@@ -246,7 +246,7 @@ export function drawSpellTexts(
     if (alpha <= 0) continue;
 
     const size = 7;
-    const charWidth = size * 0.6;
+    const charWidth = size * 0.7;
     const textWidth = spell.text.length * charWidth;
     const tx = spell.x - textWidth / 2;
 

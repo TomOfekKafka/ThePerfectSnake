@@ -6,6 +6,8 @@ import {
   updateFunFacts,
   getFunFacts,
   getSnakeFacts,
+  wrapText,
+  hueToColor,
 } from '../components/funFacts';
 
 describe('funFacts', () => {
@@ -67,7 +69,7 @@ describe('funFacts', () => {
       spawnFunFact(state, 400, 0);
       const fact = state.activeFacts[0];
       expect(fact.x).toBe(200);
-      expect(fact.startY).toBeCloseTo(400 * 0.82);
+      expect(fact.startY).toBeCloseTo(400 * 0.78);
     });
 
     it('starts with zero age and revealed chars', () => {
@@ -89,6 +91,15 @@ describe('funFacts', () => {
       spawnFunFact(state, 400, 0);
       spawnFunFact(state, 400, 0);
       expect(state.activeFacts.length).toBeLessThanOrEqual(1);
+    });
+
+    it('includes pre-computed word-wrapped lines', () => {
+      const state = createFunFactsState();
+      spawnFunFact(state, 400, 0);
+      const fact = state.activeFacts[0];
+      expect(Array.isArray(fact.lines)).toBe(true);
+      expect(fact.lines.length).toBeGreaterThan(0);
+      expect(fact.lines.join(' ')).toBe(fact.text);
     });
   });
 
@@ -135,6 +146,59 @@ describe('funFacts', () => {
       spawnFunFact(state, 400, 0);
       for (let i = 0; i < 250; i++) updateFunFacts(state);
       expect(state.activeFacts.length).toBe(0);
+    });
+  });
+
+  describe('wrapText', () => {
+    it('keeps short text on one line', () => {
+      const lines = wrapText('HELLO WORLD', 28);
+      expect(lines).toEqual(['HELLO WORLD']);
+    });
+
+    it('wraps long text onto multiple lines', () => {
+      const lines = wrapText('THERE ARE MORE WAYS TO SHUFFLE CARDS THAN ATOMS ON EARTH', 28);
+      expect(lines.length).toBeGreaterThan(1);
+      for (const line of lines) {
+        expect(line.length).toBeLessThanOrEqual(28);
+      }
+    });
+
+    it('preserves all words when wrapping', () => {
+      const text = 'A TEASPOON OF SOIL HAS MORE LIFE THAN PEOPLE ON EARTH';
+      const lines = wrapText(text, 28);
+      expect(lines.join(' ')).toBe(text);
+    });
+
+    it('handles single word longer than max', () => {
+      const lines = wrapText('SUPERLONGWORD', 5);
+      expect(lines).toEqual(['SUPERLONGWORD']);
+    });
+
+    it('handles empty string', () => {
+      const lines = wrapText('', 28);
+      expect(lines).toEqual([]);
+    });
+  });
+
+  describe('hueToColor', () => {
+    it('returns a number for any hue', () => {
+      expect(typeof hueToColor(0)).toBe('number');
+      expect(typeof hueToColor(180)).toBe('number');
+      expect(typeof hueToColor(360)).toBe('number');
+    });
+
+    it('handles negative hues by wrapping', () => {
+      const c1 = hueToColor(350);
+      const c2 = hueToColor(-10);
+      expect(c1).toBe(c2);
+    });
+
+    it('returns valid RGB range', () => {
+      for (let h = 0; h < 360; h += 30) {
+        const color = hueToColor(h);
+        expect(color).toBeGreaterThanOrEqual(0);
+        expect(color).toBeLessThanOrEqual(0xffffff);
+      }
     });
   });
 
