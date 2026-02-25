@@ -120,6 +120,31 @@ import {
   spawnWarpFlash,
   PortalEffectsState,
 } from './portalEffects';
+import {
+  createWizardEffectsState,
+  spawnWandSparkles,
+  updateWandSparkles,
+  drawWandSparkles,
+  updateSnitchWings,
+  drawSnitchWings,
+  spawnSpellText,
+  updateSpellTexts,
+  drawSpellTexts,
+  WizardEffectsState,
+} from './wizardEffects';
+import {
+  createHogwartsBackground,
+  updateHogwartsBackground,
+  drawHogwartsGrid,
+  drawFloatingCandles,
+  HogwartsBackgroundState,
+} from './hogwartsBackground';
+import {
+  createPatronusTrailState,
+  updatePatronusTrail,
+  drawPatronusTrail,
+  PatronusTrailState,
+} from './patronusTrail';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -589,6 +614,9 @@ export class SnakeScene extends Phaser.Scene {
   private lastPortalPair: { a: { x: number; y: number }; b: { x: number; y: number } } | null = null;
   private faceState: FaceState = createFaceState();
   private snakeDirection: FaceDirection = 'RIGHT';
+  private wizardEffects: WizardEffectsState = createWizardEffectsState();
+  private hogwartsBackground: HogwartsBackgroundState = createHogwartsBackground(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+  private patronusTrail: PatronusTrailState = createPatronusTrailState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2515,6 +2543,10 @@ export class SnakeScene extends Phaser.Scene {
     updateScoreBursts(this.mathParticles);
     updateNuclearBlasts(this.nuclearBlast);
     updateFunFacts(this.funFacts);
+    updateWandSparkles(this.wizardEffects);
+    updateSnitchWings(this.wizardEffects);
+    updateSpellTexts(this.wizardEffects);
+    updateHogwartsBackground(this.hogwartsBackground);
 
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
@@ -2541,12 +2573,19 @@ export class SnakeScene extends Phaser.Scene {
       );
 
       updateDragonBreath(this.dragonBreath, headX, headY, dirX * -1, dirY * -1);
+      updatePatronusTrail(this.patronusTrail, headX, headY);
+
+      if (this.frameCount % 3 === 0) {
+        spawnWandSparkles(this.wizardEffects, headX, headY, 1);
+      }
 
       if (this.lastSnakeLength > 0 && this.currentState.snake.length > this.lastSnakeLength) {
         const food = this.currentState.food;
         const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
         const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
         spawnRipple(this.cleanEffects, foodX, foodY);
+        spawnWandSparkles(this.wizardEffects, foodX, foodY, 8);
+        spawnSpellText(this.wizardEffects, width);
         const points = (this.currentState.score || 0) - this.lastHudScore;
         spawnScoreBurst(this.mathParticles, headX, headY - CELL_SIZE, points > 0 ? points : 10);
       }
@@ -2561,7 +2600,8 @@ export class SnakeScene extends Phaser.Scene {
 
     drawSpaceBackground(g, this.spaceBackground, width, height);
     drawMathWaves(g, this.mathParticles, width);
-    drawGrid3D(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
+    drawHogwartsGrid(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
+    drawFloatingCandles(g, this.hogwartsBackground);
     drawMotes(g, this.cleanEffects);
     drawMathSymbols(g, this.mathParticles);
 
@@ -2573,14 +2613,18 @@ export class SnakeScene extends Phaser.Scene {
     const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
     const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
     drawFood3D(g, foodX, foodY, CELL_SIZE, this.frameCount);
+    drawSnitchWings(g, this.wizardEffects, foodX, foodY, CELL_SIZE);
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
 
+    drawPatronusTrail(g, this.patronusTrail);
     drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState);
+    drawWandSparkles(g, this.wizardEffects);
     drawDragonBreath(g, this.dragonBreath);
     drawNuclearBlasts(g, this.nuclearBlast);
     drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
 
     drawCleanVignette(g, width, height);
+    drawSpellTexts(g, this.wizardEffects, this.drawText.bind(this));
     drawFunFacts(g, this.funFacts, this.drawText.bind(this));
 
     const score = this.currentState.score || 0;
