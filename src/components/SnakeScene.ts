@@ -212,6 +212,20 @@ import {
   drawWeatherIndicator,
   WeatherState,
 } from './weatherSystem';
+import {
+  computeEfficiency,
+  EfficiencySnapshot,
+  gradeToLabel,
+} from '../game/efficiencyMeter';
+import {
+  createOptimizationState,
+  updateOptimizationEffects,
+  spawnCodeParticle,
+  spawnGradePulse,
+  drawOptimizationMeter,
+  drawCodeParticles,
+  OptimizationState,
+} from './optimizationEffects';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -685,6 +699,9 @@ export class SnakeScene extends Phaser.Scene {
   private countryMap: CountryMapState = createCountryMapState();
   private olympics: OlympicsState = createOlympicsState();
   private weather: WeatherState = createWeatherState();
+  private optimization: OptimizationState = createOptimizationState();
+  private lastEfficiency: EfficiencySnapshot = { grade: 'D', ratio: 0, streak: 0, perfectStreak: false };
+  private efficiencyStreak = 0;
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2627,6 +2644,25 @@ export class SnakeScene extends Phaser.Scene {
     updateCountryMap(this.countryMap, this.flagDisplay.currentFlag.code, this.frameCount);
     updateWeather(this.weather, this.currentState?.foodEaten || 0, width, height, this.frameCount);
 
+    if (this.currentState && this.currentState.gameStarted) {
+      const score = this.currentState.score || 0;
+      const snakeLen = this.currentState.snake.length;
+      const foodEaten = this.currentState.foodEaten || 0;
+      const eff = computeEfficiency(score, snakeLen, foodEaten, this.efficiencyStreak);
+      if (eff.grade !== this.lastEfficiency.grade && foodEaten > 0) {
+        const headSeg = this.currentState.snake[0];
+        if (headSeg) {
+          const px = headSeg.x * CELL_SIZE + CELL_SIZE / 2;
+          const py = headSeg.y * CELL_SIZE + CELL_SIZE / 2;
+          spawnGradePulse(this.optimization, px, py, eff.grade);
+        }
+        this.optimization.meterGlow = 1;
+      }
+      this.efficiencyStreak = eff.streak;
+      this.lastEfficiency = eff;
+      updateOptimizationEffects(this.optimization, eff.grade, eff.ratio);
+    }
+
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
       const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
@@ -2683,6 +2719,9 @@ export class SnakeScene extends Phaser.Scene {
         spawnRipple(this.cleanEffects, foodX, foodY);
         spawnWandSparkles(this.wizardEffects, foodX, foodY, 8);
         spawnSpellText(this.wizardEffects, width);
+        for (let ci = 0; ci < 3; ci++) {
+          spawnCodeParticle(this.optimization, headX + (Math.random() - 0.5) * 20, headY - 10, this.lastEfficiency.grade);
+        }
         const points = (this.currentState.score || 0) - this.lastHudScore;
         spawnScoreBurst(this.mathParticles, headX, headY - CELL_SIZE, points > 0 ? points : 10);
         spawnMedalBurst(this.olympics, foodX, foodY, this.currentState.foodEaten || 0);
@@ -2746,6 +2785,8 @@ export class SnakeScene extends Phaser.Scene {
     const foodEaten = this.currentState.foodEaten || 0;
     drawCleanHUD(g, score, snakeLength, width, this.frameCount, this.drawDigit.bind(this), foodEaten);
     drawWeatherIndicator(g, this.weather, width, this.frameCount, this.drawDigit.bind(this));
+    drawCodeParticles(g, this.optimization, this.drawLetter.bind(this), this.drawDigit.bind(this));
+    drawOptimizationMeter(g, this.optimization, this.lastEfficiency.grade, width, this.frameCount, this.drawDigit.bind(this));
 
     if (this.currentState.gameOver) {
       this.drawGameOver(g, width, height);
