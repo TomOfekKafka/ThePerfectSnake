@@ -226,6 +226,19 @@ import {
   drawCodeParticles,
   OptimizationState,
 } from './optimizationEffects';
+import {
+  UpgradeState,
+  createUpgradeState,
+  tickUpgrades,
+  selectUpgrade,
+} from '../game/upgrades';
+import {
+  UpgradeHudState,
+  createUpgradeHudState,
+  updateUpgradeHud,
+  drawUpgradeChoicePanel,
+  drawOwnedUpgradesBar,
+} from './upgradeHud';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -702,6 +715,10 @@ export class SnakeScene extends Phaser.Scene {
   private optimization: OptimizationState = createOptimizationState();
   private lastEfficiency: EfficiencySnapshot = { grade: 'D', ratio: 0, streak: 0, perfectStreak: false };
   private efficiencyStreak = 0;
+  private upgradeState: UpgradeState = createUpgradeState();
+  private upgradeHud: UpgradeHudState = createUpgradeHudState();
+  private lastFoodEaten = 0;
+  private upgradeKeyHandler: ((e: KeyboardEvent) => void) | null = null;
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -722,6 +739,21 @@ export class SnakeScene extends Phaser.Scene {
     initSpaceBackground(this.spaceBackground, width, height);
     initOlympicRings(this.olympics, width, height);
     initTorch(this.olympics, width, height);
+
+    this.upgradeKeyHandler = (e: KeyboardEvent) => {
+      if (!this.upgradeState.choice || !this.upgradeState.choice.active) return;
+      const key = e.key;
+      if (key >= '1' && key <= '3') {
+        const idx = parseInt(key) - 1;
+        const options = this.upgradeState.choice.options;
+        if (idx < options.length) {
+          e.preventDefault();
+          this.upgradeState = selectUpgrade(this.upgradeState, options[idx]);
+          this.upgradeHud.selectedFlash = 1;
+        }
+      }
+    };
+    window.addEventListener('keydown', this.upgradeKeyHandler);
 
     if (this.currentState) {
       this.needsRedraw = true;
@@ -2321,6 +2353,18 @@ export class SnakeScene extends Phaser.Scene {
           );
         }, i * 50);
       }
+    }
+
+    const foodEaten = state.foodEaten || 0;
+    if (foodEaten > this.lastFoodEaten) {
+      this.upgradeState = tickUpgrades(this.upgradeState, foodEaten);
+    }
+    this.lastFoodEaten = foodEaten;
+
+    if (state.gameStarted && !state.gameOver && this.currentState?.gameOver) {
+      this.upgradeState = createUpgradeState();
+      this.upgradeHud = createUpgradeHudState();
+      this.lastFoodEaten = 0;
     }
 
     this.currentState = state;
