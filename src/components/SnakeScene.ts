@@ -205,6 +205,13 @@ import {
   triggerChomp,
   HugeHeadState,
 } from './hugeHead';
+import {
+  createWeatherState,
+  updateWeather,
+  drawWeather,
+  drawWeatherIndicator,
+  WeatherState,
+} from './weatherSystem';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -677,6 +684,7 @@ export class SnakeScene extends Phaser.Scene {
   private flagDisplay: FlagDisplayState = createFlagDisplayState();
   private countryMap: CountryMapState = createCountryMapState();
   private olympics: OlympicsState = createOlympicsState();
+  private weather: WeatherState = createWeatherState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2617,6 +2625,7 @@ export class SnakeScene extends Phaser.Scene {
     updateHogwartsBackground(this.hogwartsBackground);
     updateOlympics(this.olympics, width);
     updateCountryMap(this.countryMap, this.flagDisplay.currentFlag.code, this.frameCount);
+    updateWeather(this.weather, this.currentState?.foodEaten || 0, width, height, this.frameCount);
 
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
@@ -2727,6 +2736,7 @@ export class SnakeScene extends Phaser.Scene {
     drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
     drawMedalBursts(g, this.olympics, this.drawText.bind(this));
 
+    drawWeather(g, this.weather, width, height, this.frameCount);
     drawCleanVignette(g, width, height);
     drawSpellTexts(g, this.wizardEffects, this.drawText.bind(this));
     drawComboStreak(g, this.comboStreak, width, height, this.drawText.bind(this));
@@ -2735,6 +2745,7 @@ export class SnakeScene extends Phaser.Scene {
     const snakeLength = this.currentState.snake.length;
     const foodEaten = this.currentState.foodEaten || 0;
     drawCleanHUD(g, score, snakeLength, width, this.frameCount, this.drawDigit.bind(this), foodEaten);
+    drawWeatherIndicator(g, this.weather, width, this.frameCount, this.drawDigit.bind(this));
 
     if (this.currentState.gameOver) {
       this.drawGameOver(g, width, height);
