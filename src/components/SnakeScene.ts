@@ -171,6 +171,24 @@ import {
   drawMedalBursts,
   OlympicsState,
 } from './olympicsEffects';
+import {
+  createPinballState,
+  shouldActivatePinball,
+  activatePinball,
+  updatePinball,
+  checkBumperCollision,
+  triggerBumperHit,
+  drawPinballBumpers,
+  drawPinballFlippers,
+  drawPinballLanes,
+  drawPinballHitEffects,
+  drawPinballBanner,
+  drawPinballScorePopups,
+  PinballState,
+} from './pinballEffects';
+import {
+  computeBounceDirection,
+} from '../game/pinball';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -191,6 +209,7 @@ interface GameState {
   gameStarted?: boolean;
   score?: number;
   foodEaten?: number;
+  tickCount?: number;
 }
 
 interface Star {
