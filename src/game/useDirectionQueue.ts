@@ -7,38 +7,35 @@ import { useRef, useCallback } from 'react';
 import { Direction, OPPOSITE_DIRECTIONS } from './types';
 import { MAX_DIRECTION_QUEUE, INITIAL_DIRECTION } from './constants';
 
+export type EnqueueResult = 'accepted' | 'same_direction' | 'rejected';
+
 export function useDirectionQueue() {
   const currentDirection = useRef<Direction>(INITIAL_DIRECTION);
   const queue = useRef<Direction[]>([]);
 
-  /** Get the effective current direction (last queued or current) */
   const getEffectiveDirection = useCallback((): Direction => {
     return queue.current.length > 0
       ? queue.current[queue.current.length - 1]
       : currentDirection.current;
   }, []);
 
-  /** Try to queue a new direction, returns true if accepted */
-  const enqueue = useCallback((direction: Direction): boolean => {
+  const enqueue = useCallback((direction: Direction): EnqueueResult => {
     const effective = getEffectiveDirection();
 
-    // Prevent 180-degree turns
     if (OPPOSITE_DIRECTIONS[direction] === effective) {
-      return false;
+      return 'rejected';
     }
 
-    // Prevent duplicate
     if (direction === effective) {
-      return false;
+      return 'same_direction';
     }
 
-    // Prevent queue overflow
     if (queue.current.length >= MAX_DIRECTION_QUEUE) {
-      return false;
+      return 'rejected';
     }
 
     queue.current.push(direction);
-    return true;
+    return 'accepted';
   }, [getEffectiveDirection]);
 
   /** Dequeue and apply next direction, returns the direction to use */

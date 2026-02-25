@@ -19,11 +19,10 @@ export function useSnakeGame() {
   const [gameState, setGameState] = useState<GameState>(createInitialState);
   const gameLoopRef = useRef<number>();
   const directionQueue = useDirectionQueue();
+  const sparkCallbackRef = useRef<((direction: Direction) => void) | null>(null);
 
-  // Detect embedded mode (in iframe)
   const isEmbedded = typeof window !== 'undefined' && window.parent !== window;
 
-  // Game actions
   const resetGame = useCallback(() => {
     directionQueue.reset();
     setGameState(createNewGame(INITIAL_SNAKE));
@@ -31,8 +30,15 @@ export function useSnakeGame() {
 
   const changeDirection = useCallback((direction: Direction) => {
     if (!gameState.gameStarted || gameState.gameOver) return;
-    directionQueue.enqueue(direction);
+    const result = directionQueue.enqueue(direction);
+    if (result === 'same_direction' && sparkCallbackRef.current) {
+      sparkCallbackRef.current(direction);
+    }
   }, [gameState.gameStarted, gameState.gameOver, directionQueue]);
+
+  const onSparkTrigger = useCallback((cb: (direction: Direction) => void) => {
+    sparkCallbackRef.current = cb;
+  }, []);
 
   // PostMessage communication (origin-agnostic)
   const { broadcastState, broadcastReady } = usePostMessage({
@@ -101,6 +107,7 @@ export function useSnakeGame() {
     resetGame,
     changeDirection,
     gridSize: GRID_SIZE,
-    isEmbedded
+    isEmbedded,
+    onSparkTrigger
   };
 }
