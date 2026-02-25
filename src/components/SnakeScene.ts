@@ -2161,6 +2161,7 @@ export class SnakeScene extends Phaser.Scene {
       this.energyFieldPulse = 1.0;
       spawnDramaRings(this.cleanEffects, headX, headY);
       spawnPulseGlow(this.pulseGlow, headX, headY, 1.0, this.hueOffset);
+      spawnFunFact(this.funFacts, GRID_SIZE * CELL_SIZE, this.hueOffset);
     }
     this.lastSnakeLength = state.snake.length;
 
@@ -2580,6 +2581,7 @@ export class SnakeScene extends Phaser.Scene {
     drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
 
     drawCleanVignette(g, width, height);
+    drawFunFacts(g, this.funFacts, this.drawText.bind(this));
 
     const score = this.currentState.score || 0;
     const snakeLength = this.currentState.snake.length;
