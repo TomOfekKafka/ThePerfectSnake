@@ -281,6 +281,31 @@ export function hueToColor(hue: number): number {
   return (ri << 16) | (gi << 8) | bi;
 }
 
+export function spawnCustomFact(
+  state: FunFactsState,
+  canvasWidth: number,
+  category: string,
+  text: string,
+  hue: number
+): void {
+  if (state.activeFacts.length >= MAX_ACTIVE_FACTS) {
+    state.activeFacts.shift();
+  }
+  const lines = wrapText(text, MAX_LINE_CHARS);
+  state.activeFacts.push({
+    text,
+    category,
+    x: canvasWidth / 2,
+    y: canvasWidth * 0.78,
+    startY: canvasWidth * 0.78,
+    age: 0,
+    maxAge: FACT_LIFETIME,
+    hue,
+    revealedChars: 0,
+    lines,
+  });
+}
+
 export function getFunFacts(): readonly FunFact[] {
   return FUN_FACTS;
 }

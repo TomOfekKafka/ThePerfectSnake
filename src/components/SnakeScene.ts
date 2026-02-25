@@ -54,7 +54,6 @@ import {
   HorrorEffectsState,
 } from './horrorEffects';
 import {
-  drawFood3D,
   drawVariedFood,
   drawGrid3D,
 } from './depth3d';
@@ -108,7 +107,7 @@ import {
 } from './nuclearBlast';
 import {
   createFunFactsState,
-  spawnFunFact,
+  spawnCustomFact,
   updateFunFacts,
   drawFunFacts,
   FunFactsState,
@@ -153,6 +152,13 @@ import {
   fireLaser,
   LaserBeamState,
 } from './laserBeam';
+import {
+  createFlagDisplayState,
+  advanceFlag,
+  drawFlagFood,
+  drawCountryLabel,
+  FlagDisplayState,
+} from './countryFlags';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -626,6 +632,7 @@ export class SnakeScene extends Phaser.Scene {
   private hogwartsBackground: HogwartsBackgroundState = createHogwartsBackground(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
   private patronusTrail: PatronusTrailState = createPatronusTrailState();
   private laserBeam: LaserBeamState = createLaserBeamState();
+  private flagDisplay: FlagDisplayState = createFlagDisplayState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2198,7 +2205,15 @@ export class SnakeScene extends Phaser.Scene {
       this.energyFieldPulse = 1.0;
       spawnDramaRings(this.cleanEffects, headX, headY);
       spawnPulseGlow(this.pulseGlow, headX, headY, 1.0, this.hueOffset);
-      spawnFunFact(this.funFacts, GRID_SIZE * CELL_SIZE, this.hueOffset);
+      const eatenFlag = this.flagDisplay.currentFlag;
+      spawnCustomFact(
+        this.funFacts,
+        GRID_SIZE * CELL_SIZE,
+        eatenFlag.country,
+        eatenFlag.fact,
+        120
+      );
+      advanceFlag(this.flagDisplay);
       fireLaser(this.laserBeam, headX, headY, headX, headY);
     }
     this.lastSnakeLength = state.snake.length;
@@ -2644,7 +2659,8 @@ export class SnakeScene extends Phaser.Scene {
       drawTargetingLine(g, this.laserBeam, headPx, headPy, foodX, foodY, this.frameCount);
     }
 
-    drawFood3D(g, foodX, foodY, CELL_SIZE, this.frameCount);
+    drawFlagFood(g, this.flagDisplay.currentFlag, foodX, foodY, CELL_SIZE, this.frameCount);
+    drawCountryLabel(g, this.flagDisplay.currentFlag, foodX, foodY, CELL_SIZE, this.frameCount, this.drawText.bind(this));
     drawSnitchWings(g, this.wizardEffects, foodX, foodY, CELL_SIZE);
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
 
