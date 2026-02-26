@@ -44,6 +44,13 @@ export const CASH_BASE_VALUE = 25;
 export const CASH_HIGH_VALUE = 100;
 export const CASH_HIGH_VALUE_CHANCE = 0.15;
 
+export const FAKE_FOOD_SPAWN_CHANCE = 0.04;
+export const FAKE_FOOD_MAX_ON_BOARD = 3;
+export const FAKE_FOOD_LIFETIME = 90;
+export const FAKE_FOOD_PENALTY = 20;
+export const FAKE_FOOD_SHRINK = 2;
+export const FAKE_FOOD_MIN_FOOD_EATEN = 3;
+
 export const createInitialState = (): GameState => ({
   snake: [...INITIAL_SNAKE],
   food: { ...INITIAL_FOOD },
@@ -80,6 +87,7 @@ export const createInitialState = (): GameState => ({
   flagFood: null,
   cashItems: [],
   totalCash: 0,
+  fakeFoods: [],
   immortalActive: false,
   immortalProgress: 0,
   immortalCharges: 1,

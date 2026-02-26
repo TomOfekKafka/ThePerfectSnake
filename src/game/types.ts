@@ -65,6 +65,13 @@ export interface FlagFood {
   lifetime: number;
 }
 
+export interface FakeFood {
+  position: Position;
+  spawnTick: number;
+  lifetime: number;
+  mimicIndex: number;
+}
+
 export interface PhantomSnake {
   segments: Position[];
   direction: Direction;
@@ -95,6 +102,7 @@ export interface GameState {
   flagFood: FlagFood | null;
   cashItems: CashItem[];
   totalCash: number;
+  fakeFoods: FakeFood[];
   immortalActive: boolean;
   immortalProgress: number;
   immortalCharges: number;
