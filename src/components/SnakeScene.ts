@@ -170,17 +170,17 @@ import {
   CountryMapState,
 } from './countryMaps';
 import {
-  createOlympicsState,
-  initOlympicRings,
-  initTorch,
-  updateOlympics,
-  spawnMedalBurst,
-  drawOlympicRings,
-  drawTorchFlame,
-  drawTrackLanes,
-  drawMedalBursts,
-  OlympicsState,
-} from './olympicsEffects';
+  createCosmicCrownState,
+  initCrownStars,
+  initCrownBeam,
+  updateCosmicCrown,
+  spawnStarBurst,
+  drawCrownStars,
+  drawCrownBeam,
+  drawNebulaLines,
+  drawStarBursts,
+  CosmicCrownState,
+} from './cosmicCrownEffects';
 import {
   createPinballState,
   shouldActivatePinball,
@@ -710,7 +710,7 @@ export class SnakeScene extends Phaser.Scene {
   private laserBeam: LaserBeamState = createLaserBeamState();
   private flagDisplay: FlagDisplayState = createFlagDisplayState();
   private countryMap: CountryMapState = createCountryMapState();
-  private olympics: OlympicsState = createOlympicsState();
+  private cosmicCrown: CosmicCrownState = createCosmicCrownState();
   private weather: WeatherState = createWeatherState();
   private optimization: OptimizationState = createOptimizationState();
   private lastEfficiency: EfficiencySnapshot = { grade: 'D', ratio: 0, streak: 0, perfectStreak: false };
@@ -737,8 +737,8 @@ export class SnakeScene extends Phaser.Scene {
     initMathSymbols(this.mathParticles, width, height);
     initMathWaves(this.mathParticles, height);
     initSpaceBackground(this.spaceBackground, width, height);
-    initOlympicRings(this.olympics, width, height);
-    initTorch(this.olympics, width, height);
+    initCrownStars(this.cosmicCrown, width, height);
+    initCrownBeam(this.cosmicCrown, width, height);
 
     this.upgradeKeyHandler = (e: KeyboardEvent) => {
       if (!this.upgradeState.choice || !this.upgradeState.choice.active) return;
@@ -2684,7 +2684,7 @@ export class SnakeScene extends Phaser.Scene {
     updateSnitchWings(this.wizardEffects);
     updateSpellTexts(this.wizardEffects);
     updateHogwartsBackground(this.hogwartsBackground);
-    updateOlympics(this.olympics, width);
+    updateCosmicCrown(this.cosmicCrown, width);
     updateCountryMap(this.countryMap, this.flagDisplay.currentFlag.code, this.frameCount);
     updateWeather(this.weather, this.currentState?.foodEaten || 0, width, height, this.frameCount);
 
@@ -2768,7 +2768,7 @@ export class SnakeScene extends Phaser.Scene {
         }
         const points = (this.currentState.score || 0) - this.lastHudScore;
         spawnScoreBurst(this.mathParticles, headX, headY - CELL_SIZE, points > 0 ? points : 10);
-        spawnMedalBurst(this.olympics, foodX, foodY, this.currentState.foodEaten || 0);
+        spawnStarBurst(this.cosmicCrown, foodX, foodY, this.currentState.foodEaten || 0);
       }
       this.lastSnakeLength = this.currentState.snake.length;
     }
@@ -2783,9 +2783,9 @@ export class SnakeScene extends Phaser.Scene {
     drawMathWaves(g, this.mathParticles, width);
     drawHogwartsGrid(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
     drawFloatingCandles(g, this.hogwartsBackground);
-    drawTrackLanes(g, width, height, CELL_SIZE, this.frameCount);
-    drawOlympicRings(g, this.olympics);
-    drawTorchFlame(g, this.olympics.torch);
+    drawNebulaLines(g, width, height, CELL_SIZE, this.frameCount);
+    drawCrownStars(g, this.cosmicCrown);
+    drawCrownBeam(g, this.cosmicCrown.beam);
     drawMotes(g, this.cleanEffects);
     drawMathSymbols(g, this.mathParticles);
 
@@ -2817,7 +2817,7 @@ export class SnakeScene extends Phaser.Scene {
     drawLaserBeams(g, this.laserBeam, this.frameCount);
     drawNuclearBlasts(g, this.nuclearBlast);
     drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
-    drawMedalBursts(g, this.olympics, this.drawText.bind(this));
+    drawStarBursts(g, this.cosmicCrown, this.drawText.bind(this));
 
     drawWeather(g, this.weather, width, height, this.frameCount);
     drawCleanVignette(g, width, height);
