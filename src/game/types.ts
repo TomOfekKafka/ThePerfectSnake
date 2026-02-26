@@ -52,6 +52,13 @@ export interface BonusFood {
   lifetime: number;
 }
 
+export interface CashItem {
+  position: Position;
+  spawnTick: number;
+  lifetime: number;
+  value: number;
+}
+
 export interface FlagFood {
   position: Position;
   spawnTick: number;
@@ -86,6 +93,8 @@ export interface GameState {
   rival: RivalSnakeState;
   bonusFood: BonusFood | null;
   flagFood: FlagFood | null;
+  cashItems: CashItem[];
+  totalCash: number;
   immortalActive: boolean;
   immortalProgress: number;
   immortalCharges: number;

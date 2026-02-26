@@ -9,6 +9,7 @@ import { tickPhantom } from './phantomSnake';
 import { shouldSpawnBonusFood, generateBonusFood, isBonusFoodExpired, shrinkSnake } from './bonusFood';
 import { shouldSpawnFlagFood, generateFlagFood, isFlagFoodExpired } from './flagFood';
 import { tickRival, playerCollidesWithRival } from './rivalSnake';
+import { shouldSpawnCash, generateCashItem, expireCashItems, collectCash } from './cashItems';
 
 /** Check if two positions are equal */
 export const positionsEqual = (a: Position, b: Position): boolean =>
@@ -173,6 +174,15 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     newFlagFood = null;
   }
 
+  let cashItems = expireCashItems(state.cashItems, tickCount);
+  const cashResult = collectCash(cashItems, newHead);
+  cashItems = cashResult.remaining;
+  const cashGain = cashResult.collected.reduce((sum, c) => sum + c.value, 0);
+
+  if (shouldSpawnCash(cashItems, foodEatenCount)) {
+    cashItems = [...cashItems, generateCashItem(newSnake, state.food, cashItems, tickCount, newPowerUp?.position)];
+  }
+
   if (ateFood) {
     let resultSnake = newSnake;
     if (ateBonusFood) {
@@ -192,7 +202,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       ...state,
       snake: resultSnake,
       food: rivalFood,
-      score: state.score + scoreGain + bonusScoreGain + flagScoreGain,
+      score: state.score + scoreGain + bonusScoreGain + flagScoreGain + cashGain,
       foodEaten: foodEatenCount,
       direction,
       powerUp: newPowerUp,
@@ -206,6 +216,8 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       rival: rivalResult.rival,
       bonusFood: newBonusFood,
       flagFood: spawnedFlagFood,
+      cashItems,
+      totalCash: state.totalCash + cashGain,
     };
   }
 
@@ -234,7 +246,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     ...state,
     snake: resultSnake,
     food: finalFood,
-    score: state.score + bonusScoreGain + flagScoreGain,
+    score: state.score + bonusScoreGain + flagScoreGain + cashGain,
     direction,
     powerUp: newPowerUp,
     activePowerUps: newActivePowerUps,
@@ -247,6 +259,8 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     rival: rivalResult.rival,
     bonusFood: newBonusFood,
     flagFood: newFlagFood,
+    cashItems,
+    totalCash: state.totalCash + cashGain,
   };
 };
 
@@ -285,6 +299,8 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
   },
   bonusFood: null,
   flagFood: null,
+  cashItems: [],
+  totalCash: 0,
   immortalActive: false,
   immortalProgress: 0,
   immortalCharges: 1,
@@ -320,6 +336,7 @@ export const reviveSnake = (state: GameState): GameState => {
     },
     bonusFood: null,
     flagFood: null,
+    cashItems: [],
     immortalActive: false,
     immortalProgress: 0,
   };
