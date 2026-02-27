@@ -239,6 +239,14 @@ import {
   drawUpgradeChoicePanel,
   drawOwnedUpgradesBar,
 } from './upgradeHud';
+import {
+  SudokuState,
+  createSudokuState,
+  updateSudokuVisited,
+  updateSudokuEffects,
+  resetSudokuVisited,
+  drawSudokuGrid,
+} from './sudokuGrid';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -719,6 +727,7 @@ export class SnakeScene extends Phaser.Scene {
   private upgradeHud: UpgradeHudState = createUpgradeHudState();
   private lastFoodEaten = 0;
   private upgradeKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+  private sudoku: SudokuState = createSudokuState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2365,6 +2374,7 @@ export class SnakeScene extends Phaser.Scene {
       this.upgradeState = createUpgradeState();
       this.upgradeHud = createUpgradeHudState();
       this.lastFoodEaten = 0;
+      this.sudoku = resetSudokuVisited(this.sudoku);
     }
 
     this.currentState = state;
@@ -2707,6 +2717,11 @@ export class SnakeScene extends Phaser.Scene {
       updateOptimizationEffects(this.optimization, eff.grade, eff.ratio);
     }
 
+    if (this.currentState && this.currentState.gameStarted && !this.currentState.gameOver) {
+      this.sudoku = updateSudokuVisited(this.sudoku, this.currentState.snake);
+    }
+    this.sudoku = updateSudokuEffects(this.sudoku);
+
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
       const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
@@ -2786,6 +2801,7 @@ export class SnakeScene extends Phaser.Scene {
     drawNebulaLines(g, width, height, CELL_SIZE, this.frameCount);
     drawCrownStars(g, this.cosmicCrown);
     drawCrownBeam(g, this.cosmicCrown.beam);
+    drawSudokuGrid(g, this.sudoku, CELL_SIZE, GRID_SIZE, this.frameCount, this.drawDigit.bind(this));
     drawMotes(g, this.cleanEffects);
     drawMathSymbols(g, this.mathParticles);
 
