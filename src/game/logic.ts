@@ -123,7 +123,13 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
   } else {
     const isInvincible = hasPowerUp(state.activePowerUps, 'INVINCIBILITY');
     const hitWall = !isInBounds(newHead);
-    const hitSelf = collidesWithSnake(newHead, state.snake);
+
+    const willEat = positionsEqual(newHead, state.food);
+    const bodyForCollision = willEat
+      ? state.snake
+      : state.snake.slice(0, -1);
+    const hitSelf = collidesWithSnake(newHead, bodyForCollision);
+
     const hitRival = playerCollidesWithRival(newHead, state.rival.segments);
 
     if (hitWall || (hitSelf && !isInvincible) || (hitRival && !isInvincible)) {
