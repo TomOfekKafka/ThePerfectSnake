@@ -247,6 +247,12 @@ import {
   resetSudokuVisited,
   drawSudokuGrid,
 } from './sudokuGrid';
+import {
+  PoliceVisualsState,
+  createPoliceVisualsState,
+  updatePoliceVisuals,
+  drawPoliceVisuals,
+} from './policeVisuals';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -266,6 +272,12 @@ interface FlagFoodData {
   lifetime: number;
 }
 
+interface PoliceData {
+  segments: { x: number; y: number }[];
+  active: boolean;
+  caughtFlash: number;
+}
+
 interface GameState {
   snake: Position[];
   food: Position;
@@ -275,6 +287,7 @@ interface GameState {
   foodEaten?: number;
   tickCount?: number;
   flagFood?: FlagFoodData | null;
+  police?: PoliceData;
 }
 
 interface Star {
@@ -728,6 +741,8 @@ export class SnakeScene extends Phaser.Scene {
   private lastFoodEaten = 0;
   private upgradeKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   private sudoku: SudokuState = createSudokuState();
+  private policeVisuals: PoliceVisualsState = createPoliceVisualsState();
+  private lastPoliceCaughtFlash = 0;
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2722,6 +2737,25 @@ export class SnakeScene extends Phaser.Scene {
     }
     this.sudoku = updateSudokuEffects(this.sudoku);
 
+    {
+      const police = this.currentState?.police;
+      const policeSegments = police?.segments || [];
+      const policeActive = police?.active || false;
+      const caughtFlash = police?.caughtFlash || 0;
+      const justCaught = caughtFlash > this.lastPoliceCaughtFlash && caughtFlash > 0;
+      this.lastPoliceCaughtFlash = caughtFlash;
+      this.policeVisuals = updatePoliceVisuals(
+        this.policeVisuals,
+        policeSegments,
+        CELL_SIZE,
+        policeActive,
+        justCaught
+      );
+      if (justCaught) {
+        this.screenShakeIntensity = Math.max(this.screenShakeIntensity, 6);
+      }
+    }
+
     if (this.currentState && this.currentState.snake.length > 0) {
       const head = this.currentState.snake[0];
       const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
@@ -2834,6 +2868,17 @@ export class SnakeScene extends Phaser.Scene {
     drawNuclearBlasts(g, this.nuclearBlast);
     drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
     drawStarBursts(g, this.cosmicCrown, this.drawText.bind(this));
+
+    {
+      const police = this.currentState.police;
+      drawPoliceVisuals(
+        g,
+        this.policeVisuals,
+        police?.segments || [],
+        CELL_SIZE,
+        police?.active || false
+      );
+    }
 
     drawWeather(g, this.weather, width, height, this.frameCount);
     drawCleanVignette(g, width, height);
