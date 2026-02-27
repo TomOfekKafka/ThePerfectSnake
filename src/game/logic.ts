@@ -11,6 +11,7 @@ import { shouldSpawnFlagFood, generateFlagFood, isFlagFoodExpired } from './flag
 import { tickRival, playerCollidesWithRival } from './rivalSnake';
 import { shouldSpawnCash, generateCashItem, expireCashItems, collectCash } from './cashItems';
 import { shouldSpawnFakeFood, generateFakeFood, expireFakeFoods, collectFakeFood, shrinkFromFake } from './fakeFood';
+import { tickPolice, POLICE_PENALTY } from './policeChase';
 import { FAKE_FOOD_PENALTY } from './constants';
 
 /** Check if two positions are equal */
@@ -213,11 +214,14 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     const rivalFood = rivalResult.foodStolen
       ? generateFood(resultSnake, newPowerUp?.position)
       : newFood;
+    const isInvincibleNow = hasPowerUp(newActivePowerUps, 'INVINCIBILITY') || immortal;
+    const policeResult = tickPolice(state.police, resultSnake, foodEatenCount, false, isInvincibleNow);
+    const policePenalty = policeResult.caughtPlayer ? POLICE_PENALTY : 0;
     return {
       ...state,
       snake: resultSnake,
       food: rivalFood,
-      score: Math.max(0, state.score + scoreGain + bonusScoreGain + flagScoreGain + cashGain - fakePenalty),
+      score: Math.max(0, state.score + scoreGain + bonusScoreGain + flagScoreGain + cashGain - fakePenalty - policePenalty),
       foodEaten: foodEatenCount,
       direction,
       powerUp: newPowerUp,
@@ -234,6 +238,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       cashItems,
       totalCash: state.totalCash + cashGain,
       fakeFoods,
+      police: policeResult.police,
     };
   }
 
