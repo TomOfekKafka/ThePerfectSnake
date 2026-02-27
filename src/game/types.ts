@@ -2,16 +2,6 @@
  * Core game types - shared across all game modules
  */
 
-export interface RivalSnakeState {
-  segments: Position[];
-  direction: Direction;
-  active: boolean;
-  growPending: number;
-  moveTimer: number;
-  spawnCooldown: number;
-  foodEaten: number;
-}
-
 export interface Position {
   x: number;
   y: number;
@@ -106,7 +96,6 @@ export interface GameState {
   wormhole: Wormhole | null;
   lastWormholeDespawn: number;
   phantom: PhantomSnake;
-  rival: RivalSnakeState;
   bonusFood: BonusFood | null;
   flagFood: FlagFood | null;
   cashItems: CashItem[];
@@ -121,6 +110,16 @@ export interface GameState {
 }
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+
+export interface RivalSnakeState {
+  segments: Position[];
+  direction: Direction;
+  active: boolean;
+  growPending: number;
+  moveTimer: number;
+  spawnCooldown: number;
+  foodEaten: number;
+}
 
 export type DeathReason = 'wall' | 'self' | 'rival' | null;
 

@@ -30,11 +30,11 @@ const SELF_REASONS = [
 ] as const;
 
 const RIVAL_REASONS = [
-  'DEVOURED BY RIVAL',
-  'THE RIVAL STRIKES',
-  'AMBUSHED BY THE NEMESIS',
-  'RIVAL COLLISION',
+  'TAKEN DOWN BY THE RIVAL',
   'OUTMANEUVERED',
+  'THE RIVAL STRIKES',
+  'HEAD-ON COLLISION',
+  'RIVAL SNAKE WINS',
 ] as const;
 
 export type DeathMessage = string;

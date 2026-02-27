@@ -8,7 +8,6 @@ import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS
 import { tickPhantom } from './phantomSnake';
 import { shouldSpawnBonusFood, generateBonusFood, isBonusFoodExpired, shrinkSnake } from './bonusFood';
 import { shouldSpawnFlagFood, generateFlagFood, isFlagFoodExpired } from './flagFood';
-import { tickRival, playerCollidesWithRival, rivalSegmentsForCollision } from './rivalSnake';
 import { shouldSpawnCash, generateCashItem, expireCashItems, collectCash } from './cashItems';
 import { shouldSpawnFakeFood, generateFakeFood, expireFakeFoods, collectFakeFood, shrinkFromFake } from './fakeFood';
 import { tickPolice, POLICE_PENALTY } from './policeChase';
@@ -130,13 +129,8 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       : state.snake.slice(0, -1);
     const hitSelf = collidesWithSnake(newHead, bodyForCollision);
 
-    const rivalBody = rivalSegmentsForCollision(state.rival);
-    const hitRival = playerCollidesWithRival(newHead, rivalBody);
-
-    if (hitWall || (hitSelf && !isInvincible) || (hitRival && !isInvincible)) {
-      const deathReason = hitWall ? 'wall' as const
-        : hitSelf ? 'self' as const
-        : 'rival' as const;
+    if (hitWall || (hitSelf && !isInvincible)) {
+      const deathReason = hitWall ? 'wall' as const : 'self' as const;
       return { ...state, gameOver: true, tickCount, deathReason };
     }
   }
@@ -220,17 +214,13 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     if (!spawnedFlagFood && shouldSpawnFlagFood(foodEatenCount, spawnedFlagFood)) {
       spawnedFlagFood = generateFlagFood(resultSnake, newFood, tickCount, newPowerUp?.position);
     }
-    const rivalResult = tickRival(state.rival, newFood, resultSnake, foodEatenCount, false);
-    const rivalFood = rivalResult.foodStolen
-      ? generateFood(resultSnake, newPowerUp?.position)
-      : newFood;
     const isInvincibleNow = hasPowerUp(newActivePowerUps, 'INVINCIBILITY') || immortal;
     const policeResult = tickPolice(state.police, resultSnake, foodEatenCount, false, isInvincibleNow);
     const policePenalty = policeResult.caughtPlayer ? POLICE_PENALTY : 0;
     return {
       ...state,
       snake: resultSnake,
-      food: rivalFood,
+      food: newFood,
       score: Math.max(0, state.score + scoreGain + bonusScoreGain + flagScoreGain + cashGain - fakePenalty - policePenalty),
       foodEaten: foodEatenCount,
       direction,
@@ -242,7 +232,6 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       wormhole: null,
       lastWormholeDespawn: 0,
       phantom: phantomResult.phantom,
-      rival: rivalResult.rival,
       bonusFood: newBonusFood,
       flagFood: spawnedFlagFood,
       cashItems,
@@ -271,11 +260,6 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     ? generateFood(resultSnake, newPowerUp?.position)
     : state.food;
 
-  const rivalResult = tickRival(state.rival, phantomFood, resultSnake, foodEatenCount, false);
-  const finalFood = rivalResult.foodStolen
-    ? generateFood(resultSnake, newPowerUp?.position)
-    : phantomFood;
-
   const isInvincibleNow = hasPowerUp(newActivePowerUps, 'INVINCIBILITY') || immortal;
   const policeResult = tickPolice(state.police, resultSnake, foodEatenCount, false, isInvincibleNow);
   const policePenalty = policeResult.caughtPlayer ? POLICE_PENALTY : 0;
@@ -283,7 +267,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
   return {
     ...state,
     snake: resultSnake,
-    food: finalFood,
+    food: phantomFood,
     score: Math.max(0, state.score + bonusScoreGain + flagScoreGain + cashGain - fakePenalty - policePenalty),
     direction,
     powerUp: newPowerUp,
@@ -294,7 +278,6 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     wormhole: null,
     lastWormholeDespawn: 0,
     phantom: phantomResult.phantom,
-    rival: rivalResult.rival,
     bonusFood: newBonusFood,
     flagFood: newFlagFood,
     cashItems,
@@ -327,15 +310,6 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
     stealCount: 0,
     moveTimer: 0,
     spawnCooldown: 0,
-  },
-  rival: {
-    segments: [],
-    direction: 'LEFT',
-    active: false,
-    growPending: 0,
-    moveTimer: 0,
-    spawnCooldown: 0,
-    foodEaten: 0,
   },
   bonusFood: null,
   flagFood: null,
@@ -377,12 +351,6 @@ export const reviveSnake = (state: GameState): GameState => {
       segments: [],
       active: false,
       spawnCooldown: 0,
-    },
-    rival: {
-      ...state.rival,
-      segments: [],
-      active: false,
-      spawnCooldown: 10,
     },
     bonusFood: null,
     flagFood: null,
