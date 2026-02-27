@@ -269,6 +269,13 @@ import {
   drawSnakeEnergyField,
   drawCornerHUD,
 } from './sciFiEffects';
+import {
+  ElectricStormState,
+  createElectricStormState,
+  updateElectricStorm,
+  drawElectricStorm,
+  triggerElectricBurst,
+} from './electricStorm';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -760,6 +767,7 @@ export class SnakeScene extends Phaser.Scene {
   private policeVisuals: PoliceVisualsState = createPoliceVisualsState();
   private lastPoliceCaughtFlash = 0;
   private sciFi: SciFiState = createSciFiState();
+  private electricStorm: ElectricStormState = createElectricStormState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2731,6 +2739,12 @@ export class SnakeScene extends Phaser.Scene {
     updateCountryMap(this.countryMap, this.flagDisplay.currentFlag.code, this.frameCount);
     updateWeather(this.weather, this.currentState?.foodEaten || 0, width, height, this.frameCount);
     updateSciFi(this.sciFi, width, height);
+    updateElectricStorm(
+      this.electricStorm,
+      this.currentState?.snake || [],
+      CELL_SIZE,
+      this.frameCount
+    );
 
     if (this.currentState && this.currentState.gameStarted) {
       const score = this.currentState.score || 0;
@@ -2839,6 +2853,7 @@ export class SnakeScene extends Phaser.Scene {
         spawnStarBurst(this.cosmicCrown, foodX, foodY, this.currentState.foodEaten || 0);
         spawnShieldRing(this.sciFi, foodX, foodY);
         spawnShieldRing(this.sciFi, headX, headY);
+        triggerElectricBurst(this.electricStorm, headX, headY, CELL_SIZE * 3);
       }
       this.lastSnakeLength = this.currentState.snake.length;
     }
@@ -2890,6 +2905,7 @@ export class SnakeScene extends Phaser.Scene {
     drawPatronusTrail(g, this.patronusTrail);
     drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState, this.hugeHead);
     drawSnakeEnergyField(g, this.sciFi, this.currentState.snake, CELL_SIZE);
+    drawElectricStorm(g, this.electricStorm, this.frameCount);
     this.drawDroolDrops(g);
     drawWandSparkles(g, this.wizardEffects);
     drawDragonBreath(g, this.dragonBreath);
