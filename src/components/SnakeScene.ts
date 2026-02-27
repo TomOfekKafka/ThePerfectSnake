@@ -276,6 +276,35 @@ import {
   drawElectricStorm,
   triggerElectricBurst,
 } from './electricStorm';
+import {
+  TitleScreenState,
+  createTitleScreenState,
+  initTitleScreen,
+  updateTitleScreen,
+  drawTitleScreen,
+} from './titleScreen';
+import {
+  DeathCinematicState,
+  createDeathCinematicState,
+  triggerDeathCinematic,
+  updateDeathCinematic,
+  drawDeathCinematic,
+} from './deathCinematic';
+import {
+  MilestoneState,
+  createMilestoneState,
+  checkMilestone,
+  updateMilestones,
+  drawMilestones,
+  resetMilestones,
+} from './milestones';
+import {
+  SpeedLinesState,
+  createSpeedLinesState,
+  updateSpeedLines,
+  triggerSpeedBoost,
+  drawSpeedLines,
+} from './speedLines';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
