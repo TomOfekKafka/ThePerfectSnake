@@ -253,6 +253,22 @@ import {
   updatePoliceVisuals,
   drawPoliceVisuals,
 } from './policeVisuals';
+import {
+  SciFiState,
+  createSciFiState,
+  initDataStreams,
+  updateSciFi,
+  spawnShieldRing,
+  drawSciFiGrid,
+  drawScanPulses,
+  drawShieldRings,
+  drawDataStreams,
+  drawScanlines,
+  drawHoloGlitches,
+  drawHoloFood,
+  drawSnakeEnergyField,
+  drawCornerHUD,
+} from './sciFiEffects';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -743,6 +759,7 @@ export class SnakeScene extends Phaser.Scene {
   private sudoku: SudokuState = createSudokuState();
   private policeVisuals: PoliceVisualsState = createPoliceVisualsState();
   private lastPoliceCaughtFlash = 0;
+  private sciFi: SciFiState = createSciFiState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -763,6 +780,7 @@ export class SnakeScene extends Phaser.Scene {
     initSpaceBackground(this.spaceBackground, width, height);
     initCrownStars(this.cosmicCrown, width, height);
     initCrownBeam(this.cosmicCrown, width, height);
+    initDataStreams(this.sciFi, width, height);
 
     this.upgradeKeyHandler = (e: KeyboardEvent) => {
       if (!this.upgradeState.choice || !this.upgradeState.choice.active) return;
@@ -2712,6 +2730,7 @@ export class SnakeScene extends Phaser.Scene {
     updateCosmicCrown(this.cosmicCrown, width);
     updateCountryMap(this.countryMap, this.flagDisplay.currentFlag.code, this.frameCount);
     updateWeather(this.weather, this.currentState?.foodEaten || 0, width, height, this.frameCount);
+    updateSciFi(this.sciFi, width, height);
 
     if (this.currentState && this.currentState.gameStarted) {
       const score = this.currentState.score || 0;
@@ -2818,6 +2837,8 @@ export class SnakeScene extends Phaser.Scene {
         const points = (this.currentState.score || 0) - this.lastHudScore;
         spawnScoreBurst(this.mathParticles, headX, headY - CELL_SIZE, points > 0 ? points : 10);
         spawnStarBurst(this.cosmicCrown, foodX, foodY, this.currentState.foodEaten || 0);
+        spawnShieldRing(this.sciFi, foodX, foodY);
+        spawnShieldRing(this.sciFi, headX, headY);
       }
       this.lastSnakeLength = this.currentState.snake.length;
     }
@@ -2829,6 +2850,12 @@ export class SnakeScene extends Phaser.Scene {
     g.setPosition(shake.x, shake.y);
 
     drawSpaceBackground(g, this.spaceBackground, width, height);
+    drawSciFiGrid(g, this.sciFi, width, height, CELL_SIZE, GRID_SIZE);
+    drawDataStreams(g, this.sciFi, (dg, digit, cx, cy, sz, color, alpha) => {
+      dg.fillStyle(color, alpha);
+      this.drawDigit(dg, String(digit), cx, cy, sz);
+    });
+    drawScanPulses(g, this.sciFi, width);
     drawMathWaves(g, this.mathParticles, width);
     drawHogwartsGrid(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
     drawFloatingCandles(g, this.hogwartsBackground);
@@ -2858,9 +2885,11 @@ export class SnakeScene extends Phaser.Scene {
     drawCountryLabel(g, this.flagDisplay.currentFlag, foodX, foodY, CELL_SIZE, this.frameCount, this.drawText.bind(this));
     drawSnitchWings(g, this.wizardEffects, foodX, foodY, CELL_SIZE);
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
+    drawHoloFood(g, this.sciFi, foodX, foodY, CELL_SIZE);
 
     drawPatronusTrail(g, this.patronusTrail);
     drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState, this.hugeHead);
+    drawSnakeEnergyField(g, this.sciFi, this.currentState.snake, CELL_SIZE);
     this.drawDroolDrops(g);
     drawWandSparkles(g, this.wizardEffects);
     drawDragonBreath(g, this.dragonBreath);
@@ -2880,8 +2909,12 @@ export class SnakeScene extends Phaser.Scene {
       );
     }
 
+    drawShieldRings(g, this.sciFi);
+    drawHoloGlitches(g, this.sciFi, width);
     drawWeather(g, this.weather, width, height, this.frameCount);
     drawCleanVignette(g, width, height);
+    drawScanlines(g, this.sciFi, width, height);
+    drawCornerHUD(g, this.sciFi, width, height);
     drawSpellTexts(g, this.wizardEffects, this.drawText.bind(this));
     drawComboStreak(g, this.comboStreak, width, height, this.drawText.bind(this));
 
