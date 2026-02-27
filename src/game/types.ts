@@ -81,6 +81,15 @@ export interface PhantomSnake {
   spawnCooldown: number;
 }
 
+export interface PoliceChaseState {
+  segments: Position[];
+  direction: Direction;
+  active: boolean;
+  moveTimer: number;
+  spawnCooldown: number;
+  caughtFlash: number;
+}
+
 export interface GameState {
   snake: Position[];
   food: Position;
@@ -103,6 +112,7 @@ export interface GameState {
   cashItems: CashItem[];
   totalCash: number;
   fakeFoods: FakeFood[];
+  police: PoliceChaseState;
   immortalActive: boolean;
   immortalProgress: number;
   immortalCharges: number;
