@@ -100,4 +100,5 @@ export const createInitialState = (): GameState => ({
   immortalProgress: 0,
   immortalCharges: 1,
   immortalRechargeProgress: 0,
+  deathReason: null,
 });

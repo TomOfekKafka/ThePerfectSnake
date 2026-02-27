@@ -311,6 +311,7 @@ interface GameState {
   tickCount?: number;
   flagFood?: FlagFoodData | null;
   police?: PoliceData;
+  deathReason?: 'wall' | 'self' | 'rival' | null;
 }
 
 interface Star {
@@ -621,7 +622,7 @@ const MAX_FIRE_RAIN = 30;
 const MAX_CHAOS_EXPLOSIONS = 3;
 const NUM_SKULLS = 4;
 
-import { pickDeathMessage } from '../game/deathMessages';
+import { pickDeathMessage, pickDeathReason } from '../game/deathMessages';
 import { THEME } from './gameTheme';
 
 const COLORS = {
@@ -723,6 +724,7 @@ export class SnakeScene extends Phaser.Scene {
   private rivalSnake: RivalSnake | null = null;
   // Game over display
   private deathMessage = '';
+  private deathReasonText = '';
   private gameOverRevealProgress = 0;
   private gameOverScoreAnimPhase = 0;
   private hudPulsePhase = 0;
@@ -2391,6 +2393,7 @@ export class SnakeScene extends Phaser.Scene {
       this.chaosIntensity = 1.0;
       this.spawnDeathExplosion();
       this.deathMessage = pickDeathMessage();
+      this.deathReasonText = pickDeathReason(state.deathReason ?? null);
       this.gameOverRevealProgress = 0;
       this.gameOverScoreAnimPhase = 0;
       this.spawnGameOverEffects();
@@ -4076,10 +4079,10 @@ export class SnakeScene extends Phaser.Scene {
     this.gameOverRevealProgress = Math.min(1, this.gameOverRevealProgress + 0.025);
 
     const centerX = width / 2;
-    const panelWidth = 200;
-    const panelHeight = 120;
+    const panelWidth = 220;
+    const panelHeight = 170;
     const panelX = centerX - panelWidth / 2;
-    const panelY = height * 0.2;
+    const panelY = height * 0.15;
     const slideOffset = (1 - this.gameOverRevealProgress) * 40;
     const alpha = this.gameOverRevealProgress;
 
@@ -4092,24 +4095,45 @@ export class SnakeScene extends Phaser.Scene {
     g.lineStyle(3, COLORS.food, borderPulse * alpha);
     g.strokeRoundedRect(panelX, panelY - slideOffset, panelWidth, panelHeight, 12);
 
-    // Death message at top
-    const messageY = panelY - slideOffset + 25;
-    const msgWidth = this.deathMessage.length * 7;
+    // Flavor message at top
+    const messageY = panelY - slideOffset + 20;
+    const msgWidth = this.deathMessage.length * 9 * 0.7;
     this.drawText(g, this.deathMessage, centerX - msgWidth / 2, messageY, 9, COLORS.foodGlow, 0.9 * alpha);
 
     // Divider
     g.lineStyle(1, COLORS.snakeGlow, 0.4 * alpha);
-    g.lineBetween(panelX + 25, messageY + 12, panelX + panelWidth - 25, messageY + 12);
+    g.lineBetween(panelX + 20, messageY + 14, panelX + panelWidth - 20, messageY + 14);
 
-    // Large score display
+    // Death reason - the main attraction, big and pulsing
+    const reasonY = panelY - slideOffset + 50;
+    const reasonPulse = 0.7 + Math.sin(this.gameOverScoreAnimPhase * 1.5) * 0.3;
+    const reasonSize = 11;
+    const reasonText = this.deathReasonText || 'UNKNOWN CAUSE';
+    const reasonWidth = reasonText.length * reasonSize * 0.7;
+
+    // Glowing backdrop behind the death reason
+    g.fillStyle(COLORS.food, 0.08 * reasonPulse * alpha);
+    g.fillRoundedRect(centerX - reasonWidth / 2 - 8, reasonY - 5, reasonWidth + 16, reasonSize + 10, 4);
+
+    this.drawText(g, reasonText, centerX - reasonWidth / 2, reasonY, reasonSize, COLORS.food, reasonPulse * alpha);
+
+    // "CAUSE OF DEATH" label above the reason
+    const labelText = 'CAUSE OF DEATH';
+    const labelSize = 6;
+    const labelWidth = labelText.length * labelSize * 0.7;
+    this.drawText(g, labelText, centerX - labelWidth / 2, reasonY - 12, labelSize, COLORS.noirGray, 0.7 * alpha);
+
+    // Second divider
+    g.lineStyle(1, COLORS.snakeGlow, 0.3 * alpha);
+    g.lineBetween(panelX + 20, reasonY + reasonSize + 10, panelX + panelWidth - 20, reasonY + reasonSize + 10);
+
+    // Score section
     const score = this.currentState.score || 0;
     const scoreStr = String(score);
-    const scoreY = panelY - slideOffset + 65;
+    const scoreY = panelY - slideOffset + 100;
 
-    // Score label
     this.drawText(g, 'FINAL SCORE', centerX - 44, scoreY - 16, 8, COLORS.noirGray, 0.8 * alpha);
 
-    // Large score with pulsing glow
     const scorePulse = 0.8 + Math.sin(this.gameOverScoreAnimPhase * 2) * 0.2;
     const scoreWidth = scoreStr.length * 14;
     g.fillStyle(COLORS.snakeGlow, 0.15 * scorePulse * alpha);

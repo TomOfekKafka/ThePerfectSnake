@@ -134,7 +134,10 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     const hitRival = playerCollidesWithRival(newHead, rivalBody);
 
     if (hitWall || (hitSelf && !isInvincible) || (hitRival && !isInvincible)) {
-      return { ...state, gameOver: true, tickCount };
+      const deathReason = hitWall ? 'wall' as const
+        : hitSelf ? 'self' as const
+        : 'rival' as const;
+      return { ...state, gameOver: true, tickCount, deathReason };
     }
   }
 
@@ -351,6 +354,7 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
   immortalProgress: 0,
   immortalCharges: 1,
   immortalRechargeProgress: 0,
+  deathReason: null,
 });
 
 /** Revive the snake after a correct trivia answer. Trims half the tail and spawns safe. */
@@ -386,5 +390,6 @@ export const reviveSnake = (state: GameState): GameState => {
     fakeFoods: [],
     immortalActive: false,
     immortalProgress: 0,
+    deathReason: null,
   };
 };

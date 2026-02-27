@@ -117,9 +117,12 @@ export interface GameState {
   immortalProgress: number;
   immortalCharges: number;
   immortalRechargeProgress: number;
+  deathReason: DeathReason;
 }
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+
+export type DeathReason = 'wall' | 'self' | 'rival' | null;
 
 export const OPPOSITE_DIRECTIONS: Record<Direction, Direction> = {
   UP: 'DOWN',
