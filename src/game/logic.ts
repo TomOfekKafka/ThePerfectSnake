@@ -8,7 +8,7 @@ import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS
 import { tickPhantom } from './phantomSnake';
 import { shouldSpawnBonusFood, generateBonusFood, isBonusFoodExpired, shrinkSnake } from './bonusFood';
 import { shouldSpawnFlagFood, generateFlagFood, isFlagFoodExpired } from './flagFood';
-import { tickRival, playerCollidesWithRival } from './rivalSnake';
+import { tickRival, playerCollidesWithRival, rivalSegmentsForCollision } from './rivalSnake';
 import { shouldSpawnCash, generateCashItem, expireCashItems, collectCash } from './cashItems';
 import { shouldSpawnFakeFood, generateFakeFood, expireFakeFoods, collectFakeFood, shrinkFromFake } from './fakeFood';
 import { tickPolice, POLICE_PENALTY } from './policeChase';
@@ -130,7 +130,8 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       : state.snake.slice(0, -1);
     const hitSelf = collidesWithSnake(newHead, bodyForCollision);
 
-    const hitRival = playerCollidesWithRival(newHead, state.rival.segments);
+    const rivalBody = rivalSegmentsForCollision(state.rival);
+    const hitRival = playerCollidesWithRival(newHead, rivalBody);
 
     if (hitWall || (hitSelf && !isInvincible) || (hitRival && !isInvincible)) {
       return { ...state, gameOver: true, tickCount };
@@ -272,11 +273,15 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     ? generateFood(resultSnake, newPowerUp?.position)
     : phantomFood;
 
+  const isInvincibleNow = hasPowerUp(newActivePowerUps, 'INVINCIBILITY') || immortal;
+  const policeResult = tickPolice(state.police, resultSnake, foodEatenCount, false, isInvincibleNow);
+  const policePenalty = policeResult.caughtPlayer ? POLICE_PENALTY : 0;
+
   return {
     ...state,
     snake: resultSnake,
     food: finalFood,
-    score: Math.max(0, state.score + bonusScoreGain + flagScoreGain + cashGain - fakePenalty),
+    score: Math.max(0, state.score + bonusScoreGain + flagScoreGain + cashGain - fakePenalty - policePenalty),
     direction,
     powerUp: newPowerUp,
     activePowerUps: newActivePowerUps,
@@ -292,6 +297,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     cashItems,
     totalCash: state.totalCash + cashGain,
     fakeFoods,
+    police: policeResult.police,
   };
 };
 

@@ -229,6 +229,16 @@ export const tickRival = (
   };
 };
 
+export const rivalSegmentsForCollision = (rival: RivalSnakeState): Position[] => {
+  if (rival.segments.length === 0) return [];
+  const willMove = rival.moveTimer + 1 >= RIVAL_MOVE_EVERY;
+  const isGrowing = rival.growPending > 0;
+  if (willMove && !isGrowing) {
+    return rival.segments.slice(0, -1);
+  }
+  return rival.segments;
+};
+
 export const playerCollidesWithRival = (
   playerHead: Position,
   rivalSegments: Position[]
