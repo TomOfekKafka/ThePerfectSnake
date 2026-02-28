@@ -255,6 +255,13 @@ import {
   drawSilkWeave,
 } from './silkWeave';
 import {
+  AuroraTrailState,
+  createAuroraTrailState,
+  spawnAuroraWisps,
+  updateAuroraTrail,
+  drawAuroraTrail,
+} from './auroraTrail';
+import {
   PoliceVisualsState,
   createPoliceVisualsState,
   updatePoliceVisuals,
@@ -851,6 +858,7 @@ export class SnakeScene extends Phaser.Scene {
   private lastFoodEaten = 0;
   private upgradeKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   private silk: SilkState = createSilkState();
+  private auroraTrail: AuroraTrailState = createAuroraTrailState();
   private policeVisuals: PoliceVisualsState = createPoliceVisualsState();
   private lastPoliceCaughtFlash = 0;
   private sciFi: SciFiState = createSciFiState();
@@ -2878,6 +2886,11 @@ export class SnakeScene extends Phaser.Scene {
     }
     this.silk = updateSilkEffects(this.silk);
 
+    if (this.currentState && this.currentState.gameStarted && !this.currentState.gameOver) {
+      spawnAuroraWisps(this.auroraTrail, this.currentState.snake, CELL_SIZE, this.hueOffset);
+    }
+    updateAuroraTrail(this.auroraTrail);
+
     {
       const police = this.currentState?.police;
       const policeSegments = police?.segments || [];
@@ -3018,6 +3031,7 @@ export class SnakeScene extends Phaser.Scene {
 
     drawFireGlow(g, this.currentState.snake, CELL_SIZE, this.frameCount);
     drawFireTrail(g, this.fireTrail);
+    drawAuroraTrail(g, this.auroraTrail, this.frameCount);
     drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState);
     drawSnakeEnergyField(g, this.sciFi, this.currentState.snake, CELL_SIZE);
     drawFireHearts(g, this.fireHearts);
