@@ -94,6 +94,7 @@ export const createInitialState = (): GameState => ({
   },
   obstacles: [],
   lastObstacleSpawnFood: 0,
+  growPending: 0,
   immortalActive: false,
   immortalProgress: 0,
   immortalCharges: 1,

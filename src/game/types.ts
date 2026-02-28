@@ -110,6 +110,7 @@ export interface GameState {
   police: PoliceChaseState;
   obstacles: Obstacle[];
   lastObstacleSpawnFood: number;
+  growPending: number;
   immortalActive: boolean;
   immortalProgress: number;
   immortalCharges: number;

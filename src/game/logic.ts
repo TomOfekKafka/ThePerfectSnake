@@ -13,6 +13,7 @@ import { shouldSpawnFakeFood, generateFakeFood, expireFakeFoods, collectFakeFood
 import { tickPolice, POLICE_PENALTY } from './policeChase';
 import { FAKE_FOOD_PENALTY } from './constants';
 import { shouldSpawnObstacles, spawnObstacles, collidesWithObstacle } from './obstacles';
+import { randomGrowth, tickGrowPending } from './growthBurst';
 
 /** Check if two positions are equal */
 export const positionsEqual = (a: Position, b: Position): boolean =>
@@ -204,6 +205,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
   }
 
   if (ateFood) {
+    const growth = randomGrowth();
     let resultSnake = newSnake;
     if (ateBonusFood) {
       resultSnake = shrinkSnake(resultSnake);
@@ -251,12 +253,14 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       police: policeResult.police,
       obstacles: newObstacles,
       lastObstacleSpawnFood: newLastObstacleSpawnFood,
+      growPending: growth - 1,
     };
   }
 
-  newSnake.pop();
+  const growResult = tickGrowPending(newSnake, state.growPending);
+  const afterGrowSnake = growResult.snake;
 
-  let resultSnake = newSnake;
+  let resultSnake = afterGrowSnake;
   if (ateBonusFood) {
     resultSnake = shrinkSnake(resultSnake);
   }
@@ -299,6 +303,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     police: policeResult.police,
     obstacles: state.obstacles,
     lastObstacleSpawnFood: state.lastObstacleSpawnFood,
+    growPending: growResult.growPending,
   };
 };
 
@@ -341,6 +346,7 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
   },
   obstacles: [],
   lastObstacleSpawnFood: 0,
+  growPending: 0,
   immortalActive: false,
   immortalProgress: 0,
   immortalCharges: 1,
@@ -375,6 +381,7 @@ export const reviveSnake = (state: GameState): GameState => {
     fakeFoods: [],
     obstacles: [],
     lastObstacleSpawnFood: 0,
+    growPending: 0,
     immortalActive: false,
     immortalProgress: 0,
     deathReason: null,

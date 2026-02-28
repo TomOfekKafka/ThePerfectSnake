@@ -347,6 +347,13 @@ import {
   updateObstacleEffects,
   drawObstacles,
 } from './obstacleRenderer';
+import {
+  GrowthPopupState,
+  createGrowthPopupState,
+  spawnGrowthPopup,
+  updateGrowthPopups,
+  drawGrowthPopups,
+} from './growthPopup';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
