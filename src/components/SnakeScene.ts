@@ -713,9 +713,6 @@ export class SnakeScene extends Phaser.Scene {
   private hueOffset = 0;
   private screenFlashAlpha = 0;
   private gameOverGlitchOffset = 0;
-  private screenShakeX = 0;
-  private screenShakeY = 0;
-  private screenShakeIntensity = 0;
   private energyFieldPulse = 0;
   private foodBurstParticles: { x: number; y: number; vx: number; vy: number; life: number; size: number; hue: number; trail: { x: number; y: number }[] }[] = [];
   private chromaticIntensity = 0;
@@ -2311,9 +2308,6 @@ export class SnakeScene extends Phaser.Scene {
       if (this.screenFlashAlpha < 0) this.screenFlashAlpha = 0;
     }
 
-    this.screenShakeIntensity = 0;
-    this.screenShakeX = 0;
-    this.screenShakeY = 0;
 
     // Decay chromatic aberration
     if (this.chromaticIntensity > 0) {
@@ -2411,7 +2405,6 @@ export class SnakeScene extends Phaser.Scene {
 
     // Detect game over transition - cinematic death with 2-second delay
     if (state.gameOver && this.currentState && !this.currentState.gameOver) {
-      this.screenShakeIntensity = 0;
       this.chromaticIntensity = 3.0;
       this.chaosIntensity = 1.0;
       this.spawnDeathExplosion();
@@ -2455,7 +2448,6 @@ export class SnakeScene extends Phaser.Scene {
     if (!state.gameOver) {
       this.gameOverAlpha = 0;
       this.gameOverGlitchOffset = 0;
-      this.screenShakeIntensity = 0;
     }
   }
 
@@ -2813,9 +2805,6 @@ export class SnakeScene extends Phaser.Scene {
         policeActive,
         justCaught
       );
-      if (justCaught) {
-        this.screenShakeIntensity = Math.max(this.screenShakeIntensity, 6);
-      }
     }
 
     if (this.currentState && this.currentState.snake.length > 0) {

@@ -82,7 +82,7 @@ export function triggerCombo(
   const color = comboColor(state.combo);
 
   state.flashIntensity = Math.min(0.3 + state.combo * 0.05, 0.6);
-  state.shakeAmount = Math.min(1 + state.combo * 0.5, 4);
+  state.shakeAmount = 0;
 
   const ringCount = Math.min(state.combo, 4);
   for (let i = 0; i < ringCount; i++) {
