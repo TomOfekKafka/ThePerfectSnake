@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 
-export interface CountryFlag {
-  country: string;
+export interface KeanuCharacter {
+  name: string;
   code: string;
-  fact: string;
+  quote: string;
+  movie: string;
   suitColor: number;
   hairColor: number;
   accentColor: number;
@@ -11,11 +12,14 @@ export interface CountryFlag {
   accessory: 'sunglasses' | 'beard' | 'guitar' | 'pencil' | 'surfboard' | 'hoodie';
 }
 
-const KEANUS: CountryFlag[] = [
+export type CountryFlag = KeanuCharacter;
+
+const KEANUS: KeanuCharacter[] = [
   {
-    country: 'NEO',
+    name: 'NEO',
     code: 'NEO',
-    fact: 'THERE IS NO SPOON',
+    quote: 'THERE IS NO SPOON',
+    movie: 'THE MATRIX',
     suitColor: 0x111111,
     hairColor: 0x1a1a1a,
     accentColor: 0x00ff41,
@@ -23,9 +27,10 @@ const KEANUS: CountryFlag[] = [
     accessory: 'sunglasses',
   },
   {
-    country: 'JOHN WICK',
+    name: 'JOHN WICK',
     code: 'WICK',
-    fact: 'YEAH I AM THINKING I AM BACK',
+    quote: 'YEAH I AM THINKING I AM BACK',
+    movie: 'JOHN WICK',
     suitColor: 0x1a1a2e,
     hairColor: 0x222222,
     accentColor: 0xff3333,
@@ -33,9 +38,10 @@ const KEANUS: CountryFlag[] = [
     accessory: 'pencil',
   },
   {
-    country: 'TED',
+    name: 'TED',
     code: 'TED',
-    fact: 'BE EXCELLENT TO EACH OTHER',
+    quote: 'BE EXCELLENT TO EACH OTHER',
+    movie: 'BILL AND TED',
     suitColor: 0x2255aa,
     hairColor: 0x3d2b1f,
     accentColor: 0xffdd44,
@@ -43,9 +49,10 @@ const KEANUS: CountryFlag[] = [
     accessory: 'guitar',
   },
   {
-    country: 'JOHNNY',
+    name: 'JOHNNY',
     code: 'JNNY',
-    fact: 'I WANT ROOM SERVICE',
+    quote: 'I WANT ROOM SERVICE',
+    movie: 'JOHNNY MNEMONIC',
     suitColor: 0x333344,
     hairColor: 0x1a1a1a,
     accentColor: 0x44ccff,
@@ -53,9 +60,10 @@ const KEANUS: CountryFlag[] = [
     accessory: 'hoodie',
   },
   {
-    country: 'KEANU',
+    name: 'KEANU',
     code: 'KEANU',
-    fact: 'YOU ARE BREATHTAKING',
+    quote: 'YOU ARE BREATHTAKING',
+    movie: 'E3 2019',
     suitColor: 0x2a2a2a,
     hairColor: 0x222222,
     accentColor: 0xff88ff,
@@ -63,9 +71,10 @@ const KEANUS: CountryFlag[] = [
     accessory: 'beard',
   },
   {
-    country: 'BODHI',
+    name: 'BODHI',
     code: 'SURF',
-    fact: 'FEAR CAUSES HESITATION',
+    quote: 'FEAR CAUSES HESITATION',
+    movie: 'POINT BREAK',
     suitColor: 0x1177aa,
     hairColor: 0x3d2b1f,
     accentColor: 0x00ddff,
@@ -74,33 +83,127 @@ const KEANUS: CountryFlag[] = [
   },
 ];
 
-const FLAGS = KEANUS;
+export const KEANU_COUNT = KEANUS.length;
 
-export const FLAG_COUNT = FLAGS.length;
+export const FLAG_COUNT = KEANU_COUNT;
 
-export function pickFlag(foodEaten: number): CountryFlag {
-  return FLAGS[foodEaten % FLAGS.length];
+export function pickKeanu(foodEaten: number): KeanuCharacter {
+  return KEANUS[foodEaten % KEANUS.length];
 }
 
-export function getFlags(): readonly CountryFlag[] {
-  return FLAGS;
+export const pickFlag = pickKeanu;
+
+export function getKeanus(): readonly KeanuCharacter[] {
+  return KEANUS;
 }
 
-export interface FlagDisplayState {
-  currentFlag: CountryFlag;
+export const getFlags = getKeanus;
+
+export interface KeanuDisplayState {
+  currentKeanu: KeanuCharacter;
   nextIndex: number;
+  quotePopup: QuotePopup | null;
 }
 
-export function createFlagDisplayState(): FlagDisplayState {
+export type FlagDisplayState = KeanuDisplayState;
+
+export interface QuotePopup {
+  text: string;
+  movie: string;
+  color: number;
+  age: number;
+  x: number;
+  y: number;
+}
+
+const QUOTE_POPUP_DURATION = 90;
+
+export function createKeanuDisplayState(): KeanuDisplayState {
   return {
-    currentFlag: FLAGS[0],
+    currentKeanu: KEANUS[0],
     nextIndex: 1,
+    quotePopup: null,
   };
 }
 
-export function advanceFlag(state: FlagDisplayState): void {
-  state.currentFlag = FLAGS[state.nextIndex % FLAGS.length];
+export const createFlagDisplayState = createKeanuDisplayState;
+
+export function advanceKeanu(state: KeanuDisplayState, x: number, y: number): void {
+  state.quotePopup = {
+    text: state.currentKeanu.quote,
+    movie: state.currentKeanu.movie,
+    color: state.currentKeanu.accentColor,
+    age: 0,
+    x,
+    y,
+  };
+  state.currentKeanu = KEANUS[state.nextIndex % KEANUS.length];
   state.nextIndex++;
+}
+
+export function advanceFlag(state: FlagDisplayState): void {
+  advanceKeanu(state, 0, 0);
+}
+
+export function updateQuotePopup(state: KeanuDisplayState): void {
+  if (!state.quotePopup) return;
+  state.quotePopup.age++;
+  if (state.quotePopup.age > QUOTE_POPUP_DURATION) {
+    state.quotePopup = null;
+  }
+}
+
+export function drawQuotePopup(
+  g: Phaser.GameObjects.Graphics,
+  state: KeanuDisplayState,
+  frameCount: number,
+  drawText: (
+    g: Phaser.GameObjects.Graphics,
+    text: string,
+    x: number,
+    y: number,
+    size: number,
+    color: number,
+    alpha: number
+  ) => void
+): void {
+  const popup = state.quotePopup;
+  if (!popup) return;
+
+  const progress = popup.age / QUOTE_POPUP_DURATION;
+  const fadeIn = Math.min(1, popup.age / 10);
+  const fadeOut = Math.max(0, 1 - Math.pow(Math.max(0, progress - 0.7) / 0.3, 2));
+  const alpha = fadeIn * fadeOut;
+  if (alpha <= 0) return;
+
+  const rise = popup.age * 0.8;
+  const cx = popup.x;
+  const cy = popup.y - 30 - rise;
+
+  const scale = 0.8 + Math.sin(popup.age * 0.15) * 0.05;
+  const textSize = Math.round(4 * scale);
+
+  const quoteWidth = popup.text.length * textSize * 0.75;
+  const movieWidth = popup.movie.length * 3 * 0.75;
+  const boxWidth = Math.max(quoteWidth, movieWidth) + 16;
+  const boxHeight = 22;
+  const boxX = cx - boxWidth / 2;
+  const boxY = cy - boxHeight / 2;
+
+  g.fillStyle(0x000000, alpha * 0.8);
+  g.fillRoundedRect(boxX, boxY, boxWidth, boxHeight, 4);
+  g.lineStyle(1.5, popup.color, alpha * 0.7);
+  g.strokeRoundedRect(boxX, boxY, boxWidth, boxHeight, 4);
+
+  const glowPulse = 0.1 + Math.sin(frameCount * 0.12) * 0.05;
+  g.fillStyle(popup.color, alpha * glowPulse);
+  g.fillRoundedRect(boxX - 2, boxY - 2, boxWidth + 4, boxHeight + 4, 5);
+
+  const quoteX = cx - quoteWidth / 2;
+  drawText(g, popup.text, quoteX, cy - 4, textSize, popup.color, alpha);
+
+  const movieX = cx - movieWidth / 2;
+  drawText(g, popup.movie, movieX, cy + 5, 3, 0xaaaaaa, alpha * 0.7);
 }
 
 function drawKeanuHead(
@@ -305,9 +408,9 @@ export function drawFlagFood(
   g.fillCircle(foodX - size * 0.2, floatY - size * 0.35, 1.5);
 }
 
-export function drawCountryLabel(
+export function drawKeanuLabel(
   g: Phaser.GameObjects.Graphics,
-  flag: CountryFlag,
+  keanu: KeanuCharacter,
   foodX: number,
   foodY: number,
   cellSize: number,
@@ -324,16 +427,29 @@ export function drawCountryLabel(
 ): void {
   const hover = Math.sin(frameCount * 0.08) * 3;
   const floatY = foodY + hover;
-  const labelY = floatY - cellSize * 1.0;
-  const charWidth = 5 * 0.7;
-  const labelWidth = flag.code.length * charWidth;
-  const labelX = foodX - labelWidth / 2;
+  const labelY = floatY - cellSize * 1.2;
 
-  const bgAlpha = 0.6 + Math.sin(frameCount * 0.06) * 0.1;
-  g.fillStyle(0x000000, bgAlpha * 0.7);
-  g.fillRoundedRect(labelX - 4, labelY - 5, labelWidth + 8, 11, 3);
-  g.lineStyle(1, flag.accentColor, bgAlpha * 0.5);
-  g.strokeRoundedRect(labelX - 4, labelY - 5, labelWidth + 8, 11, 3);
+  const nameCharW = 5 * 0.7;
+  const nameWidth = keanu.name.length * nameCharW;
+  const nameX = foodX - nameWidth / 2;
 
-  drawText(g, flag.code, labelX, labelY, 5, flag.accentColor, bgAlpha);
+  const bgAlpha = 0.7 + Math.sin(frameCount * 0.06) * 0.1;
+  const nameBgW = nameWidth + 12;
+  g.fillStyle(0x000000, bgAlpha * 0.8);
+  g.fillRoundedRect(foodX - nameBgW / 2, labelY - 6, nameBgW, 20, 4);
+  g.lineStyle(1.5, keanu.accentColor, bgAlpha * 0.6);
+  g.strokeRoundedRect(foodX - nameBgW / 2, labelY - 6, nameBgW, 20, 4);
+
+  const glowPulse = 0.08 + Math.sin(frameCount * 0.1) * 0.04;
+  g.fillStyle(keanu.accentColor, glowPulse);
+  g.fillRoundedRect(foodX - nameBgW / 2 - 2, labelY - 8, nameBgW + 4, 24, 5);
+
+  drawText(g, keanu.name, nameX, labelY, 5, keanu.accentColor, bgAlpha);
+
+  const movieCharW = 3 * 0.7;
+  const movieWidth = keanu.movie.length * movieCharW;
+  const movieX = foodX - movieWidth / 2;
+  drawText(g, keanu.movie, movieX, labelY + 8, 3, 0x888888, bgAlpha * 0.6);
 }
+
+export const drawCountryLabel = drawKeanuLabel;

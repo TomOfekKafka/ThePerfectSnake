@@ -155,10 +155,12 @@ import {
   LaserBeamState,
 } from './laserBeam';
 import {
-  createFlagDisplayState,
-  advanceFlag,
-  drawCountryLabel,
-  FlagDisplayState,
+  createKeanuDisplayState,
+  advanceKeanu,
+  drawKeanuLabel,
+  drawQuotePopup,
+  updateQuotePopup,
+  KeanuDisplayState,
 } from './countryFlags';
 import {
   createPortraitTextures,
@@ -795,7 +797,7 @@ export class SnakeScene extends Phaser.Scene {
   private laserBeam: LaserBeamState = createLaserBeamState();
   private flagLifeBar: FlagLifeBarState = createFlagLifeBarState();
   private skullDrop: SkullDropState = createSkullDropState();
-  private flagDisplay: FlagDisplayState = createFlagDisplayState();
+  private keanuDisplay: KeanuDisplayState = createKeanuDisplayState();
   private countryMap: CountryMapState = createCountryMapState();
   private cosmicCrown: CosmicCrownState = createCosmicCrownState();
   private weather: WeatherState = createWeatherState();
@@ -2402,9 +2404,9 @@ export class SnakeScene extends Phaser.Scene {
       spawnDramaRings(this.cleanEffects, headX, headY);
       spawnPulseGlow(this.pulseGlow, headX, headY, 1.0, this.hueOffset);
       triggerCombo(this.comboStreak, headX, headY, this.frameCount);
-      advanceFlag(this.flagDisplay);
       const foodPx = state.food.x * CELL_SIZE + CELL_SIZE / 2;
       const foodPy = state.food.y * CELL_SIZE + CELL_SIZE / 2;
+      advanceKeanu(this.keanuDisplay, headX, headY);
       fireLaser(this.laserBeam, headX, headY, foodPx, foodPy);
       resetFlagLifeBar(this.flagLifeBar);
       resetSkullDrop(this.skullDrop);
@@ -2787,7 +2789,8 @@ export class SnakeScene extends Phaser.Scene {
     updateSnitchWings(this.wizardEffects);
     updateSpellTexts(this.wizardEffects);
     updateCosmicCrown(this.cosmicCrown, width);
-    updateCountryMap(this.countryMap, this.flagDisplay.currentFlag.code, this.frameCount);
+    updateCountryMap(this.countryMap, this.keanuDisplay.currentKeanu.code, this.frameCount);
+    updateQuotePopup(this.keanuDisplay);
     updateWeather(this.weather, this.currentState?.foodEaten || 0, width, height, this.frameCount);
     updateSciFi(this.sciFi, width, height);
     updateElectricStorm(
@@ -2944,13 +2947,14 @@ export class SnakeScene extends Phaser.Scene {
     }
 
     if (!isSkullVisible(this.skullDrop)) {
-      drawPortraitFood(this, g, this.flagDisplay.currentFlag, foodX, foodY, CELL_SIZE, this.frameCount);
-      drawCountryLabel(g, this.flagDisplay.currentFlag, foodX, foodY, CELL_SIZE, this.frameCount, this.drawText.bind(this));
+      drawPortraitFood(this, g, this.keanuDisplay.currentKeanu, foodX, foodY, CELL_SIZE, this.frameCount);
+      drawKeanuLabel(g, this.keanuDisplay.currentKeanu, foodX, foodY, CELL_SIZE, this.frameCount, this.drawText.bind(this));
     } else {
       hidePortraitImages(this);
     }
     drawFlagLifeBar(g, this.flagLifeBar, foodX, foodY, CELL_SIZE, this.frameCount);
     drawSkullDrop(g, this.skullDrop, CELL_SIZE, this.frameCount);
+    drawQuotePopup(g, this.keanuDisplay, this.frameCount, this.drawText.bind(this));
     drawSnitchWings(g, this.wizardEffects, foodX, foodY, CELL_SIZE);
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
     drawHoloFood(g, this.sciFi, foodX, foodY, CELL_SIZE);

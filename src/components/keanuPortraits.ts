@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CountryFlag, getFlags } from './countryFlags';
+import { KeanuCharacter, CountryFlag, getKeanus, getFlags } from './countryFlags';
 
 const PORTRAIT_SIZE = 48;
 

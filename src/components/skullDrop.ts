@@ -147,12 +147,12 @@ export function drawSkullDrop(
   const cy = state.y + bob;
   const s = cellSize * 0.65 * state.scale;
 
-  drawSkullAura(g, cx, cy, s, alpha, frameCount);
+  drawKeanuAura(g, cx, cy, s, alpha, frameCount);
   drawSoulParticles(g, state);
-  drawSkullShape(g, cx, cy, s, alpha, frameCount);
+  drawKeanuWhoa(g, cx, cy, s, alpha, frameCount);
 }
 
-function drawSkullAura(
+function drawKeanuAura(
   g: Phaser.GameObjects.Graphics,
   cx: number,
   cy: number,
@@ -163,11 +163,11 @@ function drawSkullAura(
   const pulse = 1.0 + Math.sin(frameCount * 0.08) * 0.15;
   const auraSize = size * 2.8 * pulse;
 
-  g.fillStyle(0x220033, alpha * 0.15);
+  g.fillStyle(0x001122, alpha * 0.15);
   g.fillCircle(cx, cy, auraSize);
-  g.fillStyle(0x440066, alpha * 0.1);
+  g.fillStyle(0x003366, alpha * 0.1);
   g.fillCircle(cx, cy, auraSize * 0.7);
-  g.fillStyle(0x660044, alpha * 0.08);
+  g.fillStyle(0x004488, alpha * 0.08);
   g.fillCircle(cx, cy, auraSize * 0.5);
 }
 
@@ -177,16 +177,16 @@ function drawSoulParticles(
 ): void {
   for (const p of state.soulParticles) {
     const a = Math.max(0, p.life);
-    g.fillStyle(0x9944cc, a * 0.3);
+    g.fillStyle(0x4499cc, a * 0.3);
     g.fillCircle(p.x, p.y, p.size * 1.5);
-    g.fillStyle(0xcc66ff, a * 0.6);
+    g.fillStyle(0x66ccff, a * 0.6);
     g.fillCircle(p.x, p.y, p.size);
-    g.fillStyle(0xeeccff, a * 0.3);
+    g.fillStyle(0xccddff, a * 0.3);
     g.fillCircle(p.x, p.y, p.size * 0.4);
   }
 }
 
-function drawSkullShape(
+function drawKeanuWhoa(
   g: Phaser.GameObjects.Graphics,
   cx: number,
   cy: number,
@@ -196,86 +196,124 @@ function drawSkullShape(
 ): void {
   const s = size;
 
-  // Cranium
-  g.fillStyle(0xddccbb, alpha * 0.95);
-  g.fillEllipse(cx, cy - s * 0.15, s * 1.7, s * 1.8);
+  g.fillStyle(0xddb896, alpha * 0.95);
+  g.fillEllipse(cx, cy - s * 0.1, s * 1.5, s * 1.7);
 
-  // Cranium shading
-  g.fillStyle(0xccbbaa, alpha * 0.5);
-  g.fillEllipse(cx, cy + s * 0.05, s * 1.5, s * 1.4);
+  g.fillStyle(0xccaa88, alpha * 0.4);
+  g.fillEllipse(cx, cy + s * 0.1, s * 1.3, s * 1.3);
 
-  // Jaw / lower part
-  g.fillStyle(0xccbbaa, alpha * 0.9);
-  g.fillEllipse(cx, cy + s * 0.55, s * 1.2, s * 0.8);
+  g.fillStyle(0x1a1a1a, alpha);
+  g.fillEllipse(cx, cy - s * 0.7, s * 1.8, s * 1.0);
+  g.fillRect(cx - s * 0.85, cy - s * 0.5, s * 0.3, s * 1.2);
+  g.fillRect(cx + s * 0.55, cy - s * 0.5, s * 0.3, s * 1.2);
 
-  // Eye sockets - dark voids
-  const eyeSpacing = s * 0.38;
-  const eyeY = cy - s * 0.1;
-  const eyeW = s * 0.45;
-  const eyeH = s * 0.5;
+  g.fillStyle(0x1a1a1a, alpha * 0.7);
+  g.fillEllipse(cx, cy + s * 0.5, s * 1.0, s * 0.5);
 
-  g.fillStyle(0x110011, alpha);
-  g.fillEllipse(cx - eyeSpacing, eyeY, eyeW, eyeH);
-  g.fillEllipse(cx + eyeSpacing, eyeY, eyeW, eyeH);
+  const eyeSpacing = s * 0.35;
+  const eyeY = cy - s * 0.15;
+  const surprised = 0.8 + Math.sin(frameCount * 0.15) * 0.2;
 
-  // Glowing red eye cores
-  const eyeGlow = 0.6 + Math.sin(frameCount * 0.12) * 0.4;
-  const eyeR = s * 0.12;
+  g.fillStyle(0xffffff, alpha);
+  g.fillEllipse(cx - eyeSpacing, eyeY, s * 0.3, s * 0.35 * surprised);
+  g.fillEllipse(cx + eyeSpacing, eyeY, s * 0.3, s * 0.35 * surprised);
 
-  g.fillStyle(0xff0000, alpha * eyeGlow * 0.3);
-  g.fillCircle(cx - eyeSpacing, eyeY, eyeR * 2.5);
-  g.fillCircle(cx + eyeSpacing, eyeY, eyeR * 2.5);
+  g.fillStyle(0x222222, alpha);
+  g.fillCircle(cx - eyeSpacing, eyeY, s * 0.1);
+  g.fillCircle(cx + eyeSpacing, eyeY, s * 0.1);
 
-  g.fillStyle(0xff2200, alpha * eyeGlow);
-  g.fillCircle(cx - eyeSpacing, eyeY, eyeR);
-  g.fillCircle(cx + eyeSpacing, eyeY, eyeR);
+  const glint = 0.5 + Math.sin(frameCount * 0.2) * 0.3;
+  g.fillStyle(0xffffff, alpha * glint);
+  g.fillCircle(cx - eyeSpacing - s * 0.05, eyeY - s * 0.06, s * 0.04);
+  g.fillCircle(cx + eyeSpacing - s * 0.05, eyeY - s * 0.06, s * 0.04);
 
-  g.fillStyle(0xff8844, alpha * eyeGlow * 0.8);
-  g.fillCircle(cx - eyeSpacing, eyeY - eyeR * 0.3, eyeR * 0.5);
-  g.fillCircle(cx + eyeSpacing, eyeY - eyeR * 0.3, eyeR * 0.5);
+  g.fillStyle(0x332211, alpha * 0.8);
+  g.fillRect(cx - eyeSpacing - s * 0.2, eyeY - s * 0.28, s * 0.4, s * 0.06);
+  g.fillRect(cx + eyeSpacing - s * 0.2, eyeY - s * 0.28, s * 0.4, s * 0.06);
 
-  // Nose cavity
-  g.fillStyle(0x221111, alpha * 0.9);
-  const noseY = cy + s * 0.2;
-  g.fillTriangle(
-    cx, noseY + s * 0.15,
-    cx - s * 0.12, noseY,
-    cx + s * 0.12, noseY
-  );
+  g.fillStyle(0xcc9977, alpha * 0.7);
+  g.fillEllipse(cx, cy + s * 0.12, s * 0.12, s * 0.08);
 
-  // Teeth row
-  const teethY = cy + s * 0.5;
-  const teethW = s * 0.9;
-  const toothCount = 6;
-  const toothWidth = teethW / toothCount;
-  const toothHeight = s * 0.18;
+  const mouthOpen = 0.7 + Math.sin(frameCount * 0.1) * 0.15;
+  const mouthY = cy + s * 0.35;
+  g.fillStyle(0x331111, alpha * 0.9);
+  g.fillEllipse(cx, mouthY, s * 0.35, s * 0.25 * mouthOpen);
 
-  g.fillStyle(0xeeddcc, alpha * 0.9);
-  for (let i = 0; i < toothCount; i++) {
-    const tx = cx - teethW / 2 + i * toothWidth + toothWidth * 0.15;
-    g.fillRect(tx, teethY - toothHeight / 2, toothWidth * 0.7, toothHeight);
+  g.fillStyle(0x551111, alpha * 0.5);
+  g.fillEllipse(cx, mouthY + s * 0.05, s * 0.25, s * 0.12);
+
+  g.lineStyle(1.5, 0x886644, alpha * 0.4);
+  g.strokeEllipse(cx, cy - s * 0.1, s * 1.5, s * 1.7);
+
+  g.fillStyle(0xffeedd, alpha * 0.12);
+  g.fillEllipse(cx - s * 0.2, cy - s * 0.55, s * 0.5, s * 0.3);
+
+  const whoaScale = 1.0 + Math.sin(frameCount * 0.12) * 0.1;
+  const whoaY = cy - s * 1.3;
+  const whoaAlpha = alpha * (0.7 + Math.sin(frameCount * 0.08) * 0.3);
+
+  g.fillStyle(0x000000, whoaAlpha * 0.6);
+  g.fillRoundedRect(cx - s * 1.2 * whoaScale, whoaY - s * 0.3, s * 2.4 * whoaScale, s * 0.55, 4);
+  g.lineStyle(2, 0x66ccff, whoaAlpha * 0.8);
+  g.strokeRoundedRect(cx - s * 1.2 * whoaScale, whoaY - s * 0.3, s * 2.4 * whoaScale, s * 0.55, 4);
+
+  g.fillStyle(0x66ccff, whoaAlpha * 0.08);
+  g.fillRoundedRect(cx - s * 1.3 * whoaScale, whoaY - s * 0.35, s * 2.6 * whoaScale, s * 0.65, 5);
+
+  const letterSpacing = s * 0.5 * whoaScale;
+  const letters = ['W', 'H', 'O', 'A'];
+  const startX = cx - letterSpacing * 1.5;
+
+  for (let i = 0; i < letters.length; i++) {
+    const lx = startX + i * letterSpacing;
+    const ly = whoaY + Math.sin(frameCount * 0.15 + i * 0.8) * 2;
+    drawWhoaLetter(g, letters[i], lx, ly, s * 0.18 * whoaScale, whoaAlpha, frameCount, i);
   }
+}
 
-  // Teeth dividers
-  g.lineStyle(1, 0x332222, alpha * 0.6);
-  for (let i = 1; i < toothCount; i++) {
-    const dx = cx - teethW / 2 + i * toothWidth;
-    g.beginPath();
-    g.moveTo(dx, teethY - toothHeight / 2);
-    g.lineTo(dx, teethY + toothHeight / 2);
-    g.strokePath();
+function drawWhoaLetter(
+  g: Phaser.GameObjects.Graphics,
+  letter: string,
+  x: number,
+  y: number,
+  size: number,
+  alpha: number,
+  frameCount: number,
+  index: number
+): void {
+  const glow = 0.3 + Math.sin(frameCount * 0.1 + index * 1.2) * 0.2;
+  g.fillStyle(0x66ccff, alpha * glow);
+  g.fillCircle(x, y, size * 2);
+
+  g.lineStyle(2.5, 0xffffff, alpha);
+  g.beginPath();
+
+  switch (letter) {
+    case 'W':
+      g.moveTo(x - size, y - size);
+      g.lineTo(x - size * 0.5, y + size);
+      g.lineTo(x, y - size * 0.3);
+      g.lineTo(x + size * 0.5, y + size);
+      g.lineTo(x + size, y - size);
+      break;
+    case 'H':
+      g.moveTo(x - size * 0.7, y - size);
+      g.lineTo(x - size * 0.7, y + size);
+      g.moveTo(x - size * 0.7, y);
+      g.lineTo(x + size * 0.7, y);
+      g.moveTo(x + size * 0.7, y - size);
+      g.lineTo(x + size * 0.7, y + size);
+      break;
+    case 'O':
+      g.arc(x, y, size * 0.8, 0, Math.PI * 2);
+      break;
+    case 'A':
+      g.moveTo(x - size * 0.7, y + size);
+      g.lineTo(x, y - size);
+      g.lineTo(x + size * 0.7, y + size);
+      g.moveTo(x - size * 0.4, y + size * 0.2);
+      g.lineTo(x + size * 0.4, y + size * 0.2);
+      break;
   }
-
-  // Skull outline
-  g.lineStyle(1.5, 0x443333, alpha * 0.5);
-  g.strokeEllipse(cx, cy - s * 0.15, s * 1.7, s * 1.8);
-
-  // Cranium highlight
-  g.fillStyle(0xffffff, alpha * 0.15);
-  g.fillEllipse(cx - s * 0.2, cy - s * 0.55, s * 0.6, s * 0.35);
-
-  // Cheekbone shadows
-  g.fillStyle(0x998877, alpha * 0.25);
-  g.fillEllipse(cx - s * 0.55, cy + s * 0.15, s * 0.35, s * 0.3);
-  g.fillEllipse(cx + s * 0.55, cy + s * 0.15, s * 0.35, s * 0.3);
+  g.strokePath();
 }
