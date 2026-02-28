@@ -280,6 +280,14 @@ import {
   drawDeathCinematic,
 } from './deathCinematic';
 import {
+  FlagLifeBarState,
+  createFlagLifeBarState,
+  resetFlagLifeBar,
+  damageFlagLifeBar,
+  updateFlagLifeBar,
+  drawFlagLifeBar,
+} from './flagLifeBar';
+import {
   MilestoneState,
   createMilestoneState,
   checkMilestone,
@@ -769,6 +777,7 @@ export class SnakeScene extends Phaser.Scene {
   private hogwartsBackground: HogwartsBackgroundState = createHogwartsBackground(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
   private patronusTrail: PatronusTrailState = createPatronusTrailState();
   private laserBeam: LaserBeamState = createLaserBeamState();
+  private flagLifeBar: FlagLifeBarState = createFlagLifeBarState();
   private flagDisplay: FlagDisplayState = createFlagDisplayState();
   private countryMap: CountryMapState = createCountryMapState();
   private cosmicCrown: CosmicCrownState = createCosmicCrownState();
@@ -2380,6 +2389,7 @@ export class SnakeScene extends Phaser.Scene {
       const foodPx = state.food.x * CELL_SIZE + CELL_SIZE / 2;
       const foodPy = state.food.y * CELL_SIZE + CELL_SIZE / 2;
       fireLaser(this.laserBeam, headX, headY, foodPx, foodPy);
+      resetFlagLifeBar(this.flagLifeBar);
       this.hugeHead = triggerChomp(this.hugeHead);
     }
     this.lastSnakeLength = state.snake.length;
@@ -2441,6 +2451,7 @@ export class SnakeScene extends Phaser.Scene {
       this.deathCinematic = createDeathCinematicState();
       this.deathDelayActive = false;
       this.deathDelayFrames = 0;
+      resetFlagLifeBar(this.flagLifeBar);
     }
 
     this.currentState = state;
@@ -2852,7 +2863,13 @@ export class SnakeScene extends Phaser.Scene {
         spawnPulseGlow(this.pulseGlow, laserFoodX, laserFoodY, 0.6, this.hueOffset);
         triggerScreenShake(this.cleanEffects, 5);
         this.screenFlashAlpha = Math.max(this.screenFlashAlpha, 0.15);
+        const flagDestroyed = damageFlagLifeBar(this.flagLifeBar, laserFoodX, laserFoodY);
+        if (flagDestroyed) {
+          spawnPulseGlow(this.pulseGlow, laserFoodX, laserFoodY, 1.5, this.hueOffset);
+          this.screenFlashAlpha = 0.4;
+        }
       }
+      updateFlagLifeBar(this.flagLifeBar);
 
       if (this.frameCount % 3 === 0) {
         spawnWandSparkles(this.wizardEffects, headX, headY, 1);
@@ -2907,6 +2924,7 @@ export class SnakeScene extends Phaser.Scene {
     }
 
     drawFlagFood(g, this.flagDisplay.currentFlag, foodX, foodY, CELL_SIZE, this.frameCount);
+    drawFlagLifeBar(g, this.flagLifeBar, foodX, foodY, CELL_SIZE, this.frameCount);
     drawCountryLabel(g, this.flagDisplay.currentFlag, foodX, foodY, CELL_SIZE, this.frameCount, this.drawText.bind(this));
     drawSnitchWings(g, this.wizardEffects, foodX, foodY, CELL_SIZE);
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
