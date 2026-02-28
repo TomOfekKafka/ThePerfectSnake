@@ -76,12 +76,8 @@ import {
   createMathParticlesState,
   initMathSymbols,
   initMathWaves,
-  updateMathSymbols,
-  updateMathWaves,
   updateScoreBursts,
   spawnScoreBurst,
-  drawMathSymbols,
-  drawMathWaves,
   drawScoreBursts,
   MathParticlesState,
 } from './mathParticles';
@@ -137,9 +133,6 @@ import {
 } from './wizardEffects';
 import {
   createHogwartsBackground,
-  updateHogwartsBackground,
-  drawHogwartsGrid,
-  drawFloatingCandles,
   HogwartsBackgroundState,
 } from './hogwartsBackground';
 import {
@@ -177,7 +170,6 @@ import {
   spawnStarBurst,
   drawCrownStars,
   drawCrownBeam,
-  drawNebulaLines,
   drawStarBursts,
   CosmicCrownState,
 } from './cosmicCrownEffects';
@@ -260,11 +252,7 @@ import {
   updateSciFi,
   spawnShieldRing,
   drawSciFiGrid,
-  drawScanPulses,
   drawShieldRings,
-  drawDataStreams,
-  drawScanlines,
-  drawHoloGlitches,
   drawHoloFood,
   drawSnakeEnergyField,
   drawCornerHUD,
@@ -2767,15 +2755,12 @@ export class SnakeScene extends Phaser.Scene {
     updateMotes(this.cleanEffects, width, height);
     updateRipples(this.cleanEffects);
     updateFoodOrbits(this.cleanEffects);
-    updateMathSymbols(this.mathParticles, width, height);
-    updateMathWaves(this.mathParticles);
     updateScoreBursts(this.mathParticles);
     updateNuclearBlasts(this.nuclearBlast);
     updateComboStreak(this.comboStreak);
     updateWandSparkles(this.wizardEffects);
     updateSnitchWings(this.wizardEffects);
     updateSpellTexts(this.wizardEffects);
-    updateHogwartsBackground(this.hogwartsBackground);
     updateCosmicCrown(this.cosmicCrown, width);
     updateCountryMap(this.countryMap, this.flagDisplay.currentFlag.code, this.frameCount);
     updateWeather(this.weather, this.currentState?.foodEaten || 0, width, height, this.frameCount);
@@ -2907,20 +2892,10 @@ export class SnakeScene extends Phaser.Scene {
 
     drawSpaceBackground(g, this.spaceBackground, width, height);
     drawSciFiGrid(g, this.sciFi, width, height, CELL_SIZE, GRID_SIZE);
-    drawDataStreams(g, this.sciFi, (dg, digit, cx, cy, sz, color, alpha) => {
-      dg.fillStyle(color, alpha);
-      this.drawDigit(dg, String(digit), cx, cy, sz);
-    });
-    drawScanPulses(g, this.sciFi, width);
-    drawMathWaves(g, this.mathParticles, width);
-    drawHogwartsGrid(g, width, height, CELL_SIZE, GRID_SIZE, this.frameCount);
-    drawFloatingCandles(g, this.hogwartsBackground);
-    drawNebulaLines(g, width, height, CELL_SIZE, this.frameCount);
     drawCrownStars(g, this.cosmicCrown);
     drawCrownBeam(g, this.cosmicCrown.beam);
     drawSudokuGrid(g, this.sudoku, CELL_SIZE, GRID_SIZE, this.frameCount, this.drawDigit.bind(this));
     drawMotes(g, this.cleanEffects);
-    drawMathSymbols(g, this.mathParticles);
 
     if (!this.currentState) return;
 
@@ -2967,10 +2942,8 @@ export class SnakeScene extends Phaser.Scene {
     }
 
     drawShieldRings(g, this.sciFi);
-    drawHoloGlitches(g, this.sciFi, width);
     drawWeather(g, this.weather, width, height, this.frameCount);
     drawCleanVignette(g, width, height);
-    drawScanlines(g, this.sciFi, width, height);
     drawCornerHUD(g, this.sciFi, width, height);
     drawSpellTexts(g, this.wizardEffects, this.drawText.bind(this));
     drawComboStreak(g, this.comboStreak, width, height, this.drawText.bind(this));
