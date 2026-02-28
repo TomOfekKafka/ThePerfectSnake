@@ -141,12 +141,6 @@ import {
   PatronusTrailState,
 } from './patronusTrail';
 import {
-  createFireTrailState,
-  updateFireTrail,
-  drawFireTrail,
-  FireTrailState,
-} from './fireTrail';
-import {
   createLaserBeamState,
   updateLaserBeams,
   drawTargetingLine,
@@ -316,7 +310,6 @@ import {
   SpeedLinesState,
   createSpeedLinesState,
   updateSpeedLines,
-  triggerSpeedBoost,
   drawSpeedLines,
 } from './speedLines';
 import {
@@ -326,6 +319,12 @@ import {
   updateFireHearts,
   drawFireHearts,
 } from './fireHearts';
+import {
+  FireTrailState,
+  createFireTrailState,
+  updateFireTrail,
+  drawFireTrail,
+} from './fireTrail';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -421,13 +420,6 @@ interface VortexParticle {
   alpha: number;
 }
 
-interface SnakeAfterimage {
-  segments: Position[];
-  life: number;
-  maxLife: number;
-  hueOffset: number;
-}
-
 interface FoodParticle {
   x: number;
   y: number;
@@ -449,6 +441,13 @@ interface SnakeTrailParticle {
   hue: number;
 }
 
+interface SnakeAfterimage {
+  segments: { x: number; y: number }[];
+  life: number;
+  maxLife: number;
+  hueOffset: number;
+}
+
 interface ShockWave {
   x: number;
   y: number;
@@ -468,12 +467,10 @@ const CELL_SIZE = 20;
 const GRID_SIZE = 20;
 const NUM_STARS = 30;
 const MAX_FOOD_PARTICLES = 8;
-const MAX_TRAIL_PARTICLES = 40;
 const MAX_SHOCKWAVES = 3;
 const MAX_LIGHTNING_BOLTS = 5;
 const MAX_BURST_PARTICLES = 12;
 const NUM_PLASMA_WAVES = 3;
-const MAX_AFTERIMAGES = 4;
 const NUM_AURORA_WAVES = 5;
 const NUM_NEBULA_CLOUDS = 6;
 const NUM_VORTEX_RINGS = 5;
@@ -483,6 +480,8 @@ const MAX_DEATH_DEBRIS = 24;
 const NUM_SPIRITS_PER_EDGE = 2;
 const MAX_FLAME_PARTICLES = 60;
 const MAX_COMET_TRAIL_LENGTH = 30;
+const MAX_TRAIL_PARTICLES = 40;
+const MAX_AFTERIMAGES = 6;
 const MAX_ETHEREAL_PARTICLES = 50;
 const NUM_BEES = 8;
 const BEE_SPAWN_CHANCE = 0.02;
