@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { getHouseColors } from './wizardEffects';
+import { getFireColors } from './fireColors';
 
 interface Vec2 {
   x: number;
@@ -131,7 +131,7 @@ function getColorAtProgress(
   snakeLen: number
 ): { base: number; highlight: number; edge: number } {
   const segIndex = Math.floor(progress * (snakeLen - 1));
-  return getHouseColors(Math.min(segIndex, snakeLen - 1), snakeLen);
+  return getFireColors(Math.min(segIndex, snakeLen - 1), snakeLen);
 }
 
 export function drawCurveSnake(
@@ -145,7 +145,7 @@ export function drawCurveSnake(
 
   if (len === 1) {
     const pt = gridToPixel(snake[0].x, snake[0].y, cellSize);
-    const colors = getHouseColors(0, 1);
+    const colors = getFireColors(0, 1);
     g.fillStyle(0x000000, 0.2);
     g.fillCircle(pt.x + 2, pt.y + 3, cellSize * 0.4);
     g.fillStyle(colors.base, 0.95);

@@ -324,6 +324,7 @@ import {
   createFireTrailState,
   updateFireTrail,
   drawFireTrail,
+  drawFireGlow,
 } from './fireTrail';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
@@ -2968,6 +2969,7 @@ export class SnakeScene extends Phaser.Scene {
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
     drawHoloFood(g, this.sciFi, foodX, foodY, CELL_SIZE);
 
+    drawFireGlow(g, this.currentState.snake, CELL_SIZE, this.frameCount);
     drawFireTrail(g, this.fireTrail);
     drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState);
     drawSnakeEnergyField(g, this.sciFi, this.currentState.snake, CELL_SIZE);
