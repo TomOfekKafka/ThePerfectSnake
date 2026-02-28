@@ -1,15 +1,5 @@
 import Phaser from 'phaser';
 
-export interface CrownStar {
-  cx: number;
-  cy: number;
-  size: number;
-  color: number;
-  phase: number;
-  pulseSpeed: number;
-  twinkleOffset: number;
-}
-
 export interface CrownBeam {
   x: number;
   y: number;
@@ -39,20 +29,11 @@ export interface StarBurst {
 }
 
 export interface CosmicCrownState {
-  stars: CrownStar[];
   beam: CrownBeam;
   bursts: StarBurst[];
   frameCount: number;
   nebulaPhase: number;
 }
-
-const CROWN_COLORS = [
-  0xffd700,
-  0xff69b4,
-  0x00ffff,
-  0xaa66ff,
-  0xff4444,
-];
 
 const BURST_COLORS: Record<string, number> = {
   nova: 0x00ffff,
@@ -65,33 +46,11 @@ const MAX_BURSTS = 5;
 
 export function createCosmicCrownState(): CosmicCrownState {
   return {
-    stars: [],
     beam: { x: 0, y: 0, particles: [], glowRadius: 20, glowPhase: 0 },
     bursts: [],
     frameCount: 0,
     nebulaPhase: 0,
   };
-}
-
-export function initCrownStars(
-  state: CosmicCrownState,
-  width: number,
-  _height: number
-): void {
-  const starSize = Math.min(width * 0.035, 14);
-  const spacing = starSize * 3.2;
-  const startX = width / 2 - spacing * 2;
-  const baseY = starSize + 10;
-
-  state.stars = CROWN_COLORS.map((color, i) => ({
-    cx: startX + i * spacing,
-    cy: baseY + Math.sin((i / CROWN_COLORS.length) * Math.PI) * -8,
-    size: starSize * (i === 2 ? 1.3 : 0.9 + (i % 2) * 0.2),
-    color,
-    phase: i * 1.2,
-    pulseSpeed: 0.04 + i * 0.008,
-    twinkleOffset: i * 0.5,
-  }));
 }
 
 export function initCrownBeam(
@@ -204,39 +163,6 @@ function drawStarShape(
     const nnx = cx + Math.cos(nextAngle) * nr;
     const nny = cy + Math.sin(nextAngle) * nr;
     g.lineBetween(nx, ny, nnx, nny);
-  }
-}
-
-export function drawCrownStars(
-  g: Phaser.GameObjects.Graphics,
-  state: CosmicCrownState
-): void {
-  const fc = state.frameCount;
-
-  for (let i = 0; i < state.stars.length; i++) {
-    const star = state.stars[i];
-    const pulse = 0.5 + Math.sin(fc * star.pulseSpeed + star.phase) * 0.25;
-    const twinkle = 0.7 + Math.sin(fc * 0.1 + star.twinkleOffset) * 0.3;
-    const alpha = pulse * twinkle;
-
-    g.fillStyle(star.color, alpha * 0.15);
-    g.fillCircle(star.cx, star.cy, star.size * 2.2);
-
-    g.fillStyle(star.color, alpha * 0.3);
-    g.fillCircle(star.cx, star.cy, star.size * 1.4);
-
-    g.lineStyle(1.5, star.color, alpha * 0.9);
-    drawStarShape(g, star.cx, star.cy, star.size, star.size * 0.4, 5);
-
-    g.fillStyle(0xffffff, alpha * 0.7);
-    g.fillCircle(star.cx, star.cy, star.size * 0.2);
-
-    if (i < state.stars.length - 1) {
-      const next = state.stars[i + 1];
-      const midAlpha = 0.06 + Math.sin(fc * 0.03 + i) * 0.03;
-      g.lineStyle(1, 0xffffff, midAlpha);
-      g.lineBetween(star.cx, star.cy, next.cx, next.cy);
-    }
   }
 }
 

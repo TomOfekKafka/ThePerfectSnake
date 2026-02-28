@@ -165,11 +165,9 @@ import {
 } from './countryMaps';
 import {
   createCosmicCrownState,
-  initCrownStars,
   initCrownBeam,
   updateCosmicCrown,
   spawnStarBurst,
-  drawCrownStars,
   drawCrownBeam,
   drawStarBursts,
   CosmicCrownState,
@@ -815,7 +813,6 @@ export class SnakeScene extends Phaser.Scene {
     initMathSymbols(this.mathParticles, width, height);
     initMathWaves(this.mathParticles, height);
     initSpaceBackground(this.spaceBackground, width, height);
-    initCrownStars(this.cosmicCrown, width, height);
     initCrownBeam(this.cosmicCrown, width, height);
     initDataStreams(this.sciFi, width, height);
 
@@ -2903,7 +2900,6 @@ export class SnakeScene extends Phaser.Scene {
 
     drawSpaceBackground(g, this.spaceBackground, width, height);
     drawSciFiGrid(g, this.sciFi, width, height, CELL_SIZE, GRID_SIZE);
-    drawCrownStars(g, this.cosmicCrown);
     drawCrownBeam(g, this.cosmicCrown.beam);
     drawSudokuGrid(g, this.sudoku, CELL_SIZE, GRID_SIZE, this.frameCount, this.drawDigit.bind(this));
     drawMotes(g, this.cleanEffects);
