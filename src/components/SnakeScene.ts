@@ -153,13 +153,14 @@ import {
   drawFireTrail,
 } from './fireTrail';
 import {
-  createLaserBeamState,
-  updateLaserBeams,
-  drawTargetingLine,
-  drawLaserBeams,
-  fireLaser,
-  LaserBeamState,
-} from './laserBeam';
+  createSpellProjectileState,
+  updateSpellProjectiles,
+  drawSpellTargetingLine,
+  drawSpellBolts,
+  drawSpellLabels,
+  castSpell,
+  SpellProjectileState,
+} from './spellProjectile';
 import {
   createKeanuDisplayState,
   advanceKeanu,
@@ -843,7 +844,7 @@ export class SnakeScene extends Phaser.Scene {
   private hogwartsBackground: HogwartsBackgroundState = createHogwartsBackground(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
   private patronusTrail: PatronusTrailState = createPatronusTrailState();
   private fireTrail: FireTrailState = createFireTrailState();
-  private laserBeam: LaserBeamState = createLaserBeamState();
+  private spellProjectile: SpellProjectileState = createSpellProjectileState();
   private flagLifeBar: FlagLifeBarState = createFlagLifeBarState();
   private skullDrop: SkullDropState = createSkullDropState();
   private keanuDisplay: KeanuDisplayState = createKeanuDisplayState();
@@ -2461,7 +2462,7 @@ export class SnakeScene extends Phaser.Scene {
       const foodPx = state.food.x * CELL_SIZE + CELL_SIZE / 2;
       const foodPy = state.food.y * CELL_SIZE + CELL_SIZE / 2;
       advanceKeanu(this.keanuDisplay, headX, headY);
-      fireLaser(this.laserBeam, headX, headY, foodPx, foodPy);
+      castSpell(this.spellProjectile, headX, headY, foodPx, foodPy);
       resetFlagLifeBar(this.flagLifeBar);
       resetSkullDrop(this.skullDrop);
       this.hugeHead = triggerChomp(this.hugeHead);
@@ -2941,8 +2942,8 @@ export class SnakeScene extends Phaser.Scene {
       const foodPos = this.currentState.food;
       const laserFoodX = foodPos.x * CELL_SIZE + CELL_SIZE / 2;
       const laserFoodY = foodPos.y * CELL_SIZE + CELL_SIZE / 2;
-      const laserHit = updateLaserBeams(
-        this.laserBeam,
+      const laserHit = updateSpellProjectiles(
+        this.spellProjectile,
         headX, headY,
         laserFoodX, laserFoodY,
         this.currentState.gameStarted !== false,
@@ -3011,7 +3012,7 @@ export class SnakeScene extends Phaser.Scene {
       const head = this.currentState.snake[0];
       const headPx = head.x * CELL_SIZE + CELL_SIZE / 2;
       const headPy = head.y * CELL_SIZE + CELL_SIZE / 2;
-      drawTargetingLine(g, this.laserBeam, headPx, headPy, foodX, foodY, this.frameCount);
+      drawSpellTargetingLine(g, this.spellProjectile, headPx, headPy, foodX, foodY, this.frameCount);
     }
 
     if (!isSkullVisible(this.skullDrop)) {
@@ -3039,7 +3040,7 @@ export class SnakeScene extends Phaser.Scene {
     this.drawDroolDrops(g);
     drawWandSparkles(g, this.wizardEffects);
     drawDragonBreath(g, this.dragonBreath);
-    drawLaserBeams(g, this.laserBeam, this.frameCount);
+    drawSpellBolts(g, this.spellProjectile, this.frameCount);
     drawNuclearBlasts(g, this.nuclearBlast);
     drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
     drawStarBursts(g, this.cosmicCrown, this.drawText.bind(this));
@@ -3059,6 +3060,7 @@ export class SnakeScene extends Phaser.Scene {
     drawWeather(g, this.weather, width, height, this.frameCount);
     drawCleanVignette(g, width, height);
     drawCornerHUD(g, this.sciFi, width, height);
+    drawSpellLabels(g, this.spellProjectile, this.drawText.bind(this));
     drawSpellTexts(g, this.wizardEffects, this.drawText.bind(this));
     drawComboStreak(g, this.comboStreak, width, height, this.drawText.bind(this));
 
