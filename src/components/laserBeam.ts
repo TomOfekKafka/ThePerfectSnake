@@ -1,5 +1,16 @@
 import Phaser from 'phaser';
 
+interface FireTrailParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  life: number;
+  maxLife: number;
+  hue: number;
+}
+
 export interface LaserBeam {
   startX: number;
   startY: number;
@@ -14,6 +25,7 @@ export interface LaserBeam {
   hue: number;
   hitTarget: boolean;
   impactParticles: KissImpactParticle[];
+  fireTrail: FireTrailParticle[];
   impactFlash: number;
   wobblePhase: number;
   scale: number;
@@ -54,6 +66,8 @@ const MAX_IMPACT_PARTICLES = 50;
 const IMPACT_PARTICLES_PER_HIT = 16;
 const AUTO_FIRE_INTERVAL = 50;
 const COOLDOWN_FRAMES = 8;
+const MAX_FIRE_TRAIL = 40;
+const FIRE_SPAWN_RATE = 3;
 
 export function createLaserBeamState(): LaserBeamState {
   return {
@@ -93,6 +107,7 @@ export function fireLaser(
     hue,
     hitTarget: false,
     impactParticles: [],
+    fireTrail: [],
     impactFlash: 0,
     wobblePhase: Math.random() * Math.PI * 2,
     scale: 0.5 + Math.random() * 0.5,
@@ -149,6 +164,8 @@ export function updateLaserBeams(
 
       beam.scale = 0.6 + Math.sin(beam.progress * Math.PI) * 0.4;
 
+      spawnFireTrailParticles(beam);
+
       const tdx = beam.endX - beam.targetX;
       const tdy = beam.endY - beam.targetY;
       const tdist = Math.sqrt(tdx * tdx + tdy * tdy);
@@ -160,6 +177,7 @@ export function updateLaserBeams(
         beam.endY = beam.targetY;
         hitThisFrame = true;
         spawnKissImpactParticles(beam);
+        spawnFireImpactParticles(beam);
       }
     }
 
@@ -187,7 +205,20 @@ export function updateLaserBeams(
       }
     }
 
-    if (beam.life <= 0 && beam.impactParticles.length === 0) {
+    for (let j = beam.fireTrail.length - 1; j >= 0; j--) {
+      const f = beam.fireTrail[j];
+      f.x += f.vx;
+      f.y += f.vy;
+      f.vy -= 0.02;
+      f.vx *= 0.96;
+      f.size *= 0.97;
+      f.life -= 0.04;
+      if (f.life <= 0 || f.size < 0.3) {
+        beam.fireTrail.splice(j, 1);
+      }
+    }
+
+    if (beam.life <= 0 && beam.impactParticles.length === 0 && beam.fireTrail.length === 0) {
       state.beams.splice(i, 1);
     }
   }
@@ -218,6 +249,48 @@ function spawnKissImpactParticles(beam: LaserBeam): void {
       isHeart,
       rotation: Math.random() * Math.PI * 2,
       rotSpeed: (Math.random() - 0.5) * 0.15,
+    });
+  }
+}
+
+function spawnFireTrailParticles(beam: LaserBeam): void {
+  for (let i = 0; i < FIRE_SPAWN_RATE; i++) {
+    if (beam.fireTrail.length >= MAX_FIRE_TRAIL) {
+      beam.fireTrail.shift();
+    }
+    const spread = (Math.random() - 0.5) * 2.5;
+    const life = 0.4 + Math.random() * 0.35;
+    beam.fireTrail.push({
+      x: beam.endX + (Math.random() - 0.5) * 6,
+      y: beam.endY + (Math.random() - 0.5) * 6,
+      vx: spread,
+      vy: -(0.5 + Math.random() * 1.2),
+      size: 2 + Math.random() * 3.5,
+      life,
+      maxLife: life,
+      hue: 10 + Math.random() * 35,
+    });
+  }
+}
+
+function spawnFireImpactParticles(beam: LaserBeam): void {
+  const count = 10;
+  for (let i = 0; i < count; i++) {
+    if (beam.fireTrail.length >= MAX_FIRE_TRAIL) {
+      beam.fireTrail.shift();
+    }
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 4;
+    const life = 0.5 + Math.random() * 0.4;
+    beam.fireTrail.push({
+      x: beam.targetX,
+      y: beam.targetY,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1.5,
+      size: 2.5 + Math.random() * 3,
+      life,
+      maxLife: life,
+      hue: 5 + Math.random() * 45,
     });
   }
 }
@@ -374,6 +447,34 @@ export function drawTargetingLine(
   }
 }
 
+function drawFireTrail(
+  g: Phaser.GameObjects.Graphics,
+  beam: LaserBeam
+): void {
+  for (const f of beam.fireTrail) {
+    const lifeRatio = f.life / f.maxLife;
+    if (lifeRatio < 0.01) continue;
+
+    const outerHue = f.hue;
+    const outerColor = hslToHex(outerHue, 1.0, 0.3 + lifeRatio * 0.15);
+    g.fillStyle(outerColor, lifeRatio * 0.3);
+    g.fillCircle(f.x, f.y, f.size * 1.8);
+
+    const midColor = hslToHex(outerHue + 5, 1.0, 0.45);
+    g.fillStyle(midColor, lifeRatio * 0.55);
+    g.fillCircle(f.x, f.y, f.size * 1.1);
+
+    const coreColor = hslToHex(outerHue + 20, 0.85, 0.6 + lifeRatio * 0.25);
+    g.fillStyle(coreColor, lifeRatio * 0.75);
+    g.fillCircle(f.x, f.y, f.size * 0.5);
+
+    if (lifeRatio > 0.6) {
+      g.fillStyle(0xffffcc, (lifeRatio - 0.6) * 1.5);
+      g.fillCircle(f.x, f.y, f.size * 0.25);
+    }
+  }
+}
+
 export function drawLaserBeams(
   g: Phaser.GameObjects.Graphics,
   state: LaserBeamState,
@@ -383,10 +484,17 @@ export function drawLaserBeams(
     const lifeRatio = Math.max(0, beam.life);
     if (lifeRatio <= 0 && beam.impactParticles.length === 0) continue;
 
+    drawFireTrail(g, beam);
+
     if (lifeRatio > 0 && !beam.hitTarget) {
       const kissSize = beam.width * beam.scale;
       const pulse = 1 + Math.sin(frameCount * 0.3 + beam.wobblePhase) * 0.15;
       const heartSize = kissSize * pulse;
+
+      const fireGlowHue = 20 + Math.sin(frameCount * 0.15) * 15;
+      const fireGlow = hslToHex(fireGlowHue, 1.0, 0.45);
+      g.fillStyle(fireGlow, 0.25 * lifeRatio);
+      g.fillCircle(beam.endX, beam.endY, heartSize * 2.5);
 
       const glowColor = hslToHex(beam.hue, 0.8, 0.5);
       g.fillStyle(glowColor, 0.2 * lifeRatio);
