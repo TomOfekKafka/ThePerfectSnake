@@ -333,6 +333,12 @@ import {
   drawFireTrail,
   drawFireGlow,
 } from './fireTrail';
+import {
+  ObstacleRenderState,
+  createObstacleRenderState,
+  updateObstacleEffects,
+  drawObstacles,
+} from './obstacleRenderer';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -839,6 +845,7 @@ export class SnakeScene extends Phaser.Scene {
   private deathDelayActive = false;
   private fireHearts: FireHeartsState = createFireHeartsState();
   private backgroundBand: BackgroundBandState = createBackgroundBandState();
+  private obstacleRender: ObstacleRenderState = createObstacleRenderState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2826,6 +2833,11 @@ export class SnakeScene extends Phaser.Scene {
     );
     updateFireHearts(this.fireHearts);
     updateBackgroundBand(this.backgroundBand);
+    updateObstacleEffects(
+      this.obstacleRender,
+      this.currentState?.obstacles || [],
+      CELL_SIZE
+    );
 
     if (this.currentState && this.currentState.gameStarted) {
       const score = this.currentState.score || 0;
