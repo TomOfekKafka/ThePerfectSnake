@@ -268,6 +268,13 @@ import {
   triggerElectricBurst,
 } from './electricStorm';
 import {
+  BackgroundBandState,
+  createBackgroundBandState,
+  initBackgroundBand,
+  updateBackgroundBand,
+  drawBackgroundBand,
+} from './backgroundBand';
+import {
   TitleScreenState,
   createTitleScreenState,
   initTitleScreen,
@@ -824,6 +831,7 @@ export class SnakeScene extends Phaser.Scene {
   private deathDelayFrames = 0;
   private deathDelayActive = false;
   private fireHearts: FireHeartsState = createFireHeartsState();
+  private backgroundBand: BackgroundBandState = createBackgroundBandState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -845,6 +853,7 @@ export class SnakeScene extends Phaser.Scene {
     initSpaceBackground(this.spaceBackground, width, height);
     initCrownBeam(this.cosmicCrown, width, height);
     initDataStreams(this.sciFi, width, height);
+    initBackgroundBand(this.backgroundBand, width);
 
     this.upgradeKeyHandler = (e: KeyboardEvent) => {
       if (!this.upgradeState.choice || !this.upgradeState.choice.active) return;
@@ -2809,6 +2818,7 @@ export class SnakeScene extends Phaser.Scene {
       this.frameCount
     );
     updateFireHearts(this.fireHearts);
+    updateBackgroundBand(this.backgroundBand);
 
     if (this.currentState && this.currentState.gameStarted) {
       const score = this.currentState.score || 0;
@@ -2936,6 +2946,7 @@ export class SnakeScene extends Phaser.Scene {
     g.setPosition(shake.x, shake.y);
 
     drawSpaceBackground(g, this.spaceBackground, width, height);
+    drawBackgroundBand(g, this.backgroundBand, width, height);
     drawSciFiGrid(g, this.sciFi, width, height, CELL_SIZE, GRID_SIZE);
     drawCrownBeam(g, this.cosmicCrown.beam);
     drawSilkWeave(g, this.silk, CELL_SIZE, GRID_SIZE, this.frameCount);
