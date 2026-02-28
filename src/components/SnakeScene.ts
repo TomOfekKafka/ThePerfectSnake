@@ -157,10 +157,14 @@ import {
 import {
   createFlagDisplayState,
   advanceFlag,
-  drawFlagFood,
   drawCountryLabel,
   FlagDisplayState,
 } from './countryFlags';
+import {
+  createPortraitTextures,
+  drawPortraitFood,
+  hidePortraitImages,
+} from './keanuPortraits';
 import {
   createCountryMapState,
   updateCountryMap,
@@ -817,6 +821,7 @@ export class SnakeScene extends Phaser.Scene {
 
   create(): void {
     this.graphics = this.add.graphics();
+    createPortraitTextures(this);
     const width = GRID_SIZE * CELL_SIZE;
     const height = GRID_SIZE * CELL_SIZE;
     initMotes(this.cleanEffects, width, height);
@@ -2939,8 +2944,10 @@ export class SnakeScene extends Phaser.Scene {
     }
 
     if (!isSkullVisible(this.skullDrop)) {
-      drawFlagFood(g, this.flagDisplay.currentFlag, foodX, foodY, CELL_SIZE, this.frameCount);
+      drawPortraitFood(this, g, this.flagDisplay.currentFlag, foodX, foodY, CELL_SIZE, this.frameCount);
       drawCountryLabel(g, this.flagDisplay.currentFlag, foodX, foodY, CELL_SIZE, this.frameCount, this.drawText.bind(this));
+    } else {
+      hidePortraitImages(this);
     }
     drawFlagLifeBar(g, this.flagLifeBar, foodX, foodY, CELL_SIZE, this.frameCount);
     drawSkullDrop(g, this.skullDrop, CELL_SIZE, this.frameCount);
