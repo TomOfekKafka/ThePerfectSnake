@@ -137,9 +137,21 @@ import {
   HogwartsBackgroundState,
 } from './hogwartsBackground';
 import {
-  createPatronusTrailState,
+  BodyPulseState,
+  createBodyPulseState,
+  updateBodyPulse,
+  drawBodyPulse,
+} from './bodyPulse';
+import {
   PatronusTrailState,
+  createPatronusTrailState,
 } from './patronusTrail';
+import {
+  FireTrailState,
+  createFireTrailState,
+  updateFireTrail,
+  drawFireTrail,
+} from './fireTrail';
 import {
   createLaserBeamState,
   updateLaserBeams,
@@ -327,10 +339,6 @@ import {
   drawFireHearts,
 } from './fireHearts';
 import {
-  FireTrailState,
-  createFireTrailState,
-  updateFireTrail,
-  drawFireTrail,
   drawFireGlow,
 } from './fireTrail';
 import {
@@ -451,23 +459,6 @@ interface FoodParticle {
   size: number;
 }
 
-interface SnakeTrailParticle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  maxLife: number;
-  size: number;
-  hue: number;
-}
-
-interface SnakeAfterimage {
-  segments: { x: number; y: number }[];
-  life: number;
-  maxLife: number;
-  hueOffset: number;
-}
 
 interface ShockWave {
   x: number;
@@ -500,14 +491,43 @@ const NUM_METEORS = 8;
 const MAX_DEATH_DEBRIS = 24;
 const NUM_SPIRITS_PER_EDGE = 2;
 const MAX_FLAME_PARTICLES = 60;
-const MAX_COMET_TRAIL_LENGTH = 30;
-const MAX_TRAIL_PARTICLES = 40;
-const MAX_AFTERIMAGES = 6;
-const MAX_ETHEREAL_PARTICLES = 50;
 const NUM_BEES = 8;
 const BEE_SPAWN_CHANCE = 0.02;
+const MAX_TRAIL_PARTICLES = 40;
+const MAX_AFTERIMAGES = 6;
+const MAX_COMET_TRAIL_LENGTH = 30;
+const MAX_ETHEREAL_PARTICLES = 40;
 
-// Comet trail segment - stores historical snake positions for smooth trail rendering
+interface SnakeTrailParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  size: number;
+  hue: number;
+}
+
+interface SnakeAfterimage {
+  segments: { x: number; y: number }[];
+  life: number;
+  maxLife: number;
+  hueOffset: number;
+}
+
+interface FlameParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  life: number;
+  maxLife: number;
+  hue: number;
+  brightness: number;
+}
+
 interface CometTrailSegment {
   x: number;
   y: number;
@@ -516,7 +536,6 @@ interface CometTrailSegment {
   hue: number;
 }
 
-// Ethereal trail particle - luminous particles that drift away from trail
 interface EtherealParticle {
   x: number;
   y: number;
@@ -529,6 +548,7 @@ interface EtherealParticle {
   brightness: number;
   pulsePhase: number;
 }
+
 
 // Thrown food animation - food launched onto screen with arc trajectory
 interface ThrownFood {
@@ -592,18 +612,6 @@ interface GuardianSpirit {
   orbs: { angle: number; distance: number; size: number; speed: number }[];
 }
 
-// Flame particle for burning effect
-interface FlameParticle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  size: number;
-  life: number;
-  maxLife: number;
-  hue: number;
-  brightness: number;
-}
 
 // Mystical bee - glowing magical creatures that swarm around food
 interface MysticalBee {
