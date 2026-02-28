@@ -83,7 +83,7 @@ const spawnSirenParticle = (
     vx: Math.cos(angle) * speed,
     vy: Math.sin(angle) * speed,
     life: 1,
-    color: isRed ? 0xff2222 : 0x2244ff,
+    color: isRed ? 0xcc44ee : 0x22dd88,
     size: 2 + Math.random() * 2,
   });
 };
@@ -169,23 +169,23 @@ const drawPoliceBody = (
     const baseSize = (cellSize / 2 - 1) * (0.6 + t * 0.4);
     const size = baseSize * pulse;
 
-    g.fillStyle(0x111133, 0.3 * pulse);
+    g.fillStyle(0x0d1a11, 0.3 * pulse);
     g.fillCircle(px, py, size * 2.2);
 
-    g.fillStyle(0x1a1a2e, 0.7 * pulse);
+    g.fillStyle(0x142218, 0.7 * pulse);
     g.fillCircle(px, py, size * 1.4);
 
-    g.fillStyle(0x222244, 0.9 * pulse);
+    g.fillStyle(0x1e3322, 0.9 * pulse);
     g.fillCircle(px, py, size);
 
     if (i === 0) {
       const isRedPhase = Math.sin(sirenPhase) > 0;
 
-      g.fillStyle(0x333355, 0.95);
+      g.fillStyle(0x223333, 0.95);
       g.fillCircle(px, py, size * 1.2);
 
-      const lightColor = isRedPhase ? 0xff0000 : 0x0044ff;
-      const lightGlow = isRedPhase ? 0xff4444 : 0x4488ff;
+      const lightColor = isRedPhase ? 0xcc44ee : 0x22dd88;
+      const lightGlow = isRedPhase ? 0xdd66ff : 0x44eeaa;
       const lightAlpha = 0.6 + Math.abs(Math.sin(sirenPhase)) * 0.4;
 
       g.fillStyle(lightGlow, lightAlpha * 0.3);
@@ -193,7 +193,7 @@ const drawPoliceBody = (
 
       g.fillStyle(lightColor, lightAlpha);
       g.fillCircle(px - size * 0.5, py - size * 0.5, size * 0.4);
-      g.fillStyle(isRedPhase ? 0x0044ff : 0xff0000, lightAlpha * 0.7);
+      g.fillStyle(isRedPhase ? 0x22dd88 : 0xcc44ee, lightAlpha * 0.7);
       g.fillCircle(px + size * 0.5, py - size * 0.5, size * 0.4);
 
       g.fillStyle(0xffffff, 0.9);
@@ -251,7 +251,7 @@ const drawSirenBeams = (
   const beamLen = cellSize * 3;
   const beamAlpha = 0.15 + Math.abs(Math.sin(sirenPhase)) * 0.1;
 
-  const beamColor = isRed ? 0xff0000 : 0x0044ff;
+  const beamColor = isRed ? 0xcc44ee : 0x22dd88;
   g.fillStyle(beamColor, beamAlpha);
 
   const bx = Math.cos(beamAngle) * beamLen;
@@ -304,7 +304,7 @@ export const drawPoliceVisuals = (
     const flash = state.caughtFlash;
     const radius = (1 - flash.intensity) * cellSize * 6 + cellSize * 2;
     const isRed = Math.sin(state.sirenPhase * 3) > 0;
-    const flashColor = isRed ? 0xff0000 : 0x0044ff;
+    const flashColor = isRed ? 0xcc44ee : 0x22dd88;
     g.fillStyle(flashColor, flash.intensity * 0.3);
     g.fillCircle(flash.x, flash.y, radius);
     g.fillStyle(0xffffff, flash.intensity * 0.15);

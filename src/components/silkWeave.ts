@@ -154,12 +154,12 @@ export function resetSilkVisited(_state: SilkState): SilkState {
   return createSilkState();
 }
 
-const THREAD_UNWOVEN = 0x1a2a3a;
-const SILK_GOLD = 0xdaa520;
-const SILK_CRIMSON = 0xdc143c;
-const SILK_ROYAL = 0x4169e1;
-const SILK_SHIMMER = 0xffd700;
-const WEAVE_FLASH = 0xffe4b5;
+const THREAD_UNWOVEN = 0x1a2a22;
+const SILK_EMERALD = 0x22cc66;
+const SILK_VIOLET = 0xaa44dd;
+const SILK_MINT = 0x44ddaa;
+const SILK_SHIMMER = 0xcc55ee;
+const WEAVE_FLASH = 0xddaaff;
 
 function colorLerp(a: number, b: number, t: number): number {
   const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, ab = a & 0xff;
@@ -173,9 +173,9 @@ function colorLerp(a: number, b: number, t: number): number {
 function silkColor(r: number, c: number, phase: number): number {
   const pattern = (r + c) % 3;
   const shimmer = Math.sin(phase + r * 0.5 + c * 0.3) * 0.5 + 0.5;
-  if (pattern === 0) return colorLerp(SILK_GOLD, SILK_SHIMMER, shimmer * 0.4);
-  if (pattern === 1) return colorLerp(SILK_CRIMSON, SILK_GOLD, shimmer * 0.3);
-  return colorLerp(SILK_ROYAL, SILK_SHIMMER, shimmer * 0.3);
+  if (pattern === 0) return colorLerp(SILK_EMERALD, SILK_SHIMMER, shimmer * 0.4);
+  if (pattern === 1) return colorLerp(SILK_VIOLET, SILK_EMERALD, shimmer * 0.3);
+  return colorLerp(SILK_MINT, SILK_SHIMMER, shimmer * 0.3);
 }
 
 function drawThreadCurve(
@@ -284,14 +284,14 @@ export function drawSilkWeave(
       const y = flash.index * cellSize;
       g.fillStyle(shimmerColor, flash.alpha * 0.25);
       g.fillRect(0, y, gridSize * cellSize, cellSize);
-      g.lineStyle(2, SILK_GOLD, flash.alpha * 0.5);
+      g.lineStyle(2, SILK_EMERALD, flash.alpha * 0.5);
       g.lineBetween(0, y, gridSize * cellSize, y);
       g.lineBetween(0, y + cellSize, gridSize * cellSize, y + cellSize);
     } else {
       const x = flash.index * cellSize;
       g.fillStyle(shimmerColor, flash.alpha * 0.25);
       g.fillRect(x, 0, cellSize, gridSize * cellSize);
-      g.lineStyle(2, SILK_GOLD, flash.alpha * 0.5);
+      g.lineStyle(2, SILK_EMERALD, flash.alpha * 0.5);
       g.lineBetween(x, 0, x, gridSize * cellSize);
       g.lineBetween(x + cellSize, 0, x + cellSize, gridSize * cellSize);
     }
@@ -310,7 +310,7 @@ export function drawSilkWeave(
     g.fillStyle(THREAD_UNWOVEN, 0.3);
     g.fillRect(barX, barY, barWidth, barHeight);
 
-    const barColor = colorLerp(SILK_CRIMSON, SILK_GOLD, pct);
+    const barColor = colorLerp(SILK_VIOLET, SILK_EMERALD, pct);
     g.fillStyle(barColor, 0.6);
     g.fillRect(barX, barY, barWidth * pct, barHeight);
   }

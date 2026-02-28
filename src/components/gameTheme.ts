@@ -1,15 +1,15 @@
 export const THEME = {
   bg: {
-    deep: 0x060d1a,
-    mid: 0x0c1a2e,
-    light: 0x142844,
-    accent: 0x1a3355,
+    deep: 0x040d08,
+    mid: 0x0a1a10,
+    light: 0x122818,
+    accent: 0x1a3322,
   },
 
   grid: {
-    line: 0x1a2e4a,
-    accent: 0x243a5a,
-    dot: 0x2a4466,
+    line: 0x1a3024,
+    accent: 0x243a2c,
+    dot: 0x2a4434,
   },
 
   snake: {
@@ -18,60 +18,60 @@ export const THEME = {
     tail: 0x14a044,
     glow: 0x44ffaa,
     highlight: 0x66ffbb,
-    eye: 0xffd700,
+    eye: 0xee55cc,
     pupil: 0x111111,
     edge: 0x0d7a33,
   },
 
   food: {
-    body: 0xffd700,
-    core: 0xffec80,
-    glow: 0xffaa22,
-    particle: 0xffcc44,
+    body: 0xcc44ee,
+    core: 0xdd88ff,
+    glow: 0xaa22cc,
+    particle: 0xcc66ee,
   },
 
   wall: {
-    core: 0x334466,
-    glow: 0x4466aa,
-    highlight: 0x5588cc,
-    corner: 0x668ecc,
-    spark: 0x88bbff,
+    core: 0x334a38,
+    glow: 0x44664a,
+    highlight: 0x558866,
+    corner: 0x66aa77,
+    spark: 0x88ccaa,
   },
 
   hud: {
-    text: 0xe2e8f0,
-    textDim: 0x8899bb,
-    score: 0xffd700,
-    scoreGlow: 0xffaa22,
+    text: 0xe2f0e8,
+    textDim: 0x88aa99,
+    score: 0xee55cc,
+    scoreGlow: 0xcc22aa,
   },
 
   effects: {
     ripple: 0x44ffaa,
-    mote: 0xb8c8e8,
-    sparkle: 0xffd700,
+    mote: 0xc8d8c8,
+    sparkle: 0xee55cc,
     trail: 0x33cc88,
-    burst: 0xffcc44,
+    burst: 0xcc66ee,
   },
 
   nebula: [
-    0x1a2e55,
-    0x1a3366,
-    0x223a66,
-    0x1a3055,
-    0x1e3558,
+    0x1a3322,
+    0x1a3328,
+    0x223a2e,
+    0x1a3024,
+    0x1e3528,
   ],
 
   dust: [
-    0x6688bb,
-    0x88aacc,
-    0x5577aa,
-    0x7799bb,
+    0x66aa88,
+    0x88ccaa,
+    0x55aa77,
+    0x77bb99,
   ],
 
   gameOver: {
-    overlay: 0x060d1a,
-    text: 0xffd700,
-    label: 0x8899bb,
+    overlay: 0x040d08,
+    text: 0xee55cc,
+    label: 0x88aa99,
   },
 
   segments: [

@@ -34,13 +34,13 @@ const HEARTS_PER_BURST = 6;
 const HEART_LIFETIME = 70;
 const MAX_EMBERS_PER_HEART = 8;
 
-const FIRE_CORE = 0xfff4c2;
-const FIRE_INNER = 0xffaa22;
-const FIRE_MID = 0xff6600;
-const FIRE_OUTER = 0xdd2200;
-const HEART_RED = 0xff2244;
-const HEART_PINK = 0xff6688;
-const HEART_DEEP = 0xcc0033;
+const FIRE_CORE = 0xeeaaff;
+const FIRE_INNER = 0xcc55ee;
+const FIRE_MID = 0xaa22cc;
+const FIRE_OUTER = 0x7711aa;
+const HEART_MAGENTA = 0xee44cc;
+const HEART_PINK = 0xff88dd;
+const HEART_DEEP = 0xaa1199;
 
 export function createFireHeartsState(): FireHeartsState {
   return { hearts: [] };
@@ -201,7 +201,7 @@ export function drawFireHearts(
     drawHeartShape(g, h.x, h.y - 1, flameSize * 1.2, FIRE_MID, alpha * 0.3);
 
     drawHeartShape(g, h.x, h.y, heartSize * 1.15, HEART_DEEP, alpha * 0.6);
-    drawHeartShape(g, h.x, h.y, heartSize, HEART_RED, alpha * 0.85);
+    drawHeartShape(g, h.x, h.y, heartSize, HEART_MAGENTA, alpha * 0.85);
     drawHeartShape(g, h.x, h.y, heartSize * 0.7, HEART_PINK, alpha * 0.5);
 
     if (t > 0.2) {

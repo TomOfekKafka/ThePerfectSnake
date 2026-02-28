@@ -23,13 +23,13 @@ const FLAME_LIFETIME = 42;
 const EMBER_LIFETIME = 55;
 const SMOKE_LIFETIME = 60;
 
-const FIRE_WHITE = 0xffffff;
-const FIRE_CORE = 0xfff4c2;
-const FIRE_INNER = 0xffaa22;
-const FIRE_MID = 0xff6600;
-const FIRE_OUTER = 0xdd2200;
-const FIRE_DEEP = 0x881100;
-const FIRE_SMOKE = 0x331100;
+const FIRE_WHITE = 0xffeeff;
+const FIRE_CORE = 0xeeaaff;
+const FIRE_INNER = 0xcc55ee;
+const FIRE_MID = 0xaa22cc;
+const FIRE_OUTER = 0x7711aa;
+const FIRE_DEEP = 0x440066;
+const FIRE_SMOKE = 0x220033;
 
 export function createFireTrailState(): FireTrailState {
   return {
@@ -233,7 +233,7 @@ function drawSmokeParticle(g: Phaser.GameObjects.Graphics, p: FireParticle): voi
   g.fillStyle(FIRE_SMOKE, alpha);
   g.fillCircle(p.x, p.y - 2, p.size * 2);
 
-  g.fillStyle(0x221100, alpha * 0.5);
+  g.fillStyle(0x110022, alpha * 0.5);
   g.fillCircle(p.x, p.y - 2, p.size * 1.2);
 }
 

@@ -46,11 +46,11 @@ export interface OlympicsState {
 }
 
 const RING_COLORS = [
-  0x0085c7,
-  0x000000,
-  0xf4c300,
-  0x009f3d,
-  0xdf0024,
+  0x22cc66,
+  0xaa44dd,
+  0x44ddaa,
+  0xdd44aa,
+  0x66eebb,
 ];
 
 const MEDAL_COLORS: Record<string, number> = {

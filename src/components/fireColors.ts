@@ -9,19 +9,19 @@ function lerpColor(c1: number, c2: number, t: number): number {
   return (Math.min(0xff, r) << 16) | (Math.min(0xff, g) << 8) | Math.min(0xff, b);
 }
 
-const WHITE_HOT = 0xfff8e8;
-const YELLOW_FIRE = 0xffdd44;
-const ORANGE_FIRE = 0xff8800;
-const RED_FIRE = 0xdd2200;
-const DEEP_EMBER = 0x881100;
+const WHITE_HOT = 0xf8eeff;
+const VIOLET_FIRE = 0xcc55ee;
+const MAGENTA_FIRE = 0xaa22cc;
+const PURPLE_FIRE = 0x7711aa;
+const DEEP_EMBER = 0x440066;
 
 const HIGHLIGHT_WHITE = 0xffffff;
-const HIGHLIGHT_YELLOW = 0xffeeaa;
-const HIGHLIGHT_ORANGE = 0xffbb55;
+const HIGHLIGHT_PINK = 0xeeaaff;
+const HIGHLIGHT_VIOLET = 0xbb66dd;
 
-const EDGE_ORANGE = 0xaa5500;
-const EDGE_RED = 0x661100;
-const EDGE_EMBER = 0x440800;
+const EDGE_PURPLE = 0x551188;
+const EDGE_DEEP = 0x330066;
+const EDGE_EMBER = 0x220044;
 
 export function getFireColors(
   segmentIndex: number,
@@ -31,29 +31,29 @@ export function getFireColors(
 
   let base: number;
   if (t < 0.15) {
-    base = lerpColor(WHITE_HOT, YELLOW_FIRE, t / 0.15);
+    base = lerpColor(WHITE_HOT, VIOLET_FIRE, t / 0.15);
   } else if (t < 0.4) {
-    base = lerpColor(YELLOW_FIRE, ORANGE_FIRE, (t - 0.15) / 0.25);
+    base = lerpColor(VIOLET_FIRE, MAGENTA_FIRE, (t - 0.15) / 0.25);
   } else if (t < 0.75) {
-    base = lerpColor(ORANGE_FIRE, RED_FIRE, (t - 0.4) / 0.35);
+    base = lerpColor(MAGENTA_FIRE, PURPLE_FIRE, (t - 0.4) / 0.35);
   } else {
-    base = lerpColor(RED_FIRE, DEEP_EMBER, (t - 0.75) / 0.25);
+    base = lerpColor(PURPLE_FIRE, DEEP_EMBER, (t - 0.75) / 0.25);
   }
 
   let highlight: number;
   if (t < 0.3) {
-    highlight = lerpColor(HIGHLIGHT_WHITE, HIGHLIGHT_YELLOW, t / 0.3);
+    highlight = lerpColor(HIGHLIGHT_WHITE, HIGHLIGHT_PINK, t / 0.3);
   } else if (t < 0.7) {
-    highlight = lerpColor(HIGHLIGHT_YELLOW, HIGHLIGHT_ORANGE, (t - 0.3) / 0.4);
+    highlight = lerpColor(HIGHLIGHT_PINK, HIGHLIGHT_VIOLET, (t - 0.3) / 0.4);
   } else {
-    highlight = lerpColor(HIGHLIGHT_ORANGE, ORANGE_FIRE, (t - 0.7) / 0.3);
+    highlight = lerpColor(HIGHLIGHT_VIOLET, MAGENTA_FIRE, (t - 0.7) / 0.3);
   }
 
   let edge: number;
   if (t < 0.3) {
-    edge = lerpColor(EDGE_ORANGE, EDGE_RED, t / 0.3);
+    edge = lerpColor(EDGE_PURPLE, EDGE_DEEP, t / 0.3);
   } else {
-    edge = lerpColor(EDGE_RED, EDGE_EMBER, (t - 0.3) / 0.7);
+    edge = lerpColor(EDGE_DEEP, EDGE_EMBER, (t - 0.3) / 0.7);
   }
 
   return { base, highlight, edge };
