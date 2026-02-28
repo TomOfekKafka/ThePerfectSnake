@@ -153,6 +153,12 @@ import {
   drawFireTrail,
 } from './fireTrail';
 import {
+  WebTrailState,
+  createWebTrailState,
+  updateWebTrail,
+  drawWebTrail,
+} from './webTrail';
+import {
   createSpellProjectileState,
   updateSpellProjectiles,
   drawSpellTargetingLine,
@@ -853,6 +859,7 @@ export class SnakeScene extends Phaser.Scene {
   private hogwartsBackground: HogwartsBackgroundState = createHogwartsBackground(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
   private patronusTrail: PatronusTrailState = createPatronusTrailState();
   private fireTrail: FireTrailState = createFireTrailState();
+  private webTrail: WebTrailState = createWebTrailState();
   private spellProjectile: SpellProjectileState = createSpellProjectileState();
   private flagLifeBar: FlagLifeBarState = createFlagLifeBarState();
   private skullDrop: SkullDropState = createSkullDropState();
@@ -2968,6 +2975,7 @@ export class SnakeScene extends Phaser.Scene {
       updateDragonBreath(this.dragonBreath, snoutTip.tipX, snoutTip.tipY, breathVec.fx, breathVec.fy);
       this.hugeHead = updateHugeHead(this.hugeHead, snoutTip.tipX, snoutTip.tipY);
       updateFireTrail(this.fireTrail, headX, headY, this.currentState.snake, CELL_SIZE);
+      updateWebTrail(this.webTrail, this.currentState.snake, CELL_SIZE);
 
       const foodPos = this.currentState.food;
       const laserFoodX = foodPos.x * CELL_SIZE + CELL_SIZE / 2;
@@ -3060,6 +3068,7 @@ export class SnakeScene extends Phaser.Scene {
 
     drawObstacles(g, this.obstacleRender, this.currentState.obstacles || [], CELL_SIZE, this.frameCount);
 
+    drawWebTrail(g, this.webTrail, this.frameCount);
     drawFireGlow(g, this.currentState.snake, CELL_SIZE, this.frameCount);
     drawFireTrail(g, this.fireTrail);
     drawAuroraTrail(g, this.auroraTrail, this.frameCount);
@@ -4268,22 +4277,51 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   private drawGrid(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
-    // Film noir grid: subtle, dark lines suggesting tile floor or city grid
-    g.lineStyle(1, COLORS.gridLine, 0.08);
+    g.lineStyle(1, COLORS.gridLine, 0.06);
     for (let i = 0; i <= GRID_SIZE; i++) {
       g.lineBetween(i * CELL_SIZE, 0, i * CELL_SIZE, height);
       g.lineBetween(0, i * CELL_SIZE, width, i * CELL_SIZE);
     }
 
-    // Accent lines every 5 cells - subtle gray
-    const accentPulse = 0.12 + Math.sin(this.frameCount * 0.03) * 0.04;
+    const accentPulse = 0.1 + Math.sin(this.frameCount * 0.03) * 0.04;
     g.lineStyle(1, COLORS.gridAccent, accentPulse);
     for (let i = 0; i <= GRID_SIZE; i += 5) {
       g.lineBetween(i * CELL_SIZE, 0, i * CELL_SIZE, height);
       g.lineBetween(0, i * CELL_SIZE, width, i * CELL_SIZE);
     }
 
-    // Heavy vignette for dramatic noir look
+    const cx = width / 2;
+    const cy = height / 2;
+    const webPulse = 0.06 + Math.sin(this.frameCount * 0.02) * 0.02;
+
+    const radialCount = 12;
+    const maxRadius = Math.sqrt(cx * cx + cy * cy);
+    g.lineStyle(0.5, 0xdddddd, webPulse);
+    for (let r = 0; r < radialCount; r++) {
+      const angle = (r / radialCount) * Math.PI * 2;
+      const ex = cx + Math.cos(angle) * maxRadius;
+      const ey = cy + Math.sin(angle) * maxRadius;
+      g.lineBetween(cx, cy, ex, ey);
+    }
+
+    const ringCount = 6;
+    for (let ring = 1; ring <= ringCount; ring++) {
+      const radius = (ring / ringCount) * (width * 0.48);
+      const ringAlpha = webPulse * (0.6 + ring / ringCount * 0.4);
+      g.lineStyle(0.5, 0xdddddd, ringAlpha);
+      g.beginPath();
+      const segments = 24;
+      for (let s = 0; s <= segments; s++) {
+        const angle = (s / segments) * Math.PI * 2;
+        const wobble = Math.sin(angle * radialCount * 0.5 + this.frameCount * 0.01) * radius * 0.02;
+        const px = cx + Math.cos(angle) * (radius + wobble);
+        const py = cy + Math.sin(angle) * (radius + wobble);
+        if (s === 0) g.moveTo(px, py);
+        else g.lineTo(px, py);
+      }
+      g.strokePath();
+    }
+
     this.drawVignette(g, width, height);
   }
 
@@ -4301,7 +4339,6 @@ export class SnakeScene extends Phaser.Scene {
   private drawFood(g: Phaser.GameObjects.Graphics): void {
     if (!this.currentState) return;
 
-    // Don't draw food if it's still being thrown
     if (this.thrownFood && !this.thrownFood.landed) return;
 
     const food = this.currentState.food;
@@ -4310,75 +4347,73 @@ export class SnakeScene extends Phaser.Scene {
     const pulseScale = 1 + Math.sin(this.frameCount * 0.15) * 0.08;
     const glowPulse = 0.4 + Math.sin(this.frameCount * 0.1) * 0.2;
 
-    // Spawn particles (orange/yellow for Halloween)
     this.spawnFoodParticles(foodX, foodY);
 
-    // Draw particles
     for (const p of this.foodParticles) {
-      g.fillStyle(COLORS.pumpkinOrange, p.life * 0.4);
+      g.fillStyle(COLORS.food, p.life * 0.4);
       g.fillCircle(p.x, p.y, p.size * p.life);
     }
 
-    // Halloween pumpkin!
-    const pumpkinSize = (CELL_SIZE / 2) * pulseScale;
+    const spiderSize = (CELL_SIZE / 2) * pulseScale;
 
-    // Shadow underneath
-    g.fillStyle(0x000000, 0.5);
-    g.fillEllipse(foodX + 2, foodY + pumpkinSize * 0.8, pumpkinSize * 1.2, pumpkinSize * 0.4);
+    g.fillStyle(0x000000, 0.4);
+    g.fillEllipse(foodX + 1.5, foodY + spiderSize * 0.6, spiderSize * 1.0, spiderSize * 0.3);
 
-    // Outer orange glow (candlelight effect)
-    g.fillStyle(COLORS.pumpkinOrange, glowPulse * 0.15);
-    g.fillCircle(foodX, foodY, pumpkinSize + 12);
-    g.fillStyle(COLORS.candyCorn1, glowPulse * 0.2);
-    g.fillCircle(foodX, foodY, pumpkinSize + 6);
+    g.fillStyle(0xff2244, glowPulse * 0.12);
+    g.fillCircle(foodX, foodY, spiderSize + 14);
+    g.fillStyle(0xcc1122, glowPulse * 0.18);
+    g.fillCircle(foodX, foodY, spiderSize + 7);
 
-    // Pumpkin body (slightly squashed circle)
-    g.fillStyle(COLORS.pumpkinOrange, 0.95);
-    g.fillEllipse(foodX, foodY, pumpkinSize * 1.1, pumpkinSize * 0.9);
+    g.fillStyle(0x111111, 0.95);
+    g.fillCircle(foodX, foodY + spiderSize * 0.15, spiderSize * 0.55);
+    g.fillCircle(foodX, foodY - spiderSize * 0.25, spiderSize * 0.4);
 
-    // Pumpkin segments (darker lines)
-    g.lineStyle(2, 0xcc4400, 0.5);
-    g.lineBetween(foodX, foodY - pumpkinSize * 0.8, foodX, foodY + pumpkinSize * 0.7);
-    g.lineStyle(1.5, 0xcc4400, 0.3);
-    g.lineBetween(foodX - pumpkinSize * 0.5, foodY - pumpkinSize * 0.5, foodX - pumpkinSize * 0.4, foodY + pumpkinSize * 0.6);
-    g.lineBetween(foodX + pumpkinSize * 0.5, foodY - pumpkinSize * 0.5, foodX + pumpkinSize * 0.4, foodY + pumpkinSize * 0.6);
+    const legWave = Math.sin(this.frameCount * 0.12) * 2;
+    g.lineStyle(1.5, 0x222222, 0.9);
+    const legPairs = [
+      { angle: -0.6, len: spiderSize * 1.3, mid: spiderSize * 0.7 },
+      { angle: -0.2, len: spiderSize * 1.5, mid: spiderSize * 0.8 },
+      { angle: 0.2, len: spiderSize * 1.5, mid: spiderSize * 0.8 },
+      { angle: 0.6, len: spiderSize * 1.3, mid: spiderSize * 0.7 },
+    ];
+    for (let side = -1; side <= 1; side += 2) {
+      for (let li = 0; li < legPairs.length; li++) {
+        const leg = legPairs[li];
+        const baseX = foodX + side * spiderSize * 0.3;
+        const baseY = foodY + leg.angle * spiderSize * 0.5;
+        const midX = baseX + side * leg.mid * 0.7;
+        const midY = baseY - leg.mid * 0.5 + legWave * (li % 2 === 0 ? 1 : -1);
+        const tipX = baseX + side * leg.len;
+        const tipY = baseY + leg.len * 0.3 + legWave * (li % 2 === 0 ? -1 : 1);
+        g.lineBetween(baseX, baseY, midX, midY);
+        g.lineBetween(midX, midY, tipX, tipY);
+      }
+    }
 
-    // Pumpkin stem
-    g.fillStyle(0x228822, 0.9);
-    g.fillRect(foodX - 2, foodY - pumpkinSize * 0.9 - 4, 4, 6);
+    const eyeGlow = 0.8 + Math.sin(this.frameCount * 0.1) * 0.2;
+    g.fillStyle(0xcc1122, eyeGlow);
+    g.fillCircle(foodX - spiderSize * 0.15, foodY - spiderSize * 0.35, spiderSize * 0.12);
+    g.fillCircle(foodX + spiderSize * 0.15, foodY - spiderSize * 0.35, spiderSize * 0.12);
+    g.fillStyle(0xff4466, eyeGlow * 0.6);
+    g.fillCircle(foodX - spiderSize * 0.15, foodY - spiderSize * 0.35, spiderSize * 0.06);
+    g.fillCircle(foodX + spiderSize * 0.15, foodY - spiderSize * 0.35, spiderSize * 0.06);
 
-    // Jack-o-lantern face - glowing eyes and mouth
-    const faceGlow = 0.8 + Math.sin(this.frameCount * 0.12) * 0.2;
-    g.fillStyle(COLORS.candyCorn1, faceGlow);
-
-    // Eyes (triangles)
+    g.fillStyle(0xcc1122, 0.6);
+    g.fillCircle(foodX, foodY + spiderSize * 0.1, spiderSize * 0.18);
+    const hourGlassSize = spiderSize * 0.1;
     g.fillTriangle(
-      foodX - pumpkinSize * 0.4, foodY - pumpkinSize * 0.1,
-      foodX - pumpkinSize * 0.15, foodY - pumpkinSize * 0.1,
-      foodX - pumpkinSize * 0.27, foodY - pumpkinSize * 0.35
+      foodX - hourGlassSize, foodY + spiderSize * 0.1 - hourGlassSize,
+      foodX + hourGlassSize, foodY + spiderSize * 0.1 - hourGlassSize,
+      foodX, foodY + spiderSize * 0.1
     );
     g.fillTriangle(
-      foodX + pumpkinSize * 0.4, foodY - pumpkinSize * 0.1,
-      foodX + pumpkinSize * 0.15, foodY - pumpkinSize * 0.1,
-      foodX + pumpkinSize * 0.27, foodY - pumpkinSize * 0.35
+      foodX - hourGlassSize, foodY + spiderSize * 0.1 + hourGlassSize,
+      foodX + hourGlassSize, foodY + spiderSize * 0.1 + hourGlassSize,
+      foodX, foodY + spiderSize * 0.1
     );
 
-    // Mouth (jagged smile)
-    g.fillStyle(COLORS.candyCorn1, faceGlow * 0.9);
-    g.fillRect(foodX - pumpkinSize * 0.35, foodY + pumpkinSize * 0.15, pumpkinSize * 0.7, pumpkinSize * 0.25);
-
-    // Teeth (dark gaps in mouth)
-    g.fillStyle(COLORS.pumpkinOrange, 1);
-    g.fillTriangle(
-      foodX - pumpkinSize * 0.15, foodY + pumpkinSize * 0.15,
-      foodX, foodY + pumpkinSize * 0.15,
-      foodX - pumpkinSize * 0.075, foodY + pumpkinSize * 0.3
-    );
-    g.fillTriangle(
-      foodX + pumpkinSize * 0.15, foodY + pumpkinSize * 0.15,
-      foodX + pumpkinSize * 0.3, foodY + pumpkinSize * 0.15,
-      foodX + pumpkinSize * 0.225, foodY + pumpkinSize * 0.3
-    );
+    g.lineStyle(0.5, 0xdddddd, 0.3);
+    g.lineBetween(foodX, foodY - spiderSize * 0.6, foodX, foodY - spiderSize * 2);
   }
 
   private drawEnergyTendrils(g: Phaser.GameObjects.Graphics, foodX: number, foodY: number): void {
@@ -4428,18 +4463,17 @@ export class SnakeScene extends Phaser.Scene {
 
   private drawFoodBurst(g: Phaser.GameObjects.Graphics): void {
     for (const p of this.foodBurstParticles) {
-      // Halloween: orange pumpkin burst
       for (let i = 0; i < p.trail.length; i++) {
         const t = p.trail[i];
         const trailAlpha = p.life * 0.4 * (1 - i / p.trail.length);
         const trailSize = p.size * p.life * (1 - i / p.trail.length);
-        g.fillStyle(COLORS.pumpkinOrange, trailAlpha);
+        g.fillStyle(COLORS.food, trailAlpha);
         g.fillCircle(t.x, t.y, trailSize);
       }
 
-      g.fillStyle(COLORS.candyCorn1, p.life * 0.7);
+      g.fillStyle(COLORS.foodCore, p.life * 0.7);
       g.fillCircle(p.x, p.y, p.size * p.life);
-      g.fillStyle(COLORS.candyCorn3, p.life * 0.9);
+      g.fillStyle(COLORS.noirWhite, p.life * 0.9);
       g.fillCircle(p.x, p.y, p.size * p.life * 0.4);
     }
   }
