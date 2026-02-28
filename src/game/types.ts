@@ -80,6 +80,12 @@ export interface PoliceChaseState {
   caughtFlash: number;
 }
 
+export interface Obstacle {
+  position: Position;
+  spawnTick: number;
+  variant: number;
+}
+
 export interface GameState {
   snake: Position[];
   food: Position;
@@ -102,6 +108,7 @@ export interface GameState {
   totalCash: number;
   fakeFoods: FakeFood[];
   police: PoliceChaseState;
+  obstacles: Obstacle[];
   immortalActive: boolean;
   immortalProgress: number;
   immortalCharges: number;
@@ -121,7 +128,7 @@ export interface RivalSnakeState {
   foodEaten: number;
 }
 
-export type DeathReason = 'wall' | 'self' | 'rival' | null;
+export type DeathReason = 'wall' | 'self' | 'rival' | 'obstacle' | null;
 
 export const OPPOSITE_DIRECTIONS: Record<Direction, Direction> = {
   UP: 'DOWN',

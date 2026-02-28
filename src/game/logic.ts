@@ -4,7 +4,7 @@
  */
 
 import { Position, Direction, GameState, OPPOSITE_DIRECTIONS, PowerUp, PowerUpType, ActivePowerUp } from './types';
-import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE, BONUS_FOOD_SCORE, FLAG_FOOD_MULTIPLIER } from './constants';
+import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE, BONUS_FOOD_SCORE, FLAG_FOOD_MULTIPLIER, OBSTACLE_MIN_FOOD_EATEN, OBSTACLE_SPAWN_INTERVAL } from './constants';
 import { tickPhantom } from './phantomSnake';
 import { shouldSpawnBonusFood, generateBonusFood, isBonusFoodExpired, shrinkSnake } from './bonusFood';
 import { shouldSpawnFlagFood, generateFlagFood, isFlagFoodExpired } from './flagFood';
@@ -12,6 +12,7 @@ import { shouldSpawnCash, generateCashItem, expireCashItems, collectCash } from 
 import { shouldSpawnFakeFood, generateFakeFood, expireFakeFoods, collectFakeFood, shrinkFromFake } from './fakeFood';
 import { tickPolice, POLICE_PENALTY } from './policeChase';
 import { FAKE_FOOD_PENALTY } from './constants';
+import { shouldSpawnObstacles, spawnObstacles, collidesWithObstacle } from './obstacles';
 
 /** Check if two positions are equal */
 export const positionsEqual = (a: Position, b: Position): boolean =>
@@ -129,8 +130,10 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       : state.snake.slice(0, -1);
     const hitSelf = collidesWithSnake(newHead, bodyForCollision);
 
-    if (hitWall || (hitSelf && !isInvincible)) {
-      const deathReason = hitWall ? 'wall' as const : 'self' as const;
+    const hitObstacle = collidesWithObstacle(newHead, state.obstacles);
+
+    if (hitWall || (hitSelf && !isInvincible) || (hitObstacle && !isInvincible)) {
+      const deathReason = hitWall ? 'wall' as const : hitObstacle ? 'obstacle' as const : 'self' as const;
       return { ...state, gameOver: true, tickCount, deathReason };
     }
   }
@@ -324,6 +327,7 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
     spawnCooldown: 0,
     caughtFlash: 0,
   },
+  obstacles: [],
   immortalActive: false,
   immortalProgress: 0,
   immortalCharges: 1,

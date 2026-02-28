@@ -51,6 +51,11 @@ export const FAKE_FOOD_PENALTY = 20;
 export const FAKE_FOOD_SHRINK = 2;
 export const FAKE_FOOD_MIN_FOOD_EATEN = 3;
 
+export const OBSTACLE_SPAWN_INTERVAL = 3;
+export const OBSTACLE_MAX_ON_BOARD = 12;
+export const OBSTACLE_MIN_FOOD_EATEN = 2;
+export const OBSTACLE_PATTERN_CHANCE = 0.4;
+
 export const createInitialState = (): GameState => ({
   snake: [...INITIAL_SNAKE],
   food: { ...INITIAL_FOOD },
@@ -87,6 +92,7 @@ export const createInitialState = (): GameState => ({
     spawnCooldown: 0,
     caughtFlash: 0,
   },
+  obstacles: [],
   immortalActive: false,
   immortalProgress: 0,
   immortalCharges: 1,
