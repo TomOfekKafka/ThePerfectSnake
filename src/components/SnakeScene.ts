@@ -319,6 +319,13 @@ import {
   triggerSpeedBoost,
   drawSpeedLines,
 } from './speedLines';
+import {
+  FireHeartsState,
+  createFireHeartsState,
+  spawnFireHearts,
+  updateFireHearts,
+  drawFireHearts,
+} from './fireHearts';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -816,6 +823,7 @@ export class SnakeScene extends Phaser.Scene {
   private deathCinematic: DeathCinematicState = createDeathCinematicState();
   private deathDelayFrames = 0;
   private deathDelayActive = false;
+  private fireHearts: FireHeartsState = createFireHeartsState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2411,6 +2419,7 @@ export class SnakeScene extends Phaser.Scene {
       resetFlagLifeBar(this.flagLifeBar);
       resetSkullDrop(this.skullDrop);
       this.hugeHead = triggerChomp(this.hugeHead);
+      spawnFireHearts(this.fireHearts, headX, headY);
     }
     this.lastSnakeLength = state.snake.length;
 
@@ -2799,6 +2808,7 @@ export class SnakeScene extends Phaser.Scene {
       CELL_SIZE,
       this.frameCount
     );
+    updateFireHearts(this.fireHearts);
 
     if (this.currentState && this.currentState.gameStarted) {
       const score = this.currentState.score || 0;
@@ -2962,6 +2972,7 @@ export class SnakeScene extends Phaser.Scene {
     drawFireTrail(g, this.fireTrail);
     drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState);
     drawSnakeEnergyField(g, this.sciFi, this.currentState.snake, CELL_SIZE);
+    drawFireHearts(g, this.fireHearts);
     drawElectricStorm(g, this.electricStorm, this.frameCount);
     this.drawDroolDrops(g);
     drawWandSparkles(g, this.wizardEffects);
