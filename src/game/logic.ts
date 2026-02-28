@@ -220,6 +220,14 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     const isInvincibleNow = hasPowerUp(newActivePowerUps, 'INVINCIBILITY') || immortal;
     const policeResult = tickPolice(state.police, resultSnake, foodEatenCount, false, isInvincibleNow);
     const policePenalty = policeResult.caughtPlayer ? POLICE_PENALTY : 0;
+
+    let newObstacles = state.obstacles;
+    let newLastObstacleSpawnFood = state.lastObstacleSpawnFood;
+    if (shouldSpawnObstacles(newObstacles, foodEatenCount, newLastObstacleSpawnFood)) {
+      newObstacles = spawnObstacles(newObstacles, resultSnake, newFood, tickCount, newPowerUp?.position);
+      newLastObstacleSpawnFood = foodEatenCount;
+    }
+
     return {
       ...state,
       snake: resultSnake,
@@ -241,6 +249,8 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       totalCash: state.totalCash + cashGain,
       fakeFoods,
       police: policeResult.police,
+      obstacles: newObstacles,
+      lastObstacleSpawnFood: newLastObstacleSpawnFood,
     };
   }
 
@@ -287,6 +297,8 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     totalCash: state.totalCash + cashGain,
     fakeFoods,
     police: policeResult.police,
+    obstacles: state.obstacles,
+    lastObstacleSpawnFood: state.lastObstacleSpawnFood,
   };
 };
 
@@ -328,6 +340,7 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
     caughtFlash: 0,
   },
   obstacles: [],
+  lastObstacleSpawnFood: 0,
   immortalActive: false,
   immortalProgress: 0,
   immortalCharges: 1,
@@ -360,6 +373,8 @@ export const reviveSnake = (state: GameState): GameState => {
     flagFood: null,
     cashItems: [],
     fakeFoods: [],
+    obstacles: [],
+    lastObstacleSpawnFood: 0,
     immortalActive: false,
     immortalProgress: 0,
     deathReason: null,

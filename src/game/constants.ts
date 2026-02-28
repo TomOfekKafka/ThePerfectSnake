@@ -93,6 +93,7 @@ export const createInitialState = (): GameState => ({
     caughtFlash: 0,
   },
   obstacles: [],
+  lastObstacleSpawnFood: 0,
   immortalActive: false,
   immortalProgress: 0,
   immortalCharges: 1,
