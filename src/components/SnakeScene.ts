@@ -362,6 +362,15 @@ import {
   updateGrowthPopups,
   drawGrowthPopups,
 } from './growthPopup';
+import {
+  SameDirectionExplosionState,
+  createSameDirectionExplosionState,
+  triggerSameDirectionExplosion,
+  updateSameDirectionExplosion,
+  drawSameDirectionExplosion,
+  drawExplosionText,
+  getExplosionShake,
+} from './sameDirectionExplosion';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -870,6 +879,7 @@ export class SnakeScene extends Phaser.Scene {
   private fireHearts: FireHeartsState = createFireHeartsState();
   private backgroundBand: BackgroundBandState = createBackgroundBandState();
   private obstacleRender: ObstacleRenderState = createObstacleRenderState();
+  private sameDirectionExplosion: SameDirectionExplosionState = createSameDirectionExplosionState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2539,6 +2549,25 @@ export class SnakeScene extends Phaser.Scene {
     }
   }
 
+  handleSameDirection(direction: string): void {
+    if (!this.currentState || this.currentState.gameOver) return;
+    const head = this.currentState.snake[0];
+    if (!head) return;
+
+    const headX = head.x * CELL_SIZE + CELL_SIZE / 2;
+    const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+    const dirMap: Record<string, { x: number; y: number }> = {
+      UP: { x: 0, y: -1 },
+      DOWN: { x: 0, y: 1 },
+      LEFT: { x: -1, y: 0 },
+      RIGHT: { x: 1, y: 0 },
+    };
+    const dir = dirMap[direction] || { x: 0, y: -1 };
+
+    triggerSameDirectionExplosion(this.sameDirectionExplosion, headX, headY, dir.x, dir.y);
+  }
+
   private spawnShockWave(x: number, y: number): void {
     if (this.shockWaves.length >= MAX_SHOCKWAVES) {
       this.shockWaves.shift();
@@ -2834,6 +2863,7 @@ export class SnakeScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
 
+    updateSameDirectionExplosion(this.sameDirectionExplosion);
     updateSpaceBackground(this.spaceBackground, width, height);
     updateMotes(this.cleanEffects, width, height);
     updateRipples(this.cleanEffects);
