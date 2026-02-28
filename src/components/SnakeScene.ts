@@ -4014,67 +4014,19 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   private drawText(
-    g: Phaser.GameObjects.Graphics,
-    text: string,
-    x: number,
-    y: number,
-    size: number,
-    color: number,
-    alpha: number
+    _g: Phaser.GameObjects.Graphics,
+    _text: string,
+    _x: number,
+    _y: number,
+    _size: number,
+    _color: number,
+    _alpha: number
   ): void {
-    const charWidth = size * 0.7;
-    const charHeight = size;
-
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      const cx = x + i * charWidth;
-
-      g.fillStyle(color, alpha);
-
-      // Simple pixel-style character rendering
-      if (char >= '0' && char <= '9') {
-        this.drawDigit(g, char, cx, y, size);
-      } else {
-        this.drawLetter(g, char, cx, y, size);
-      }
-    }
+    return;
   }
 
-  private drawDigit(g: Phaser.GameObjects.Graphics, digit: string, x: number, y: number, size: number): void {
-    const w = size * 0.5;
-    const h = size;
-    const t = size * 0.2;
-
-    // 7-segment style digits
-    const segments: Record<string, number[]> = {
-      '0': [1, 1, 1, 0, 1, 1, 1],
-      '1': [0, 0, 1, 0, 0, 1, 0],
-      '2': [1, 0, 1, 1, 1, 0, 1],
-      '3': [1, 0, 1, 1, 0, 1, 1],
-      '4': [0, 1, 1, 1, 0, 1, 0],
-      '5': [1, 1, 0, 1, 0, 1, 1],
-      '6': [1, 1, 0, 1, 1, 1, 1],
-      '7': [1, 0, 1, 0, 0, 1, 0],
-      '8': [1, 1, 1, 1, 1, 1, 1],
-      '9': [1, 1, 1, 1, 0, 1, 1],
-    };
-
-    const seg = segments[digit] || segments['0'];
-
-    // Top horizontal
-    if (seg[0]) g.fillRect(x, y - h / 2, w, t);
-    // Top-left vertical
-    if (seg[1]) g.fillRect(x - t / 2, y - h / 2, t, h / 2);
-    // Top-right vertical
-    if (seg[2]) g.fillRect(x + w - t / 2, y - h / 2, t, h / 2);
-    // Middle horizontal
-    if (seg[3]) g.fillRect(x, y - t / 2, w, t);
-    // Bottom-left vertical
-    if (seg[4]) g.fillRect(x - t / 2, y, t, h / 2);
-    // Bottom-right vertical
-    if (seg[5]) g.fillRect(x + w - t / 2, y, t, h / 2);
-    // Bottom horizontal
-    if (seg[6]) g.fillRect(x, y + h / 2 - t, w, t);
+  private drawDigit(_g: Phaser.GameObjects.Graphics, _digit: string, _x: number, _y: number, _size: number): void {
+    return;
   }
 
   private drawLetter(g: Phaser.GameObjects.Graphics, letter: string, x: number, y: number, size: number): void {
