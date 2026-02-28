@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { PowerUpType, ActivePowerUp, PowerUp, Position } from '../game/types';
 
+type DrawTextFn = (g: Phaser.GameObjects.Graphics, text: string, x: number, y: number, size: number, color: number, alpha: number) => void;
+
 interface GhostTrailSegment {
   x: number;
   y: number;
@@ -324,13 +326,15 @@ export function drawPowerUpEffects(
   width: number,
   height: number,
   frameCount: number,
-  drawText: (g: Phaser.GameObjects.Graphics, text: string, x: number, y: number, size: number, color: number, alpha: number) => void
+  drawText: DrawTextFn,
+  activePowerUps: ActivePowerUp[],
+  tickCount: number
 ): void {
   drawGhostTrail(g, state, frameCount);
   drawFreezeEffects(g, state, width, height, frameCount);
   drawShockwaveEffects(g, state, frameCount);
-  drawPowerUpOrbOnBoard(g, state, frameCount);
-  drawActivePowerUpHUD(g, state, width, height, frameCount, drawText);
+  drawPowerUpOrbOnBoard(g, state, frameCount, drawText);
+  drawActivePowerUpHUD(g, state, width, height, frameCount, drawText, activePowerUps, tickCount);
 }
 
 function drawGhostTrail(
@@ -457,40 +461,64 @@ function drawShockwaveEffects(
 function drawPowerUpOrbOnBoard(
   g: Phaser.GameObjects.Graphics,
   state: PowerUpEffectsState,
-  frameCount: number
+  frameCount: number,
+  drawText: DrawTextFn
 ): void {
   const orb = state.powerUpOrb;
   if (!orb) return;
 
   const colors = POWERUP_COLORS[orb.type];
   const pulse = Math.sin(orb.pulsePhase) * 0.3 + 0.7;
-  const baseRadius = 7;
+  const baseRadius = 9;
+
+  g.fillStyle(colors.glow, 0.08 * pulse);
+  g.fillCircle(orb.x, orb.y, baseRadius + 18);
 
   g.fillStyle(colors.glow, 0.15 * pulse);
-  g.fillCircle(orb.x, orb.y, baseRadius + 10);
+  g.fillCircle(orb.x, orb.y, baseRadius + 12);
 
   g.fillStyle(colors.glow, 0.25 * pulse);
-  g.fillCircle(orb.x, orb.y, baseRadius + 5);
+  g.fillCircle(orb.x, orb.y, baseRadius + 6);
 
-  g.fillStyle(colors.core, 0.9);
+  g.fillStyle(colors.core, 0.92);
   g.fillCircle(orb.x, orb.y, baseRadius);
 
   g.fillStyle(colors.accent, 0.6 + pulse * 0.2);
-  g.fillCircle(orb.x - 2, orb.y - 2, baseRadius * 0.4);
+  g.fillCircle(orb.x - 2, orb.y - 2, baseRadius * 0.35);
 
   for (const sp of orb.sparkles) {
-    const sx = orb.x + Math.cos(sp.angle) * sp.dist;
-    const sy = orb.y + Math.sin(sp.angle) * sp.dist;
+    const sx = orb.x + Math.cos(sp.angle) * (sp.dist + 4);
+    const sy = orb.y + Math.sin(sp.angle) * (sp.dist + 4);
     const sparkAlpha = 0.5 + Math.sin(sp.angle * 3 + frameCount * 0.1) * 0.3;
     g.fillStyle(colors.accent, sparkAlpha);
-    g.fillCircle(sx, sy, sp.size);
+    g.fillCircle(sx, sy, sp.size * 1.2);
   }
 
-  g.lineStyle(1.5, colors.accent, 0.3 * pulse);
-  g.strokeCircle(orb.x, orb.y, baseRadius + 3 + Math.sin(orb.pulsePhase * 0.5) * 2);
+  g.lineStyle(2, colors.accent, 0.4 * pulse);
+  g.strokeCircle(orb.x, orb.y, baseRadius + 4 + Math.sin(orb.pulsePhase * 0.5) * 2);
 
   drawPowerUpIcon(g, orb.x, orb.y, orb.type, baseRadius, frameCount);
+
+  const label = POWERUP_LABELS[orb.type];
+  const labelY = orb.y - baseRadius - 14 + Math.sin(frameCount * 0.06) * 2;
+  const labelAlpha = 0.8 + Math.sin(frameCount * 0.08) * 0.15;
+
+  g.fillStyle(0x000000, 0.5);
+  const labelWidth = label.length * 5 + 6;
+  g.fillRoundedRect(orb.x - labelWidth / 2, labelY - 2, labelWidth, 10, 3);
+
+  drawText(g, label, orb.x - (label.length * 4.2) / 2, labelY, 7, colors.accent, labelAlpha);
 }
+
+const POWERUP_LABELS: Record<PowerUpType, string> = {
+  SPEED_BOOST: 'SPEED',
+  INVINCIBILITY: 'SHIELD',
+  SCORE_MULTIPLIER: 'X3',
+  MAGNET: 'MAGNET',
+  GHOST_MODE: 'GHOST',
+  FREEZE_TIME: 'FREEZE',
+  SHOCKWAVE: 'BLAST',
+};
 
 function drawPowerUpIcon(
   g: Phaser.GameObjects.Graphics,
@@ -502,6 +530,53 @@ function drawPowerUpIcon(
 ): void {
   const s = radius * 0.5;
   switch (type) {
+    case 'SPEED_BOOST': {
+      g.lineStyle(1.5, 0xffffff, 0.9);
+      g.lineBetween(x - s * 0.6, y, x + s * 0.1, y - s * 0.7);
+      g.lineBetween(x + s * 0.1, y - s * 0.7, x - s * 0.2, y);
+      g.lineBetween(x - s * 0.2, y, x + s * 0.6, y + s * 0.7);
+      const spark = Math.sin(frameCount * 0.2) * 0.3;
+      g.fillStyle(0xffff88, 0.7 + spark);
+      g.fillCircle(x + s * 0.6, y + s * 0.7, s * 0.2);
+      break;
+    }
+    case 'INVINCIBILITY': {
+      g.fillStyle(0xffffff, 0.8);
+      g.fillTriangle(
+        x, y - s * 0.8,
+        x - s * 0.7, y - s * 0.2,
+        x + s * 0.7, y - s * 0.2
+      );
+      g.fillRect(x - s * 0.7, y - s * 0.2, s * 1.4, s * 0.7);
+      g.fillTriangle(
+        x - s * 0.7, y + s * 0.5,
+        x + s * 0.7, y + s * 0.5,
+        x, y + s * 0.9
+      );
+      g.fillStyle(POWERUP_COLORS.INVINCIBILITY.core, 0.7);
+      g.fillCircle(x, y + s * 0.1, s * 0.25);
+      break;
+    }
+    case 'SCORE_MULTIPLIER': {
+      g.lineStyle(1.8, 0xffffff, 0.9);
+      g.lineBetween(x - s * 0.5, y - s * 0.5, x + s * 0.5, y + s * 0.5);
+      g.lineBetween(x + s * 0.5, y - s * 0.5, x - s * 0.5, y + s * 0.5);
+      const flash = Math.sin(frameCount * 0.12) * 0.2;
+      g.fillStyle(0xffffff, 0.6 + flash);
+      g.fillCircle(x, y, s * 0.15);
+      break;
+    }
+    case 'MAGNET': {
+      g.lineStyle(1.5, 0xffffff, 0.85);
+      g.beginPath();
+      g.arc(x, y - s * 0.1, s * 0.5, Math.PI, 0, false);
+      g.strokePath();
+      g.fillStyle(0xff4444, 0.8);
+      g.fillRect(x - s * 0.5 - s * 0.15, y - s * 0.1, s * 0.3, s * 0.7);
+      g.fillStyle(0x4444ff, 0.8);
+      g.fillRect(x + s * 0.5 - s * 0.15, y - s * 0.1, s * 0.3, s * 0.7);
+      break;
+    }
     case 'GHOST_MODE': {
       g.fillStyle(0xffffff, 0.8);
       g.fillCircle(x, y - s * 0.3, s * 0.8);
@@ -542,8 +617,6 @@ function drawPowerUpIcon(
       g.fillCircle(x, y, s * 0.2);
       break;
     }
-    default:
-      break;
   }
 }
 
@@ -553,32 +626,62 @@ function drawActivePowerUpHUD(
   width: number,
   height: number,
   frameCount: number,
-  drawText: (g: Phaser.GameObjects.Graphics, text: string, x: number, y: number, size: number, color: number, alpha: number) => void
+  drawText: DrawTextFn,
+  activePowerUps: ActivePowerUp[],
+  tickCount: number
 ): void {
-  const active = state.activeGlow;
-  if (active.length === 0) return;
+  if (activePowerUps.length === 0) return;
 
-  const newPowerUps = active.filter(a =>
-    a.type === 'GHOST_MODE' || a.type === 'FREEZE_TIME' || a.type === 'SHOCKWAVE'
-  );
+  const barWidth = 90;
+  const barHeight = 16;
+  const spacing = 20;
 
-  for (let i = 0; i < newPowerUps.length; i++) {
-    const ap = newPowerUps[i];
+  for (let i = 0; i < activePowerUps.length; i++) {
+    const ap = activePowerUps[i];
     const colors = POWERUP_COLORS[ap.type];
-    const bx = 8;
-    const by = height - 26 - i * 18;
-    const pulse = Math.sin(frameCount * 0.08 + i) * 0.15 + 0.85;
+    const label = POWERUP_LABELS[ap.type];
+    const remaining = Math.max(0, ap.endTime - tickCount);
+    const duration = getDurationForType(ap.type);
+    const ratio = duration > 0 ? remaining / duration : 0;
+    const seconds = Math.ceil(remaining / 10);
 
-    g.fillStyle(colors.core, 0.3 * pulse);
-    g.fillRoundedRect(bx, by, 80, 14, 3);
-    g.fillStyle(colors.core, 0.7 * ap.intensity * pulse);
-    g.fillRoundedRect(bx, by, 80 * ap.intensity, 14, 3);
+    const bx = 6;
+    const by = height - 22 - i * spacing;
+    const pulse = Math.sin(frameCount * 0.08 + i) * 0.12 + 0.88;
 
-    g.fillStyle(colors.accent, 0.9);
-    g.fillCircle(bx + 7, by + 7, 4);
+    g.fillStyle(0x000000, 0.45);
+    g.fillRoundedRect(bx - 2, by - 2, barWidth + 4, barHeight + 4, 4);
 
-    const label = ap.type === 'GHOST_MODE' ? 'GHOST' :
-                  ap.type === 'FREEZE_TIME' ? 'FREEZE' : 'BLAST';
-    drawText(g, label, bx + 16, by + 2, 8, colors.accent, 0.9);
+    g.fillStyle(colors.core, 0.25 * pulse);
+    g.fillRoundedRect(bx, by, barWidth, barHeight, 3);
+    g.fillStyle(colors.core, 0.75 * pulse);
+    g.fillRoundedRect(bx, by, barWidth * ratio, barHeight, 3);
+
+    g.lineStyle(1, colors.accent, 0.5 * pulse);
+    g.strokeRoundedRect(bx, by, barWidth, barHeight, 3);
+
+    g.fillStyle(colors.accent, 0.95);
+    g.fillCircle(bx + 8, by + barHeight / 2, 5);
+    drawPowerUpIcon(g, bx + 8, by + barHeight / 2, ap.type, 5, frameCount);
+
+    drawText(g, label, bx + 17, by + 3, 7, 0xffffff, 0.95);
+
+    const timeStr = String(seconds);
+    const timeColor = seconds <= 3 ? 0xff4444 : colors.accent;
+    const timeAlpha = seconds <= 3 ? 0.7 + Math.sin(frameCount * 0.2) * 0.3 : 0.85;
+    drawText(g, timeStr, bx + barWidth - timeStr.length * 5 - 4, by + 3, 7, timeColor, timeAlpha);
   }
+}
+
+function getDurationForType(type: PowerUpType): number {
+  const durations: Record<PowerUpType, number> = {
+    SPEED_BOOST: 50,
+    INVINCIBILITY: 40,
+    SCORE_MULTIPLIER: 60,
+    MAGNET: 45,
+    GHOST_MODE: 55,
+    FREEZE_TIME: 45,
+    SHOCKWAVE: 1,
+  };
+  return durations[type];
 }
