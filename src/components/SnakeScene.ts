@@ -1,5 +1,12 @@
 import Phaser from 'phaser';
 import {
+  Spiderling,
+  spawnSpiderlings,
+  updateSpiderlings,
+  drawSpiderlings,
+  drawEggFood,
+} from './spiderlings';
+import {
   createCleanEffectsState,
   initMotes,
   updateMotes,
@@ -767,6 +774,8 @@ export class SnakeScene extends Phaser.Scene {
   private lastFoodPos: Position | null = null;
   // Mystical bees swarming around
   private bees: MysticalBee[] = [];
+  // Baby spiders that burst from eggs when eaten
+  private spiderlingsList: Spiderling[] = [];
   // Rival snake - spectral AI nemesis
   private rivalSnake: RivalSnake | null = null;
   // Game over display
@@ -2835,6 +2844,7 @@ export class SnakeScene extends Phaser.Scene {
       this.frameCount
     );
     updateFireHearts(this.fireHearts);
+    updateSpiderlings(this.spiderlingsList);
     updateBackgroundBand(this.backgroundBand);
     updateObstacleEffects(
       this.obstacleRender,
@@ -2963,6 +2973,7 @@ export class SnakeScene extends Phaser.Scene {
         spawnShieldRing(this.sciFi, foodX, foodY);
         spawnShieldRing(this.sciFi, headX, headY);
         triggerElectricBurst(this.electricStorm, headX, headY, CELL_SIZE * 3);
+        spawnSpiderlings(this.spiderlingsList, headX, headY, 4 + Math.floor(Math.random() * 3));
       }
       this.lastSnakeLength = this.currentState.snake.length;
     }
@@ -4286,76 +4297,15 @@ export class SnakeScene extends Phaser.Scene {
     const food = this.currentState.food;
     const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
     const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
-    const pulseScale = 1 + Math.sin(this.frameCount * 0.15) * 0.08;
-    const glowPulse = 0.4 + Math.sin(this.frameCount * 0.1) * 0.2;
 
     this.spawnFoodParticles(foodX, foodY);
 
     for (const p of this.foodParticles) {
-      g.fillStyle(COLORS.food, p.life * 0.4);
+      g.fillStyle(0xf5e6d0, p.life * 0.3);
       g.fillCircle(p.x, p.y, p.size * p.life);
     }
 
-    const spiderSize = (CELL_SIZE / 2) * pulseScale;
-
-    g.fillStyle(0x000000, 0.4);
-    g.fillEllipse(foodX + 1.5, foodY + spiderSize * 0.6, spiderSize * 1.0, spiderSize * 0.3);
-
-    g.fillStyle(0xff2244, glowPulse * 0.12);
-    g.fillCircle(foodX, foodY, spiderSize + 14);
-    g.fillStyle(0xcc1122, glowPulse * 0.18);
-    g.fillCircle(foodX, foodY, spiderSize + 7);
-
-    g.fillStyle(0x111111, 0.95);
-    g.fillCircle(foodX, foodY + spiderSize * 0.15, spiderSize * 0.55);
-    g.fillCircle(foodX, foodY - spiderSize * 0.25, spiderSize * 0.4);
-
-    const legWave = Math.sin(this.frameCount * 0.12) * 2;
-    g.lineStyle(1.5, 0x222222, 0.9);
-    const legPairs = [
-      { angle: -0.6, len: spiderSize * 1.3, mid: spiderSize * 0.7 },
-      { angle: -0.2, len: spiderSize * 1.5, mid: spiderSize * 0.8 },
-      { angle: 0.2, len: spiderSize * 1.5, mid: spiderSize * 0.8 },
-      { angle: 0.6, len: spiderSize * 1.3, mid: spiderSize * 0.7 },
-    ];
-    for (let side = -1; side <= 1; side += 2) {
-      for (let li = 0; li < legPairs.length; li++) {
-        const leg = legPairs[li];
-        const baseX = foodX + side * spiderSize * 0.3;
-        const baseY = foodY + leg.angle * spiderSize * 0.5;
-        const midX = baseX + side * leg.mid * 0.7;
-        const midY = baseY - leg.mid * 0.5 + legWave * (li % 2 === 0 ? 1 : -1);
-        const tipX = baseX + side * leg.len;
-        const tipY = baseY + leg.len * 0.3 + legWave * (li % 2 === 0 ? -1 : 1);
-        g.lineBetween(baseX, baseY, midX, midY);
-        g.lineBetween(midX, midY, tipX, tipY);
-      }
-    }
-
-    const eyeGlow = 0.8 + Math.sin(this.frameCount * 0.1) * 0.2;
-    g.fillStyle(0xcc1122, eyeGlow);
-    g.fillCircle(foodX - spiderSize * 0.15, foodY - spiderSize * 0.35, spiderSize * 0.12);
-    g.fillCircle(foodX + spiderSize * 0.15, foodY - spiderSize * 0.35, spiderSize * 0.12);
-    g.fillStyle(0xff4466, eyeGlow * 0.6);
-    g.fillCircle(foodX - spiderSize * 0.15, foodY - spiderSize * 0.35, spiderSize * 0.06);
-    g.fillCircle(foodX + spiderSize * 0.15, foodY - spiderSize * 0.35, spiderSize * 0.06);
-
-    g.fillStyle(0xcc1122, 0.6);
-    g.fillCircle(foodX, foodY + spiderSize * 0.1, spiderSize * 0.18);
-    const hourGlassSize = spiderSize * 0.1;
-    g.fillTriangle(
-      foodX - hourGlassSize, foodY + spiderSize * 0.1 - hourGlassSize,
-      foodX + hourGlassSize, foodY + spiderSize * 0.1 - hourGlassSize,
-      foodX, foodY + spiderSize * 0.1
-    );
-    g.fillTriangle(
-      foodX - hourGlassSize, foodY + spiderSize * 0.1 + hourGlassSize,
-      foodX + hourGlassSize, foodY + spiderSize * 0.1 + hourGlassSize,
-      foodX, foodY + spiderSize * 0.1
-    );
-
-    g.lineStyle(0.5, 0xdddddd, 0.3);
-    g.lineBetween(foodX, foodY - spiderSize * 0.6, foodX, foodY - spiderSize * 2);
+    drawEggFood(g, foodX, foodY, CELL_SIZE, this.frameCount);
   }
 
   private drawEnergyTendrils(g: Phaser.GameObjects.Graphics, foodX: number, foodY: number): void {
