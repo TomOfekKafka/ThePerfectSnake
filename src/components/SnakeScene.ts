@@ -241,13 +241,13 @@ import {
   drawOwnedUpgradesBar,
 } from './upgradeHud';
 import {
-  SudokuState,
-  createSudokuState,
-  updateSudokuVisited,
-  updateSudokuEffects,
-  resetSudokuVisited,
-  drawSudokuGrid,
-} from './sudokuGrid';
+  SilkState,
+  createSilkState,
+  updateSilkVisited,
+  updateSilkEffects,
+  resetSilkVisited,
+  drawSilkWeave,
+} from './silkWeave';
 import {
   PoliceVisualsState,
   createPoliceVisualsState,
@@ -808,7 +808,7 @@ export class SnakeScene extends Phaser.Scene {
   private upgradeHud: UpgradeHudState = createUpgradeHudState();
   private lastFoodEaten = 0;
   private upgradeKeyHandler: ((e: KeyboardEvent) => void) | null = null;
-  private sudoku: SudokuState = createSudokuState();
+  private silk: SilkState = createSilkState();
   private policeVisuals: PoliceVisualsState = createPoliceVisualsState();
   private lastPoliceCaughtFlash = 0;
   private sciFi: SciFiState = createSciFiState();
@@ -2467,7 +2467,7 @@ export class SnakeScene extends Phaser.Scene {
       this.upgradeState = createUpgradeState();
       this.upgradeHud = createUpgradeHudState();
       this.lastFoodEaten = 0;
-      this.sudoku = resetSudokuVisited(this.sudoku);
+      this.silk = resetSilkVisited(this.silk);
       this.deathCinematic = createDeathCinematicState();
       this.deathDelayActive = false;
       this.deathDelayFrames = 0;
@@ -2820,9 +2820,9 @@ export class SnakeScene extends Phaser.Scene {
     }
 
     if (this.currentState && this.currentState.gameStarted && !this.currentState.gameOver) {
-      this.sudoku = updateSudokuVisited(this.sudoku, this.currentState.snake);
+      this.silk = updateSilkVisited(this.silk, this.currentState.snake);
     }
-    this.sudoku = updateSudokuEffects(this.sudoku);
+    this.silk = updateSilkEffects(this.silk);
 
     {
       const police = this.currentState?.police;
@@ -2928,7 +2928,7 @@ export class SnakeScene extends Phaser.Scene {
     drawSpaceBackground(g, this.spaceBackground, width, height);
     drawSciFiGrid(g, this.sciFi, width, height, CELL_SIZE, GRID_SIZE);
     drawCrownBeam(g, this.cosmicCrown.beam);
-    drawSudokuGrid(g, this.sudoku, CELL_SIZE, GRID_SIZE, this.frameCount, this.drawDigit.bind(this));
+    drawSilkWeave(g, this.silk, CELL_SIZE, GRID_SIZE, this.frameCount);
     drawMotes(g, this.cleanEffects);
 
     if (!this.currentState) return;
