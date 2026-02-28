@@ -23,13 +23,13 @@ const FLAME_LIFETIME = 42;
 const EMBER_LIFETIME = 55;
 const SMOKE_LIFETIME = 60;
 
-const FIRE_WHITE = 0xffeeff;
-const FIRE_CORE = 0xeeaaff;
-const FIRE_INNER = 0xcc55ee;
-const FIRE_MID = 0xaa22cc;
-const FIRE_OUTER = 0x7711aa;
-const FIRE_DEEP = 0x440066;
-const FIRE_SMOKE = 0x220033;
+const FIRE_WHITE = 0xffffff;
+const FIRE_CORE = 0xf0eef5;
+const FIRE_INNER = 0xe0d8e8;
+const FIRE_MID = 0xd0c8d8;
+const FIRE_OUTER = 0xc0b8c8;
+const FIRE_DEEP = 0xb0a8b8;
+const FIRE_SMOKE = 0xa098a8;
 
 export function createFireTrailState(): FireTrailState {
   return {

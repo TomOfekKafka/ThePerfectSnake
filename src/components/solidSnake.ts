@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { FaceDirection, FaceState } from './snakeFace';
 import { getHouseColors } from './wizardEffects';
-import { drawCurveSnake } from './curveSnake';
+import { drawSpermSnake } from './spermSnake';
 
 export interface SolidSegment {
   cx: number;
@@ -192,5 +192,5 @@ export function drawSolidSnake(
   _direction: FaceDirection,
   _faceState: FaceState
 ): void {
-  drawCurveSnake(g, snake, cellSize, frameCount);
+  drawSpermSnake(g, snake, cellSize, frameCount);
 }
