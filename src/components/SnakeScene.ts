@@ -92,8 +92,6 @@ import {
 import {
   createPulseGlowState,
   spawnPulseGlow,
-  updatePulseGlows,
-  drawPulseGlows,
   PulseGlowState,
 } from './pulseGlow';
 import {
@@ -115,12 +113,6 @@ import {
   PortalEffectsState,
 } from './portalEffects';
 import {
-  createWallBorderState,
-  updateWallBorder,
-  drawWallBorder,
-  WallBorderState,
-} from './wallBorder';
-import {
   createWizardEffectsState,
   spawnWandSparkles,
   updateWandSparkles,
@@ -136,12 +128,6 @@ import {
   createHogwartsBackground,
   HogwartsBackgroundState,
 } from './hogwartsBackground';
-import {
-  BodyPulseState,
-  createBodyPulseState,
-  updateBodyPulse,
-  drawBodyPulse,
-} from './bodyPulse';
 import {
   PatronusTrailState,
   createPatronusTrailState,
@@ -183,7 +169,6 @@ import {
 import {
   createCountryMapState,
   updateCountryMap,
-  drawCountryMap,
   CountryMapState,
 } from './countryMaps';
 import {
@@ -195,24 +180,6 @@ import {
   drawStarBursts,
   CosmicCrownState,
 } from './cosmicCrownEffects';
-import {
-  createPinballState,
-  shouldActivatePinball,
-  activatePinball,
-  updatePinball,
-  checkBumperCollision,
-  triggerBumperHit,
-  drawPinballBumpers,
-  drawPinballFlippers,
-  drawPinballLanes,
-  drawPinballHitEffects,
-  drawPinballBanner,
-  drawPinballScorePopups,
-  PinballState,
-} from './pinballEffects';
-import {
-  computeBounceDirection,
-} from '../game/pinball';
 import {
   createHugeHeadState,
   updateHugeHead,
@@ -249,9 +216,6 @@ import {
 import {
   UpgradeHudState,
   createUpgradeHudState,
-  updateUpgradeHud,
-  drawUpgradeChoicePanel,
-  drawOwnedUpgradesBar,
 } from './upgradeHud';
 import {
   SilkState,
@@ -303,9 +267,6 @@ import {
 import {
   TitleScreenState,
   createTitleScreenState,
-  initTitleScreen,
-  updateTitleScreen,
-  drawTitleScreen,
 } from './titleScreen';
 import {
   DeathCinematicState,
@@ -334,17 +295,7 @@ import {
 import {
   MilestoneState,
   createMilestoneState,
-  checkMilestone,
-  updateMilestones,
-  drawMilestones,
-  resetMilestones,
 } from './milestones';
-import {
-  SpeedLinesState,
-  createSpeedLinesState,
-  updateSpeedLines,
-  drawSpeedLines,
-} from './speedLines';
 import {
   FireHeartsState,
   createFireHeartsState,
@@ -362,20 +313,11 @@ import {
   drawObstacles,
 } from './obstacleRenderer';
 import {
-  GrowthPopupState,
-  createGrowthPopupState,
-  spawnGrowthPopup,
-  updateGrowthPopups,
-  drawGrowthPopups,
-} from './growthPopup';
-import {
   SameDirectionExplosionState,
   createSameDirectionExplosionState,
   triggerSameDirectionExplosion,
   updateSameDirectionExplosion,
   drawSameDirectionExplosion,
-  drawExplosionText,
-  getExplosionShake,
 } from './sameDirectionExplosion';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
