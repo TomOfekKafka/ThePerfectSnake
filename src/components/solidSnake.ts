@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { FaceDirection, FaceState } from './snakeFace';
 import { getHouseColors } from './wizardEffects';
+import { drawCurveSnake } from './curveSnake';
 
 export interface SolidSegment {
   cx: number;
@@ -191,28 +192,5 @@ export function drawSolidSnake(
   _direction: FaceDirection,
   _faceState: FaceState
 ): void {
-  const len = snake.length;
-  if (len === 0) return;
-
-  const segments = snake.map((s, i) => {
-    const prev = i > 0 ? snake[i - 1] : undefined;
-    return computeSolidSegment(
-      s.x, s.y, cellSize, i, len,
-      prev?.x, prev?.y
-    );
-  });
-
-  for (let i = len - 1; i >= 0; i--) {
-    drawSolidShadow(g, segments[i]);
-  }
-
-  drawSolidConnectors(g, segments);
-
-  for (let i = len - 1; i >= 0; i--) {
-    if (segments[i].isHead) continue;
-    drawSolidBody(g, segments[i], frameCount);
-    drawArmorPlate(g, segments[i], frameCount);
-  }
-
-  drawSimpleHead(g, segments[0], frameCount);
+  drawCurveSnake(g, snake, cellSize, frameCount);
 }
