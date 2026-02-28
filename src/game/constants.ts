@@ -106,4 +106,13 @@ export const createInitialState = (): GameState => ({
   currentRealm: 0,
   realmPortal: null,
   lastRealmTransitionFood: 0,
+  rival: {
+    segments: [],
+    direction: 'LEFT' as const,
+    active: false,
+    growPending: 0,
+    moveTimer: 0,
+    spawnCooldown: 0,
+    foodEaten: 0,
+  },
 });

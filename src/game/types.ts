@@ -125,6 +125,7 @@ export interface GameState {
   currentRealm: number;
   realmPortal: RealmPortal | null;
   lastRealmTransitionFood: number;
+  rival: RivalSnakeState;
 }
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
