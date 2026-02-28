@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { lerpColor } from './colorUtils';
+import { C } from './palette';
 
 interface Vec2 {
   x: number;
@@ -135,23 +137,12 @@ function getNormalAt(points: Vec2[], index: number): Vec2 {
   return { x: -dy / mag, y: dx / mag };
 }
 
-function lerpChannel(a: number, b: number, t: number): number {
-  return Math.round(a + (b - a) * t);
-}
-
-function lerpColor(c1: number, c2: number, t: number): number {
-  const r = lerpChannel((c1 >> 16) & 0xff, (c2 >> 16) & 0xff, t);
-  const gc = lerpChannel((c1 >> 8) & 0xff, (c2 >> 8) & 0xff, t);
-  const b = lerpChannel(c1 & 0xff, c2 & 0xff, t);
-  return (Math.min(0xff, r) << 16) | (Math.min(0xff, gc) << 8) | Math.min(0xff, b);
-}
-
-const NOIR_SILVER = 0xc8c8d0;
-const NOIR_LIGHT = 0xa0a0a8;
-const NOIR_MID = 0x707078;
-const NOIR_DARK = 0x404048;
-const NOIR_SHADOW = 0x202028;
-const NOIR_WHITE = 0xe8e8f0;
+const NOIR_SILVER = C.NOIR.silver;
+const NOIR_LIGHT = C.NOIR.light;
+const NOIR_MID = C.NOIR.mid;
+const NOIR_DARK = C.NOIR.dark;
+const NOIR_SHADOW = C.NOIR.shadow;
+const NOIR_WHITE = C.NOIR.white;
 
 function getNoirColors(
   progress: number

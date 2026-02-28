@@ -1,27 +1,19 @@
-function lerpChannel(a: number, b: number, t: number): number {
-  return Math.round(a + (b - a) * t);
-}
+import { lerpColor } from './colorUtils';
+import { C } from './palette';
 
-function lerpColor(c1: number, c2: number, t: number): number {
-  const r = lerpChannel((c1 >> 16) & 0xff, (c2 >> 16) & 0xff, t);
-  const g = lerpChannel((c1 >> 8) & 0xff, (c2 >> 8) & 0xff, t);
-  const b = lerpChannel(c1 & 0xff, c2 & 0xff, t);
-  return (Math.min(0xff, r) << 16) | (Math.min(0xff, g) << 8) | Math.min(0xff, b);
-}
+const WHITE_HOT = C.VIOLET_FIRE.whiteHot;
+const VIOLET_FIRE = C.VIOLET_FIRE.violet;
+const MAGENTA_FIRE = C.VIOLET_FIRE.magenta;
+const PURPLE_FIRE = C.VIOLET_FIRE.purple;
+const DEEP_EMBER = C.VIOLET_FIRE.ember;
 
-const WHITE_HOT = 0xf8eeff;
-const VIOLET_FIRE = 0xcc55ee;
-const MAGENTA_FIRE = 0xaa22cc;
-const PURPLE_FIRE = 0x7711aa;
-const DEEP_EMBER = 0x440066;
+const HIGHLIGHT_WHITE = C.VIOLET_FIRE.highlightWhite;
+const HIGHLIGHT_PINK = C.VIOLET_FIRE.highlightPink;
+const HIGHLIGHT_VIOLET = C.VIOLET_FIRE.highlightViolet;
 
-const HIGHLIGHT_WHITE = 0xffffff;
-const HIGHLIGHT_PINK = 0xeeaaff;
-const HIGHLIGHT_VIOLET = 0xbb66dd;
-
-const EDGE_PURPLE = 0x551188;
-const EDGE_DEEP = 0x330066;
-const EDGE_EMBER = 0x220044;
+const EDGE_PURPLE = C.VIOLET_FIRE.edgePurple;
+const EDGE_DEEP = C.VIOLET_FIRE.edgeDeep;
+const EDGE_EMBER = C.VIOLET_FIRE.edgeEmber;
 
 export function getFireColors(
   segmentIndex: number,
