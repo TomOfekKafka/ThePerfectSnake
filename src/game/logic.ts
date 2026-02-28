@@ -3,7 +3,7 @@
  * Easy to test, easy to reason about
  */
 
-import { Position, Direction, GameState, OPPOSITE_DIRECTIONS, PowerUp, PowerUpType, ActivePowerUp } from './types';
+import { Position, Direction, GameState, OPPOSITE_DIRECTIONS, PowerUp, PowerUpType, ActivePowerUp, RealmPortal } from './types';
 import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE, BONUS_FOOD_SCORE, FLAG_FOOD_MULTIPLIER, OBSTACLE_MIN_FOOD_EATEN, OBSTACLE_SPAWN_INTERVAL } from './constants';
 import { tickPhantom } from './phantomSnake';
 import { shouldSpawnBonusFood, generateBonusFood, isBonusFoodExpired, shrinkSnake } from './bonusFood';
@@ -14,6 +14,7 @@ import { tickPolice, POLICE_PENALTY } from './policeChase';
 import { FAKE_FOOD_PENALTY } from './constants';
 import { shouldSpawnObstacles, spawnObstacles, collidesWithObstacle } from './obstacles';
 import { randomGrowth, tickGrowPending } from './growthBurst';
+import { shouldSpawnRealmPortal, generateRealmPortal, isRealmPortalExpired, checkRealmPortalEntry } from './realmPortal';
 
 /** Check if two positions are equal */
 export const positionsEqual = (a: Position, b: Position): boolean =>
@@ -248,6 +249,22 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       ? { ...policeResult.police, active: false, segments: [], spawnCooldown: 15 }
       : policeResult.police;
 
+    let realmPortal = state.realmPortal;
+    let currentRealm = state.currentRealm;
+    let lastRealmTransitionFood = state.lastRealmTransitionFood;
+
+    if (realmPortal && isRealmPortalExpired(realmPortal, tickCount)) {
+      realmPortal = null;
+    }
+    if (realmPortal && checkRealmPortalEntry(newHead, realmPortal)) {
+      currentRealm = realmPortal.targetRealm;
+      lastRealmTransitionFood = foodEatenCount;
+      realmPortal = null;
+    }
+    if (!realmPortal && shouldSpawnRealmPortal(null, foodEatenCount, lastRealmTransitionFood)) {
+      realmPortal = generateRealmPortal(resultSnake, newFood, tickCount, currentRealm, newPowerUp?.position);
+    }
+
     return {
       ...state,
       snake: resultSnake,
@@ -272,6 +289,9 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       obstacles: newObstacles,
       lastObstacleSpawnFood: newLastObstacleSpawnFood,
       growPending: growth - 1,
+      currentRealm,
+      realmPortal,
+      lastRealmTransitionFood,
     };
   }
 
@@ -314,6 +334,22 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     ? { ...policeResult.police, active: false, segments: [], spawnCooldown: 15 }
     : policeResult.police;
 
+  let realmPortal = state.realmPortal;
+  let currentRealm = state.currentRealm;
+  let lastRealmTransitionFood = state.lastRealmTransitionFood;
+
+  if (realmPortal && isRealmPortalExpired(realmPortal, tickCount)) {
+    realmPortal = null;
+  }
+  if (realmPortal && checkRealmPortalEntry(newHead, realmPortal)) {
+    currentRealm = realmPortal.targetRealm;
+    lastRealmTransitionFood = foodEatenCount;
+    realmPortal = null;
+  }
+  if (!realmPortal && shouldSpawnRealmPortal(null, foodEatenCount, lastRealmTransitionFood)) {
+    realmPortal = generateRealmPortal(resultSnake, phantomFood, tickCount, currentRealm, newPowerUp?.position);
+  }
+
   return {
     ...state,
     snake: resultSnake,
@@ -337,6 +373,9 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     obstacles: finalObstacles,
     lastObstacleSpawnFood: finalLastObstacleSpawnFood,
     growPending: growResult.growPending,
+    currentRealm,
+    realmPortal,
+    lastRealmTransitionFood,
   };
 };
 
@@ -385,6 +424,9 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
   immortalCharges: 1,
   immortalRechargeProgress: 0,
   deathReason: null,
+  currentRealm: 0,
+  realmPortal: null,
+  lastRealmTransitionFood: 0,
 });
 
 /** Revive the snake after a correct trivia answer. Trims half the tail and spawns safe. */
@@ -418,5 +460,6 @@ export const reviveSnake = (state: GameState): GameState => {
     immortalActive: false,
     immortalProgress: 0,
     deathReason: null,
+    realmPortal: null,
   };
 };

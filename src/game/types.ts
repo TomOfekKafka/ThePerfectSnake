@@ -28,6 +28,12 @@ export interface PortalPair {
   cooldown: number;
 }
 
+export interface RealmPortal {
+  position: Position;
+  spawnTick: number;
+  targetRealm: number;
+}
+
 export interface Wormhole {
   entry: Position;
   exit: Position;
@@ -116,6 +122,9 @@ export interface GameState {
   immortalCharges: number;
   immortalRechargeProgress: number;
   deathReason: DeathReason;
+  currentRealm: number;
+  realmPortal: RealmPortal | null;
+  lastRealmTransitionFood: number;
 }
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';

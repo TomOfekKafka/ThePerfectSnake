@@ -38,6 +38,9 @@ describe('GameBoard', () => {
       immortalCharges: 0,
       immortalRechargeProgress: 0,
       deathReason: null,
+      currentRealm: 0,
+      realmPortal: null,
+      lastRealmTransitionFood: 0,
     } satisfies GameState;
 
     const { container } = render(<GameBoard gameState={mockGameState} gridSize={20} />);

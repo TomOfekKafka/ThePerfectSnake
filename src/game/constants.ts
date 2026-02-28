@@ -103,4 +103,7 @@ export const createInitialState = (): GameState => ({
   immortalCharges: 1,
   immortalRechargeProgress: 0,
   deathReason: null,
+  currentRealm: 0,
+  realmPortal: null,
+  lastRealmTransitionFood: 0,
 });
