@@ -244,6 +244,10 @@ export function updateRipples(state: CleanEffectsState): void {
   }
 }
 
+export function triggerScreenShake(state: CleanEffectsState, intensity: number): void {
+  state.screenShake = Math.max(state.screenShake, intensity);
+}
+
 export function spawnDramaRings(state: CleanEffectsState, x: number, y: number): void {
   const ringCount = 3;
   for (let i = 0; i < ringCount; i++) {
@@ -259,6 +263,7 @@ export function spawnDramaRings(state: CleanEffectsState, x: number, y: number):
       thickness: 3 - i * 0.5,
     });
   }
+  triggerScreenShake(state, 8);
 }
 
 
@@ -275,7 +280,8 @@ export function updateDramaRings(state: CleanEffectsState): void {
     }
   }
 
-  state.screenShake = 0;
+  state.screenShake *= 0.82;
+  if (state.screenShake < 0.3) state.screenShake = 0;
 }
 
 export function dramaShakeOffset(state: CleanEffectsState): { x: number; y: number } {

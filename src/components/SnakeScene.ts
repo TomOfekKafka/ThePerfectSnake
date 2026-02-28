@@ -36,6 +36,7 @@ import {
   updateFoodOrbits,
   drawFoodOrbits,
   recolorFoodOrbits,
+  triggerScreenShake,
   CLEAN_COLORS,
   CleanEffectsState,
 } from './cleanEffects';
@@ -2382,7 +2383,9 @@ export class SnakeScene extends Phaser.Scene {
       spawnPulseGlow(this.pulseGlow, headX, headY, 1.0, this.hueOffset);
       triggerCombo(this.comboStreak, headX, headY, this.frameCount);
       advanceFlag(this.flagDisplay);
-      fireLaser(this.laserBeam, headX, headY, headX, headY);
+      const foodPx = state.food.x * CELL_SIZE + CELL_SIZE / 2;
+      const foodPy = state.food.y * CELL_SIZE + CELL_SIZE / 2;
+      fireLaser(this.laserBeam, headX, headY, foodPx, foodPy);
       this.hugeHead = triggerChomp(this.hugeHead);
     }
     this.lastSnakeLength = state.snake.length;
@@ -2858,6 +2861,8 @@ export class SnakeScene extends Phaser.Scene {
       );
       if (laserHit) {
         spawnPulseGlow(this.pulseGlow, laserFoodX, laserFoodY, 0.6, this.hueOffset);
+        triggerScreenShake(this.cleanEffects, 5);
+        this.screenFlashAlpha = Math.max(this.screenFlashAlpha, 0.15);
       }
 
       if (this.frameCount % 3 === 0) {
