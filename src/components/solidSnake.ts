@@ -1,8 +1,6 @@
 import Phaser from 'phaser';
 import { FaceDirection, FaceState } from './snakeFace';
 import { getHouseColors } from './wizardEffects';
-import { drawDragonHead } from './dragonHead';
-import { HugeHeadState, computeHugeHeadScale, computeBiteAngle } from './hugeHead';
 
 export interface SolidSegment {
   cx: number;
@@ -104,22 +102,32 @@ function drawSolidBody(
   g.fillRect(seg.cx - half + bevel + 1, seg.cy - half + bevel + 1, specSize, specSize);
 }
 
-function drawSolidHeadAsDragon(
+function drawSimpleHead(
   g: Phaser.GameObjects.Graphics,
   seg: SolidSegment,
-  frameCount: number,
-  direction: FaceDirection,
-  faceState: FaceState,
-  hugeHead?: HugeHeadState
+  frameCount: number
 ): void {
-  if (hugeHead) {
-    const scale = computeHugeHeadScale(frameCount, hugeHead);
-    const biteAngle = computeBiteAngle(frameCount, hugeHead);
-    const hugeSeg = { ...seg, size: seg.size * scale };
-    drawDragonHead(g, hugeSeg, frameCount, direction, faceState, biteAngle);
-  } else {
-    drawDragonHead(g, seg, frameCount, direction, faceState);
-  }
+  const size = seg.size * 1.08;
+  const half = size / 2;
+  const house = getHouseColors(seg.index, seg.snakeLen);
+  const bevel = Math.max(2, size * 0.12);
+
+  g.fillStyle(house.edge, 0.95);
+  g.fillRect(seg.cx - half, seg.cy - half, size, size);
+
+  g.fillStyle(house.base, 0.95);
+  g.fillRect(seg.cx - half + bevel, seg.cy - half + bevel, size - bevel * 2, size - bevel * 2);
+
+  g.fillStyle(house.highlight, 0.35);
+  g.fillRect(seg.cx - half + bevel, seg.cy - half + bevel, size - bevel * 2, bevel);
+
+  g.fillStyle(house.highlight, 0.25);
+  g.fillRect(seg.cx - half + bevel, seg.cy - half + bevel, bevel, size - bevel * 2);
+
+  const shimmer = 0.15 + Math.sin(frameCount * 0.04) * 0.08;
+  g.fillStyle(0xffffff, shimmer);
+  const specSize = size * 0.22;
+  g.fillRect(seg.cx - half + bevel + 1, seg.cy - half + bevel + 1, specSize, specSize);
 }
 
 function drawSolidConnectors(
@@ -180,9 +188,8 @@ export function drawSolidSnake(
   snake: { x: number; y: number }[],
   cellSize: number,
   frameCount: number,
-  direction: FaceDirection,
-  faceState: FaceState,
-  hugeHead?: HugeHeadState
+  _direction: FaceDirection,
+  _faceState: FaceState
 ): void {
   const len = snake.length;
   if (len === 0) return;
@@ -207,5 +214,5 @@ export function drawSolidSnake(
     drawArmorPlate(g, segments[i], frameCount);
   }
 
-  drawSolidHeadAsDragon(g, segments[0], frameCount, direction, faceState, hugeHead);
+  drawSimpleHead(g, segments[0], frameCount);
 }
