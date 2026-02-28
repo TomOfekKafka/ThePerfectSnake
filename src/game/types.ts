@@ -7,7 +7,7 @@ export interface Position {
   y: number;
 }
 
-export type PowerUpType = 'SPEED_BOOST' | 'INVINCIBILITY' | 'SCORE_MULTIPLIER' | 'MAGNET';
+export type PowerUpType = 'SPEED_BOOST' | 'INVINCIBILITY' | 'SCORE_MULTIPLIER' | 'MAGNET' | 'GHOST_MODE' | 'FREEZE_TIME' | 'SHOCKWAVE';
 
 export interface PowerUp {
   position: Position;

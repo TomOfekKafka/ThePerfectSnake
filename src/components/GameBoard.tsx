@@ -2,36 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import './GameBoard.css';
 import type { SnakeScene } from './SnakeScene';
 import type { TriviaState } from '../game/trivia';
-
-interface Position {
-  x: number;
-  y: number;
-}
-
-type PowerUpType = 'SPEED_BOOST' | 'INVINCIBILITY' | 'SCORE_MULTIPLIER' | 'MAGNET';
-
-interface PowerUp {
-  position: Position;
-  type: PowerUpType;
-  spawnTime: number;
-  duration: number;
-}
-
-interface ActivePowerUp {
-  type: PowerUpType;
-  endTime: number;
-}
-
-interface GameState {
-  snake: Position[];
-  food: Position;
-  gameOver: boolean;
-  gameStarted: boolean;
-  score: number;
-  powerUp?: PowerUp | null;
-  activePowerUps?: ActivePowerUp[];
-  tickCount?: number;
-}
+import type { GameState, PowerUpType } from '../game/types';
 
 interface GameBoardProps {
   gameState: GameState;
@@ -85,6 +56,9 @@ const POWERUP_COLORS: Record<PowerUpType, { main: string; glow: string; symbol: 
   INVINCIBILITY: { main: '#00ffff', glow: '#0088ff', symbol: '🛡' },
   SCORE_MULTIPLIER: { main: '#ff00ff', glow: '#8800ff', symbol: '×3' },
   MAGNET: { main: '#00ff88', glow: '#00ff00', symbol: '◎' },
+  GHOST_MODE: { main: '#aa88ff', glow: '#6644cc', symbol: '👻' },
+  FREEZE_TIME: { main: '#88ddff', glow: '#4488ff', symbol: '❄' },
+  SHOCKWAVE: { main: '#ff8844', glow: '#ff4400', symbol: '⚡' },
 };
 
 // Animation frame counter

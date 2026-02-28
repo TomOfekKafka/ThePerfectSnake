@@ -119,7 +119,9 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
   const head = state.snake[0];
   let newHead = getNextHead(head, direction);
 
-  if (immortal) {
+  const isGhostMode = hasPowerUp(state.activePowerUps, 'GHOST_MODE');
+
+  if (immortal || isGhostMode) {
     newHead = wrapPosition(newHead);
   } else {
     const isInvincible = hasPowerUp(state.activePowerUps, 'INVINCIBILITY');
@@ -145,7 +147,11 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
   let newPowerUp = state.powerUp;
   let newActivePowerUps = updateActivePowerUps(state.activePowerUps, tickCount);
 
+  let shockwaveTriggered = false;
   if (state.powerUp && positionsEqual(newHead, state.powerUp.position)) {
+    if (state.powerUp.type === 'SHOCKWAVE') {
+      shockwaveTriggered = true;
+    }
     newActivePowerUps = activatePowerUp(newActivePowerUps, state.powerUp.type, tickCount);
     newPowerUp = null;
   }
@@ -214,21 +220,33 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       resultSnake = shrinkFromFake(resultSnake);
     }
     const newFood = generateFood(resultSnake, newPowerUp?.position);
-    const phantomResult = tickPhantom(state.phantom, newFood, resultSnake, foodEatenCount, false);
+    const isFrozen = hasPowerUp(newActivePowerUps, 'FREEZE_TIME');
+    const phantomResult = isFrozen
+      ? { phantom: state.phantom, foodStolen: false }
+      : tickPhantom(state.phantom, newFood, resultSnake, foodEatenCount, false);
     let spawnedFlagFood = newFlagFood;
     if (!spawnedFlagFood && shouldSpawnFlagFood(foodEatenCount, spawnedFlagFood)) {
       spawnedFlagFood = generateFlagFood(resultSnake, newFood, tickCount, newPowerUp?.position);
     }
     const isInvincibleNow = hasPowerUp(newActivePowerUps, 'INVINCIBILITY') || immortal;
-    const policeResult = tickPolice(state.police, resultSnake, foodEatenCount, false, isInvincibleNow);
+    const policeResult = isFrozen
+      ? { police: state.police, caughtPlayer: false }
+      : tickPolice(state.police, resultSnake, foodEatenCount, false, isInvincibleNow);
     const policePenalty = policeResult.caughtPlayer ? POLICE_PENALTY : 0;
 
-    let newObstacles = state.obstacles;
-    let newLastObstacleSpawnFood = state.lastObstacleSpawnFood;
-    if (shouldSpawnObstacles(newObstacles, foodEatenCount, newLastObstacleSpawnFood)) {
+    let newObstacles = shockwaveTriggered ? [] : state.obstacles;
+    let newLastObstacleSpawnFood = shockwaveTriggered ? foodEatenCount : state.lastObstacleSpawnFood;
+    if (!shockwaveTriggered && shouldSpawnObstacles(newObstacles, foodEatenCount, newLastObstacleSpawnFood)) {
       newObstacles = spawnObstacles(newObstacles, resultSnake, newFood, tickCount, newPowerUp?.position);
       newLastObstacleSpawnFood = foodEatenCount;
     }
+
+    const shockwavePhantom = shockwaveTriggered
+      ? { ...phantomResult.phantom, active: false, segments: [], spawnCooldown: 15 }
+      : phantomResult.phantom;
+    const shockwavePolice = shockwaveTriggered
+      ? { ...policeResult.police, active: false, segments: [], spawnCooldown: 15 }
+      : policeResult.police;
 
     return {
       ...state,
@@ -244,13 +262,13 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       lastPortalDespawn: 0,
       wormhole: null,
       lastWormholeDespawn: 0,
-      phantom: phantomResult.phantom,
+      phantom: shockwavePhantom,
       bonusFood: newBonusFood,
       flagFood: spawnedFlagFood,
       cashItems,
       totalCash: state.totalCash + cashGain,
-      fakeFoods,
-      police: policeResult.police,
+      fakeFoods: shockwaveTriggered ? [] : fakeFoods,
+      police: shockwavePolice,
       obstacles: newObstacles,
       lastObstacleSpawnFood: newLastObstacleSpawnFood,
       growPending: growth - 1,
@@ -272,14 +290,29 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     newBonusFood = generateBonusFood(resultSnake, state.food, tickCount, newPowerUp?.position);
   }
 
-  const phantomResult = tickPhantom(state.phantom, state.food, resultSnake, foodEatenCount, false);
+  const isFrozen = hasPowerUp(newActivePowerUps, 'FREEZE_TIME');
+  const phantomResult = isFrozen
+    ? { phantom: state.phantom, foodStolen: false }
+    : tickPhantom(state.phantom, state.food, resultSnake, foodEatenCount, false);
   const phantomFood = phantomResult.foodStolen
     ? generateFood(resultSnake, newPowerUp?.position)
     : state.food;
 
   const isInvincibleNow = hasPowerUp(newActivePowerUps, 'INVINCIBILITY') || immortal;
-  const policeResult = tickPolice(state.police, resultSnake, foodEatenCount, false, isInvincibleNow);
+  const policeResult = isFrozen
+    ? { police: state.police, caughtPlayer: false }
+    : tickPolice(state.police, resultSnake, foodEatenCount, false, isInvincibleNow);
   const policePenalty = policeResult.caughtPlayer ? POLICE_PENALTY : 0;
+
+  let finalObstacles = shockwaveTriggered ? [] : state.obstacles;
+  let finalLastObstacleSpawnFood = shockwaveTriggered ? state.foodEaten : state.lastObstacleSpawnFood;
+
+  const shockwavePhantom = shockwaveTriggered
+    ? { ...phantomResult.phantom, active: false, segments: [], spawnCooldown: 15 }
+    : phantomResult.phantom;
+  const shockwavePolice = shockwaveTriggered
+    ? { ...policeResult.police, active: false, segments: [], spawnCooldown: 15 }
+    : policeResult.police;
 
   return {
     ...state,
@@ -294,15 +327,15 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     lastPortalDespawn: 0,
     wormhole: null,
     lastWormholeDespawn: 0,
-    phantom: phantomResult.phantom,
+    phantom: shockwavePhantom,
     bonusFood: newBonusFood,
     flagFood: newFlagFood,
-    cashItems,
+    cashItems: shockwaveTriggered ? [] : cashItems,
     totalCash: state.totalCash + cashGain,
-    fakeFoods,
-    police: policeResult.police,
-    obstacles: state.obstacles,
-    lastObstacleSpawnFood: state.lastObstacleSpawnFood,
+    fakeFoods: shockwaveTriggered ? [] : fakeFoods,
+    police: shockwavePolice,
+    obstacles: finalObstacles,
+    lastObstacleSpawnFood: finalLastObstacleSpawnFood,
     growPending: growResult.growPending,
   };
 };
