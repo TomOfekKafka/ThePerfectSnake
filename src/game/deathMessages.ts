@@ -37,6 +37,14 @@ const RIVAL_REASONS = [
   'RIVAL SNAKE WINS',
 ] as const;
 
+const OBSTACLE_REASONS = [
+  'SHATTERED ON A CRYSTAL',
+  'IMPALED BY AN OBSTACLE',
+  'CRUSHED AGAINST THE ROCKS',
+  'RAN INTO A CRYSTAL SPIKE',
+  'OBSTACLE IN THE WAY',
+] as const;
+
 export type DeathMessage = string;
 
 function pickFrom(arr: readonly string[]): string {
@@ -52,6 +60,7 @@ export function pickDeathReason(reason: DeathReason): string {
     case 'wall': return pickFrom(WALL_REASONS);
     case 'self': return pickFrom(SELF_REASONS);
     case 'rival': return pickFrom(RIVAL_REASONS);
+    case 'obstacle': return pickFrom(OBSTACLE_REASONS);
     default: return pickFrom(FLAVOR_MESSAGES);
   }
 }

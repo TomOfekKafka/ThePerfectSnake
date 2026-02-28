@@ -358,6 +358,12 @@ interface PoliceData {
   caughtFlash: number;
 }
 
+interface ObstacleData {
+  position: Position;
+  spawnTick: number;
+  variant: number;
+}
+
 interface GameState {
   snake: Position[];
   food: Position;
@@ -368,7 +374,8 @@ interface GameState {
   tickCount?: number;
   flagFood?: FlagFoodData | null;
   police?: PoliceData;
-  deathReason?: 'wall' | 'self' | 'rival' | null;
+  obstacles?: ObstacleData[];
+  deathReason?: 'wall' | 'self' | 'rival' | 'obstacle' | null;
 }
 
 interface Star {
