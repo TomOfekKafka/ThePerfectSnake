@@ -799,6 +799,9 @@ export class SnakeScene extends Phaser.Scene {
   private lastPoliceCaughtFlash = 0;
   private sciFi: SciFiState = createSciFiState();
   private electricStorm: ElectricStormState = createElectricStormState();
+  private deathCinematic: DeathCinematicState = createDeathCinematicState();
+  private deathDelayFrames = 0;
+  private deathDelayActive = false;
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2415,7 +2418,7 @@ export class SnakeScene extends Phaser.Scene {
       }
     }
 
-    // Detect game over transition - ARMAGEDDON CHAOS death sequence
+    // Detect game over transition - cinematic death with 2-second delay
     if (state.gameOver && this.currentState && !this.currentState.gameOver) {
       this.screenShakeIntensity = 0;
       this.chromaticIntensity = 3.0;
@@ -2435,6 +2438,9 @@ export class SnakeScene extends Phaser.Scene {
           );
         }, i * 50);
       }
+      triggerDeathCinematic(this.deathCinematic, state.snake, CELL_SIZE);
+      this.deathDelayFrames = 0;
+      this.deathDelayActive = true;
     }
 
     const foodEaten = state.foodEaten || 0;
@@ -2448,6 +2454,9 @@ export class SnakeScene extends Phaser.Scene {
       this.upgradeHud = createUpgradeHudState();
       this.lastFoodEaten = 0;
       this.sudoku = resetSudokuVisited(this.sudoku);
+      this.deathCinematic = createDeathCinematicState();
+      this.deathDelayActive = false;
+      this.deathDelayFrames = 0;
     }
 
     this.currentState = state;
@@ -2975,8 +2984,20 @@ export class SnakeScene extends Phaser.Scene {
     drawOptimizationMeter(g, this.optimization, this.lastEfficiency.grade, width, this.frameCount, this.drawDigit.bind(this));
 
     if (this.currentState.gameOver) {
-      this.drawGameOver(g, width, height);
-      this.drawGameOverScore(g, width, height);
+      updateDeathCinematic(this.deathCinematic);
+      drawDeathCinematic(this.deathCinematic, g, width, height, this.frameCount);
+
+      if (this.deathDelayActive) {
+        this.deathDelayFrames++;
+        if (this.deathDelayFrames >= 120) {
+          this.deathDelayActive = false;
+        }
+      }
+
+      if (!this.deathDelayActive) {
+        this.drawGameOver(g, width, height);
+        this.drawGameOverScore(g, width, height);
+      }
     }
     this.needsRedraw = false;
   }
