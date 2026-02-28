@@ -74,9 +74,9 @@ function buildSplinePoints(
       const headRegion = globalProgress < 0.15;
       const waveAmp = headRegion
         ? cellSize * 0.01 * globalProgress / 0.15
-        : cellSize * 0.08 * (0.2 + globalProgress * 0.8);
+        : cellSize * 0.06 * (0.2 + globalProgress * 0.8);
       const waveFreq = 4.5;
-      const wavePhase = frameCount * 0.1;
+      const wavePhase = frameCount * 0.08;
       const wave = Math.sin(globalProgress * Math.PI * waveFreq + wavePhase) * waveAmp;
 
       const dx = p2.x - p0.x;
@@ -97,9 +97,9 @@ function getWidthAtProgress(
   cellSize: number,
   _snakeLen: number
 ): number {
-  const headWidth = cellSize * 0.9;
-  const neckWidth = cellSize * 0.55;
-  const tailWidth = cellSize * 0.2;
+  const headWidth = cellSize * 0.85;
+  const neckWidth = cellSize * 0.5;
+  const tailWidth = cellSize * 0.15;
 
   if (progress < 0.04) {
     const t = progress / 0.04;
@@ -146,15 +146,14 @@ function lerpColor(c1: number, c2: number, t: number): number {
   return (Math.min(0xff, r) << 16) | (Math.min(0xff, gc) << 8) | Math.min(0xff, b);
 }
 
-const SPIDEY_RED = 0xcc1122;
-const SPIDEY_DARK_RED = 0x880016;
-const SPIDEY_BLUE = 0x2244cc;
-const SPIDEY_DARK_BLUE = 0x1a2288;
-const SPIDEY_WEB = 0xdddddd;
-const SPIDEY_EYE_WHITE = 0xffffff;
-const SPIDEY_EYE_BORDER = 0x111111;
+const NOIR_SILVER = 0xc8c8d0;
+const NOIR_LIGHT = 0xa0a0a8;
+const NOIR_MID = 0x707078;
+const NOIR_DARK = 0x404048;
+const NOIR_SHADOW = 0x202028;
+const NOIR_WHITE = 0xe8e8f0;
 
-function getSpideyColors(
+function getNoirColors(
   progress: number
 ): { base: number; highlight: number; edge: number; alpha: number } {
   let base: number;
@@ -162,28 +161,29 @@ function getSpideyColors(
   let edge: number;
   let alpha: number;
 
-  if (progress < 0.25) {
-    base = lerpColor(SPIDEY_RED, SPIDEY_DARK_RED, progress / 0.25);
-    highlight = 0xff3344;
-    edge = SPIDEY_DARK_RED;
+  if (progress < 0.2) {
+    base = lerpColor(NOIR_SILVER, NOIR_LIGHT, progress / 0.2);
+    highlight = NOIR_WHITE;
+    edge = NOIR_MID;
     alpha = 0.95;
   } else if (progress < 0.5) {
-    const t = (progress - 0.25) / 0.25;
-    base = lerpColor(SPIDEY_DARK_RED, SPIDEY_BLUE, t);
-    highlight = lerpColor(0xff3344, 0x4466dd, t);
-    edge = lerpColor(SPIDEY_DARK_RED, SPIDEY_DARK_BLUE, t);
+    const t = (progress - 0.2) / 0.3;
+    base = lerpColor(NOIR_LIGHT, NOIR_MID, t);
+    highlight = lerpColor(NOIR_WHITE, NOIR_SILVER, t);
+    edge = lerpColor(NOIR_MID, NOIR_DARK, t);
     alpha = 0.92;
-  } else if (progress < 0.75) {
-    base = lerpColor(SPIDEY_BLUE, SPIDEY_DARK_BLUE, (progress - 0.5) / 0.25);
-    highlight = 0x4466dd;
-    edge = SPIDEY_DARK_BLUE;
-    alpha = 0.88;
+  } else if (progress < 0.8) {
+    const t = (progress - 0.5) / 0.3;
+    base = lerpColor(NOIR_MID, NOIR_DARK, t);
+    highlight = lerpColor(NOIR_SILVER, NOIR_LIGHT, t);
+    edge = NOIR_SHADOW;
+    alpha = 0.85;
   } else {
-    const t = (progress - 0.75) / 0.25;
-    base = lerpColor(SPIDEY_DARK_BLUE, SPIDEY_RED, t * 0.4);
-    highlight = lerpColor(0x4466dd, 0xff3344, t * 0.3);
-    edge = SPIDEY_DARK_BLUE;
-    alpha = 0.82 - t * 0.2;
+    const t = (progress - 0.8) / 0.2;
+    base = lerpColor(NOIR_DARK, NOIR_SHADOW, t);
+    highlight = NOIR_MID;
+    edge = NOIR_SHADOW;
+    alpha = 0.7 - t * 0.2;
   }
 
   return { base, highlight, edge, alpha: Math.max(0.25, alpha) };
@@ -219,11 +219,11 @@ export function drawSpermSnake(
   }
 
   drawBodyShadow(g, leftEdge, rightEdge);
-  drawSpideyBody(g, points, leftEdge, rightEdge, len, frameCount);
-  drawWebPattern(g, points, leftEdge, rightEdge, cellSize, frameCount);
-  drawSpideyHeadGlow(g, points, cellSize, frameCount);
-  drawSpideyHead(g, points, leftEdge, rightEdge, cellSize, frameCount);
-  drawSpideyEyes(g, points, cellSize, frameCount);
+  drawNoirBody(g, points, leftEdge, rightEdge, len, frameCount);
+  drawNoirStripes(g, points, leftEdge, rightEdge, cellSize, frameCount);
+  drawNoirHeadGlow(g, points, cellSize, frameCount);
+  drawNoirHead(g, points, leftEdge, rightEdge, cellSize, frameCount);
+  drawNoirEyes(g, points, cellSize, frameCount);
 }
 
 function drawSingleCellHead(
@@ -232,23 +232,23 @@ function drawSingleCellHead(
   cellSize: number,
   frameCount: number
 ): void {
-  const radius = cellSize * 0.48;
-  const pulse = 1.0 + Math.sin(frameCount * 0.05) * 0.04;
+  const radius = cellSize * 0.45;
+  const pulse = 1.0 + Math.sin(frameCount * 0.05) * 0.03;
   const r = radius * pulse;
 
-  g.fillStyle(0x000000, 0.15);
-  g.fillCircle(pt.x + 1.5, pt.y + 2, r);
+  g.fillStyle(0x000000, 0.2);
+  g.fillCircle(pt.x + 2, pt.y + 3, r);
 
-  g.fillStyle(SPIDEY_RED, 0.15);
-  g.fillCircle(pt.x, pt.y, r * 1.5);
+  g.fillStyle(NOIR_SILVER, 0.1);
+  g.fillCircle(pt.x, pt.y, r * 1.4);
 
-  g.fillStyle(SPIDEY_RED, 0.95);
+  g.fillStyle(NOIR_SILVER, 0.95);
   g.fillCircle(pt.x, pt.y, r);
 
-  g.fillStyle(0xff3344, 0.3);
-  g.fillCircle(pt.x - r * 0.2, pt.y - r * 0.2, r * 0.5);
+  g.fillStyle(NOIR_WHITE, 0.25);
+  g.fillCircle(pt.x - r * 0.2, pt.y - r * 0.2, r * 0.4);
 
-  drawSpideyEyesAt(g, pt.x, pt.y, r, frameCount);
+  drawNoirEyesAt(g, pt.x, pt.y, r, frameCount);
 }
 
 function drawBodyShadow(
@@ -256,20 +256,20 @@ function drawBodyShadow(
   leftEdge: Vec2[],
   rightEdge: Vec2[]
 ): void {
-  g.fillStyle(0x000000, 0.15);
+  g.fillStyle(0x000000, 0.25);
   g.beginPath();
-  g.moveTo(leftEdge[0].x + 1.5, leftEdge[0].y + 2);
+  g.moveTo(leftEdge[0].x + 2, leftEdge[0].y + 3);
   for (let i = 1; i < leftEdge.length; i++) {
-    g.lineTo(leftEdge[i].x + 1.5, leftEdge[i].y + 2);
+    g.lineTo(leftEdge[i].x + 2, leftEdge[i].y + 3);
   }
   for (let i = rightEdge.length - 1; i >= 0; i--) {
-    g.lineTo(rightEdge[i].x + 1.5, rightEdge[i].y + 2);
+    g.lineTo(rightEdge[i].x + 2, rightEdge[i].y + 3);
   }
   g.closePath();
   g.fillPath();
 }
 
-function drawSpideyBody(
+function drawNoirBody(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   leftEdge: Vec2[],
@@ -288,7 +288,7 @@ function drawSpideyBody(
     if (startIdx >= endIdx) continue;
 
     const midProgress = ((startIdx + endIdx) / 2) / (points.length - 1);
-    const colors = getSpideyColors(midProgress);
+    const colors = getNoirColors(midProgress);
 
     g.beginPath();
     g.moveTo(leftEdge[startIdx].x, leftEdge[startIdx].y);
@@ -303,11 +303,11 @@ function drawSpideyBody(
     g.fillPath();
 
     if (midProgress < 0.4) {
-      g.lineStyle(1, colors.edge, colors.alpha * 0.5);
+      g.lineStyle(1, colors.edge, colors.alpha * 0.4);
       g.strokePath();
     }
 
-    const shimmer = 0.1 + Math.sin(frameCount * 0.05 + midProgress * Math.PI * 3) * 0.06;
+    const shimmer = 0.08 + Math.sin(frameCount * 0.04 + midProgress * Math.PI * 3) * 0.04;
     g.beginPath();
     for (let i = startIdx; i <= endIdx; i++) {
       const lp = leftEdge[i];
@@ -330,7 +330,7 @@ function drawSpideyBody(
   }
 }
 
-function drawWebPattern(
+function drawNoirStripes(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   leftEdge: Vec2[],
@@ -341,9 +341,9 @@ function drawWebPattern(
   const totalPts = points.length;
   if (totalPts < 4) return;
 
-  const webShimmer = 0.2 + Math.sin(frameCount * 0.03) * 0.05;
+  const shimmer = 0.15 + Math.sin(frameCount * 0.03) * 0.04;
 
-  g.lineStyle(0.8, SPIDEY_WEB, webShimmer);
+  g.lineStyle(0.6, NOIR_WHITE, shimmer * 0.5);
   g.beginPath();
   g.moveTo(points[0].x, points[0].y);
   for (let i = 1; i < totalPts; i++) {
@@ -351,47 +351,35 @@ function drawWebPattern(
   }
   g.strokePath();
 
-  const crossStep = Math.max(3, Math.floor(totalPts / 12));
+  const crossStep = Math.max(3, Math.floor(totalPts / 10));
   for (let i = crossStep; i < totalPts; i += crossStep) {
     const progress = i / (totalPts - 1);
-    if (progress < 0.08) continue;
+    if (progress < 0.1) continue;
 
     const life = 1 - progress * 0.3;
-    g.lineStyle(0.6, SPIDEY_WEB, webShimmer * life * 0.7);
+    g.lineStyle(0.5, NOIR_LIGHT, shimmer * life * 0.5);
     g.lineBetween(leftEdge[i].x, leftEdge[i].y, rightEdge[i].x, rightEdge[i].y);
-  }
-
-  const diagStep = Math.max(4, Math.floor(totalPts / 8));
-  for (let i = diagStep; i < totalPts - diagStep; i += diagStep) {
-    const progress = i / (totalPts - 1);
-    if (progress < 0.15) continue;
-
-    const nextI = Math.min(i + diagStep, totalPts - 1);
-    const life = (1 - progress * 0.4) * 0.5;
-    g.lineStyle(0.5, SPIDEY_WEB, webShimmer * life);
-    g.lineBetween(leftEdge[i].x, leftEdge[i].y, rightEdge[nextI].x, rightEdge[nextI].y);
-    g.lineBetween(rightEdge[i].x, rightEdge[i].y, leftEdge[nextI].x, leftEdge[nextI].y);
   }
 }
 
-function drawSpideyHeadGlow(
+function drawNoirHeadGlow(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   cellSize: number,
   frameCount: number
 ): void {
   const headPt = points[0];
-  const pulse = 1.0 + Math.sin(frameCount * 0.04) * 0.12;
-  const glowRadius = cellSize * 0.7 * pulse;
+  const pulse = 1.0 + Math.sin(frameCount * 0.04) * 0.08;
+  const glowRadius = cellSize * 0.6 * pulse;
 
-  g.fillStyle(SPIDEY_RED, 0.06);
+  g.fillStyle(NOIR_SILVER, 0.04);
   g.fillCircle(headPt.x, headPt.y, glowRadius * 1.3);
 
-  g.fillStyle(SPIDEY_RED, 0.1);
+  g.fillStyle(NOIR_SILVER, 0.08);
   g.fillCircle(headPt.x, headPt.y, glowRadius);
 }
 
-function drawSpideyHead(
+function drawNoirHead(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   leftEdge: Vec2[],
@@ -414,24 +402,24 @@ function drawSpideyHead(
   }
   g.closePath();
 
-  g.fillStyle(SPIDEY_RED, 0.95);
+  g.fillStyle(NOIR_SILVER, 0.95);
   g.fillPath();
 
-  g.lineStyle(1, SPIDEY_DARK_RED, 0.5);
+  g.lineStyle(1, NOIR_DARK, 0.4);
   g.strokePath();
 
   const headPt = points[0];
   const headW = getWidthAtProgress(0, cellSize, 1) / 2;
 
-  g.fillStyle(0xff3344, 0.3);
-  g.fillCircle(headPt.x - headW * 0.15, headPt.y - headW * 0.15, headW * 0.5);
+  g.fillStyle(NOIR_WHITE, 0.2);
+  g.fillCircle(headPt.x - headW * 0.15, headPt.y - headW * 0.15, headW * 0.4);
 
-  const specAlpha = 0.15 + Math.sin(frameCount * 0.06) * 0.08;
+  const specAlpha = 0.12 + Math.sin(frameCount * 0.06) * 0.06;
   g.fillStyle(0xffffff, specAlpha);
-  g.fillCircle(headPt.x - headW * 0.2, headPt.y - headW * 0.25, headW * 0.18);
+  g.fillCircle(headPt.x - headW * 0.2, headPt.y - headW * 0.25, headW * 0.15);
 }
 
-function drawSpideyEyes(
+function drawNoirEyes(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   cellSize: number,
@@ -439,10 +427,10 @@ function drawSpideyEyes(
 ): void {
   const headPt = points[0];
   const headW = getWidthAtProgress(0.06, cellSize, 1) / 2;
-  drawSpideyEyesAt(g, headPt.x, headPt.y, headW, frameCount);
+  drawNoirEyesAt(g, headPt.x, headPt.y, headW, frameCount);
 }
 
-function drawSpideyEyesAt(
+function drawNoirEyesAt(
   g: Phaser.GameObjects.Graphics,
   x: number,
   y: number,
@@ -450,21 +438,30 @@ function drawSpideyEyesAt(
   frameCount: number
 ): void {
   const eyeSpacing = headW * 0.45;
-  const eyeW = headW * 0.4;
-  const eyeH = headW * 0.55;
-  const squint = Math.sin(frameCount * 0.02) * 0.1;
+  const eyeW = headW * 0.35;
+  const eyeH = headW * 0.5;
+  const squint = Math.sin(frameCount * 0.02) * 0.08;
 
   const leftEyeX = x - eyeSpacing;
   const rightEyeX = x + eyeSpacing;
   const eyeY = y - headW * 0.05;
 
-  g.fillStyle(SPIDEY_EYE_BORDER, 0.9);
+  g.fillStyle(NOIR_SHADOW, 0.9);
   drawAngledEye(g, leftEyeX, eyeY, eyeW + 1.5, eyeH + 1.5, -0.15 + squint);
   drawAngledEye(g, rightEyeX, eyeY, eyeW + 1.5, eyeH + 1.5, 0.15 - squint);
 
-  g.fillStyle(SPIDEY_EYE_WHITE, 0.95);
+  g.fillStyle(0xffffff, 0.95);
   drawAngledEye(g, leftEyeX, eyeY, eyeW, eyeH, -0.15 + squint);
   drawAngledEye(g, rightEyeX, eyeY, eyeW, eyeH, 0.15 - squint);
+
+  const pupilSize = eyeW * 0.35;
+  g.fillStyle(0x111111, 0.9);
+  g.fillCircle(leftEyeX + 0.5, eyeY + 0.3, pupilSize);
+  g.fillCircle(rightEyeX + 0.5, eyeY + 0.3, pupilSize);
+
+  g.fillStyle(0xffffff, 0.7);
+  g.fillCircle(leftEyeX - pupilSize * 0.3, eyeY - pupilSize * 0.3, pupilSize * 0.3);
+  g.fillCircle(rightEyeX - pupilSize * 0.3, eyeY - pupilSize * 0.3, pupilSize * 0.3);
 }
 
 function drawAngledEye(

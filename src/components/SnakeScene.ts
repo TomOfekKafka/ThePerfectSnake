@@ -326,6 +326,18 @@ import {
   updateSameDirectionExplosion,
   drawSameDirectionExplosion,
 } from './sameDirectionExplosion';
+import {
+  NoirEffectsState,
+  createNoirEffectsState,
+  initNoirEffects,
+  updateNoirEffects,
+  drawNoirRain,
+  drawNoirSmoke,
+  drawNoirSpotlight,
+  drawVenetianBlinds,
+  drawFilmGrain,
+  drawNoirVignette,
+} from './noirEffects';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -847,6 +859,7 @@ export class SnakeScene extends Phaser.Scene {
   private obstacleRender: ObstacleRenderState = createObstacleRenderState();
   private sameDirectionExplosion: SameDirectionExplosionState = createSameDirectionExplosionState();
   private dropDeath: DropDeathState = createDropDeathState();
+  private noirEffects: NoirEffectsState = createNoirEffectsState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -869,6 +882,7 @@ export class SnakeScene extends Phaser.Scene {
     initCrownBeam(this.cosmicCrown, width, height);
     initDataStreams(this.sciFi, width, height);
     initBackgroundBand(this.backgroundBand, width);
+    initNoirEffects(this.noirEffects, width, height);
 
     this.upgradeKeyHandler = (e: KeyboardEvent) => {
       if (!this.upgradeState.choice || !this.upgradeState.choice.active) return;
@@ -2866,6 +2880,12 @@ export class SnakeScene extends Phaser.Scene {
     updateFireHearts(this.fireHearts);
     updateSpiderlings(this.spiderlingsList);
     updateBackgroundBand(this.backgroundBand);
+    {
+      const head = this.currentState?.snake?.[0];
+      const headPx = head ? head.x * CELL_SIZE + CELL_SIZE / 2 : width / 2;
+      const headPy = head ? head.y * CELL_SIZE + CELL_SIZE / 2 : height / 2;
+      updateNoirEffects(this.noirEffects, headPx, headPy, width, height);
+    }
     updateObstacleEffects(
       this.obstacleRender,
       this.currentState?.obstacles || [],
@@ -3006,10 +3026,12 @@ export class SnakeScene extends Phaser.Scene {
 
     drawSpaceBackground(g, this.spaceBackground, width, height);
     drawBackgroundBand(g, this.backgroundBand, width, height);
+    drawVenetianBlinds(g, this.noirEffects, width, height, this.frameCount);
     drawSciFiGrid(g, this.sciFi, width, height, CELL_SIZE, GRID_SIZE);
     drawCrownBeam(g, this.cosmicCrown.beam);
     drawSilkWeave(g, this.silk, CELL_SIZE, GRID_SIZE, this.frameCount);
     drawMotes(g, this.cleanEffects);
+    drawNoirRain(g, this.noirEffects);
 
     if (!this.currentState) return;
 
@@ -3070,7 +3092,10 @@ export class SnakeScene extends Phaser.Scene {
 
     drawShieldRings(g, this.sciFi);
     drawWeather(g, this.weather, width, height, this.frameCount);
-    drawCleanVignette(g, width, height);
+    drawNoirSpotlight(g, this.noirEffects, width, height, this.frameCount);
+    drawNoirSmoke(g, this.noirEffects);
+    drawFilmGrain(g, width, height, this.noirEffects.filmGrainSeed);
+    drawNoirVignette(g, width, height);
     drawCornerHUD(g, this.sciFi, width, height);
     drawWebLabels(g, this.spellProjectile, this.drawText.bind(this));
     drawSpellTexts(g, this.wizardEffects, this.drawText.bind(this));
