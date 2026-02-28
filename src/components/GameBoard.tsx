@@ -969,6 +969,7 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
         canvas.style.height = '100%';
 
         phaserGameRef.current = game;
+        (window as any).__PHASER_GAME__ = game;
 
         const scene = game.scene.getScene('SnakeScene') as SnakeScene;
         if (scene) {

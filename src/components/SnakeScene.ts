@@ -2999,6 +2999,8 @@ export class SnakeScene extends Phaser.Scene {
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
     drawHoloFood(g, this.sciFi, foodX, foodY, CELL_SIZE);
 
+    drawObstacles(g, this.obstacleRender, this.currentState.obstacles || [], CELL_SIZE, this.frameCount);
+
     drawFireGlow(g, this.currentState.snake, CELL_SIZE, this.frameCount);
     drawFireTrail(g, this.fireTrail);
     drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState);
