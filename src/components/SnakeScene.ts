@@ -138,10 +138,14 @@ import {
 } from './hogwartsBackground';
 import {
   createPatronusTrailState,
-  updatePatronusTrail,
-  drawPatronusTrail,
   PatronusTrailState,
 } from './patronusTrail';
+import {
+  createFireTrailState,
+  updateFireTrail,
+  drawFireTrail,
+  FireTrailState,
+} from './fireTrail';
 import {
   createLaserBeamState,
   updateLaserBeams,
@@ -783,6 +787,7 @@ export class SnakeScene extends Phaser.Scene {
   private wizardEffects: WizardEffectsState = createWizardEffectsState();
   private hogwartsBackground: HogwartsBackgroundState = createHogwartsBackground(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
   private patronusTrail: PatronusTrailState = createPatronusTrailState();
+  private fireTrail: FireTrailState = createFireTrailState();
   private laserBeam: LaserBeamState = createLaserBeamState();
   private flagLifeBar: FlagLifeBarState = createFlagLifeBarState();
   private skullDrop: SkullDropState = createSkullDropState();
@@ -2856,7 +2861,7 @@ export class SnakeScene extends Phaser.Scene {
       const breathVec = getDirectionVectors(this.snakeDirection);
       updateDragonBreath(this.dragonBreath, snoutTip.tipX, snoutTip.tipY, breathVec.fx, breathVec.fy);
       this.hugeHead = updateHugeHead(this.hugeHead, snoutTip.tipX, snoutTip.tipY);
-      updatePatronusTrail(this.patronusTrail, headX, headY);
+      updateFireTrail(this.fireTrail, headX, headY, this.currentState.snake, CELL_SIZE);
 
       const foodPos = this.currentState.food;
       const laserFoodX = foodPos.x * CELL_SIZE + CELL_SIZE / 2;
@@ -2943,7 +2948,7 @@ export class SnakeScene extends Phaser.Scene {
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
     drawHoloFood(g, this.sciFi, foodX, foodY, CELL_SIZE);
 
-    drawPatronusTrail(g, this.patronusTrail);
+    drawFireTrail(g, this.fireTrail);
     drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState);
     drawSnakeEnergyField(g, this.sciFi, this.currentState.snake, CELL_SIZE);
     drawElectricStorm(g, this.electricStorm, this.frameCount);
