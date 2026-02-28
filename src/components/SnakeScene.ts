@@ -680,6 +680,14 @@ const MAX_CHAOS_EXPLOSIONS = 3;
 const NUM_SKULLS = 4;
 
 import { pickDeathMessage, pickDeathReason } from '../game/deathMessages';
+import {
+  DropDeathState,
+  createDropDeathState,
+  triggerDropDeath,
+  updateDropDeath,
+  drawDropDeath,
+  getDropDeathShake,
+} from './dropDeath';
 import { THEME } from './gameTheme';
 
 const COLORS = {
@@ -838,6 +846,7 @@ export class SnakeScene extends Phaser.Scene {
   private backgroundBand: BackgroundBandState = createBackgroundBandState();
   private obstacleRender: ObstacleRenderState = createObstacleRenderState();
   private sameDirectionExplosion: SameDirectionExplosionState = createSameDirectionExplosionState();
+  private dropDeath: DropDeathState = createDropDeathState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2467,6 +2476,16 @@ export class SnakeScene extends Phaser.Scene {
       this.gameOverRevealProgress = 0;
       this.gameOverScoreAnimPhase = 0;
       this.spawnGameOverEffects();
+      triggerDropDeath(
+        this.dropDeath,
+        state.snake,
+        CELL_SIZE,
+        GRID_SIZE,
+        state.score || 0,
+        state.snake.length,
+        this.deathMessage,
+        this.deathReasonText
+      );
       for (let i = 0; i < Math.min(3, state.snake.length); i++) {
         const seg = state.snake[Math.floor(i * state.snake.length / 3)];
         setTimeout(() => {
@@ -2493,6 +2512,7 @@ export class SnakeScene extends Phaser.Scene {
       this.lastFoodEaten = 0;
       this.silk = resetSilkVisited(this.silk);
       this.deathCinematic = createDeathCinematicState();
+      this.dropDeath = createDropDeathState();
       this.deathDelayActive = false;
       this.deathDelayFrames = 0;
       resetFlagLifeBar(this.flagLifeBar);
@@ -3067,18 +3087,14 @@ export class SnakeScene extends Phaser.Scene {
     if (this.currentState.gameOver) {
       updateDeathCinematic(this.deathCinematic);
       drawDeathCinematic(this.deathCinematic, g, width, height, this.frameCount);
+      updateDropDeath(this.dropDeath);
 
-      if (this.deathDelayActive) {
-        this.deathDelayFrames++;
-        if (this.deathDelayFrames >= 120) {
-          this.deathDelayActive = false;
-        }
+      const dropShake = getDropDeathShake(this.dropDeath);
+      if (dropShake.x !== 0 || dropShake.y !== 0) {
+        g.setPosition(g.x + dropShake.x, g.y + dropShake.y);
       }
 
-      if (!this.deathDelayActive) {
-        this.drawGameOver(g, width, height);
-        this.drawGameOverScore(g, width, height);
-      }
+      drawDropDeath(this.dropDeath, g, width, height, this.frameCount, this.drawText.bind(this));
     }
     this.needsRedraw = false;
   }
