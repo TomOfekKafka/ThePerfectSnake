@@ -52,16 +52,16 @@ const MAX_SHARDS = 32;
 const MAX_SPARKS = 48;
 
 const WARNING_TEXTS = [
-  'BOOM!',
-  'KABOOM!',
+  'THWIP!',
+  'WEB BLAST!',
   'WRONG WAY!',
   'ALREADY GOING!',
-  'OVERKILL!',
-  'WASTED!',
-  'POW!',
-  'BANG!',
+  'WEB TANGLE!',
+  'STICKY!',
+  'SPLAT!',
+  'WEBBED!',
   'NOPE!',
-  'SAME!',
+  'TANGLED!',
 ];
 
 export function createSameDirectionExplosionState(): SameDirectionExplosionState {
@@ -97,7 +97,7 @@ export function triggerSameDirectionExplosion(
       radius: 4 + i * 6,
       maxRadius: 60 + i * 30,
       life: 1,
-      hue: 0 + i * 30,
+      hue: 200 + i * 20,
       thickness: 4 - i,
     });
   }
@@ -117,7 +117,7 @@ export function triggerSameDirectionExplosion(
       life: 0.8 + Math.random() * 0.4,
       rotation: Math.random() * Math.PI * 2,
       rotationSpeed: (Math.random() - 0.5) * 0.4,
-      hue: 350 + Math.random() * 40,
+      hue: 210 + Math.random() * 40,
     });
   }
 
@@ -132,7 +132,7 @@ export function triggerSameDirectionExplosion(
       vy: dirY * forwardSpeed + perpY * spread + (Math.random() - 0.5) * 2,
       size: 1 + Math.random() * 3,
       life: 0.6 + Math.random() * 0.5,
-      hue: 20 + Math.random() * 40,
+      hue: 200 + Math.random() * 40,
     });
   }
 
@@ -211,63 +211,79 @@ export function drawSameDirectionExplosion(
   height: number
 ): void {
   if (state.flashAlpha > 0.01) {
-    g.fillStyle(0xff4422, state.flashAlpha * 0.3);
+    g.fillStyle(0xddddee, state.flashAlpha * 0.2);
     g.fillRect(0, 0, width, height);
-    g.fillStyle(0xffaa44, state.flashAlpha * 0.15);
+    g.fillStyle(0xffffff, state.flashAlpha * 0.1);
     g.fillRect(0, 0, width, height);
   }
 
   for (const ring of state.rings) {
-    const alpha = ring.life * 0.8;
-    const color = hslToHex(ring.hue, 1, 0.55);
-    const innerColor = hslToHex(ring.hue + 20, 0.8, 0.7);
+    const alpha = ring.life * 0.7;
 
-    g.lineStyle(ring.thickness * ring.life + 2, color, alpha * 0.4);
-    g.strokeCircle(ring.x, ring.y, ring.radius + 4);
+    g.lineStyle(ring.thickness * ring.life + 1, 0xccccdd, alpha * 0.3);
+    g.strokeCircle(ring.x, ring.y, ring.radius + 3);
 
-    g.lineStyle(ring.thickness * ring.life, innerColor, alpha);
+    g.lineStyle(ring.thickness * ring.life * 0.8, 0xeeeeee, alpha * 0.5);
     g.strokeCircle(ring.x, ring.y, ring.radius);
 
-    g.fillStyle(0xffffff, alpha * 0.15 * ring.life);
-    g.fillCircle(ring.x, ring.y, ring.radius * 0.3 * ring.life);
+    const spokeCount = 8;
+    for (let i = 0; i < spokeCount; i++) {
+      const angle = (i / spokeCount) * Math.PI * 2;
+      const inner = ring.radius * 0.3;
+      const outer = ring.radius;
+      g.lineStyle(0.5 * ring.life, 0xdddddd, alpha * 0.25);
+      g.lineBetween(
+        ring.x + Math.cos(angle) * inner,
+        ring.y + Math.sin(angle) * inner,
+        ring.x + Math.cos(angle) * outer,
+        ring.y + Math.sin(angle) * outer
+      );
+    }
+
+    g.fillStyle(0xffffff, alpha * 0.12 * ring.life);
+    g.fillCircle(ring.x, ring.y, ring.radius * 0.2 * ring.life);
   }
 
   for (const s of state.shards) {
     const alpha = Math.min(1, s.life * 1.2);
-    const color = hslToHex(s.hue, 1, 0.5);
-    const hotCore = hslToHex(s.hue + 30, 0.6, 0.8);
+    const sz = s.size * s.life;
 
-    const cos = Math.cos(s.rotation);
-    const sin = Math.sin(s.rotation);
-    const hw = s.size * s.life;
-    const hh = s.size * 0.4 * s.life;
+    g.fillStyle(0xbbbbcc, alpha * 0.2);
+    g.fillCircle(s.x, s.y, sz * 1.5);
 
-    g.fillStyle(color, alpha * 0.4);
-    g.fillCircle(s.x, s.y, hw * 1.8);
+    g.fillStyle(0xdddddd, alpha * 0.6);
+    g.fillCircle(s.x, s.y, sz * 0.7);
 
-    g.fillStyle(color, alpha * 0.8);
-    g.beginPath();
-    g.moveTo(s.x + cos * hw - sin * hh, s.y + sin * hw + cos * hh);
-    g.lineTo(s.x - cos * hw - sin * hh, s.y - sin * hw + cos * hh);
-    g.lineTo(s.x - cos * hw + sin * hh, s.y - sin * hw - cos * hh);
-    g.lineTo(s.x + cos * hw + sin * hh, s.y + sin * hw - cos * hh);
-    g.closePath();
-    g.fillPath();
+    g.fillStyle(0xffffff, alpha * 0.8);
+    g.fillCircle(s.x, s.y, sz * 0.3);
 
-    g.fillStyle(hotCore, alpha);
-    g.fillCircle(s.x, s.y, hw * 0.4);
+    if (s.life > 0.3) {
+      const strandLen = sz * 2.5;
+      const angle = s.rotation;
+      g.lineStyle(0.5 * s.life, 0xdddddd, alpha * 0.35);
+      g.lineBetween(
+        s.x, s.y,
+        s.x + Math.cos(angle) * strandLen,
+        s.y + Math.sin(angle) * strandLen
+      );
+    }
   }
 
   for (const sp of state.sparks) {
     const alpha = Math.min(1, sp.life * 1.5);
-    const color = hslToHex(sp.hue, 1, 0.5);
-    const bright = hslToHex(sp.hue + 15, 0.5, 0.85);
+    const speed = Math.sqrt(sp.vx * sp.vx + sp.vy * sp.vy);
+    const strandLen = Math.max(sp.size * 2, speed * 3);
+    const angle = Math.atan2(sp.vy, sp.vx);
 
-    g.fillStyle(color, alpha * 0.4);
-    g.fillCircle(sp.x, sp.y, sp.size * 2);
+    g.lineStyle(0.6 * sp.life, 0xdddddd, alpha * 0.4);
+    g.lineBetween(
+      sp.x - Math.cos(angle) * strandLen,
+      sp.y - Math.sin(angle) * strandLen,
+      sp.x, sp.y
+    );
 
-    g.fillStyle(bright, alpha);
-    g.fillCircle(sp.x, sp.y, sp.size * 0.7);
+    g.fillStyle(0xffffff, alpha * 0.6);
+    g.fillCircle(sp.x, sp.y, sp.size * 0.5);
   }
 }
 
@@ -278,8 +294,7 @@ export function drawExplosionText(
   if (state.textAlpha < 0.02) return;
 
   const size = Math.round(16 * state.textScale);
-  const color = hslToHex(10, 1, 0.55);
-  drawTextFn(state.textX, state.textY, state.warningText, size, color, state.textAlpha);
+  drawTextFn(state.textX, state.textY, state.warningText, size, 0xffffff, state.textAlpha);
 }
 
 export function getExplosionShake(state: SameDirectionExplosionState): { x: number; y: number } {
