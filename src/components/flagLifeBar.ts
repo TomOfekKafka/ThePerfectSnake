@@ -94,7 +94,7 @@ function spawnDamageParticles(state: FlagLifeBarState, x: number, y: number): vo
     }
     const angle = Math.random() * Math.PI * 2;
     const speed = 1.5 + Math.random() * 3;
-    const colors = [0xff4444, 0xff8800, 0xffcc00, 0xffffff];
+    const colors = [0xff66aa, 0xff88cc, 0xffaadd, 0xffd4e8];
     state.damageParticles.push({
       x,
       y,
@@ -109,7 +109,7 @@ function spawnDamageParticles(state: FlagLifeBarState, x: number, y: number): vo
 
 function spawnBreakParticles(state: FlagLifeBarState, x: number, y: number): void {
   const count = MAX_BREAK_PARTICLES;
-  const colors = [0xff2200, 0xff6600, 0xffaa00, 0xffdd44, 0xffffff, 0x44aaff];
+  const colors = [0xff3388, 0xff66aa, 0xff88cc, 0xffaadd, 0xffd4e8, 0xff44aa];
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = 2 + Math.random() * 6;
@@ -196,7 +196,7 @@ export function drawFlagLifeBar(
     g.fillStyle(0x1a1a2e, 0.9);
     g.fillRoundedRect(barX + shakeX, barY + shakeY, barWidth, barHeight, 2);
 
-    const fillColor = hpRatio > 0.6 ? 0x22dd66 : hpRatio > 0.3 ? 0xffaa00 : 0xff3344;
+    const fillColor = hpRatio > 0.6 ? 0xff66aa : hpRatio > 0.3 ? 0xff3388 : 0xff1166;
     const fillWidth = barWidth * hpRatio;
 
     g.fillStyle(fillColor, 0.9);
@@ -252,7 +252,7 @@ export function drawFlagLifeBar(
     const flashAlpha = (0.3 - state.breakProgress) * 2;
     g.fillStyle(0xffffff, flashAlpha * 0.6);
     g.fillCircle(foodX, foodY, cellSize * 2 * (1 + state.breakProgress * 3));
-    g.fillStyle(0xffaa00, flashAlpha * 0.3);
+    g.fillStyle(0xff66aa, flashAlpha * 0.3);
     g.fillCircle(foodX, foodY, cellSize * 3 * (1 + state.breakProgress * 2));
   }
 }
