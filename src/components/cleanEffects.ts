@@ -135,23 +135,23 @@ export const CLEAN_COLORS = {
   tear: 0x60a5fa,
   tearHighlight: 0x93c5fd,
 
-  snow: 0xffffff,
-  snowGlow: 0xe8f4ff,
+  snow: 0xccddff,
+  snowGlow: 0x99bbff,
 
-  snowmanBody: 0xf0f8ff,
-  snowmanShadow: 0xd0e8f0,
+  snowmanBody: 0xdde8ff,
+  snowmanShadow: 0x99aadd,
   snowmanNose: 0xff6b35,
   snowmanCoal: THEME.bg.deep,
   snowmanScarf: THEME.snake.head,
 
   candyRed: THEME.snake.head,
-  candyWhite: 0xfdf6f0,
+  candyWhite: 0xccddff,
   candyRedGlow: THEME.snake.glow,
-  candyWhiteGlow: 0xffffff,
+  candyWhiteGlow: 0xaaccff,
 
   dramaRed: THEME.food.glow,
   dramaBlue: THEME.wall.glow,
-  dramaWhite: 0xffffff,
+  dramaAccent: 0xaa88ff,
 };
 
 const MAX_RIPPLES = 5;
@@ -300,7 +300,7 @@ export function drawDramaRings(
     g.lineStyle(ring.thickness, CLEAN_COLORS.dramaBlue, alpha * 0.6);
     g.strokeCircle(ring.x + offset, ring.y, ring.radius);
 
-    g.lineStyle(ring.thickness * 0.6, CLEAN_COLORS.dramaWhite, alpha);
+    g.lineStyle(ring.thickness * 0.6, CLEAN_COLORS.dramaAccent, alpha);
     g.strokeCircle(ring.x, ring.y, ring.radius);
   }
 }
@@ -516,7 +516,7 @@ export function drawRipples(
     g.lineStyle(ripple.thickness, CLEAN_COLORS.ripple, ripple.alpha);
     g.strokeCircle(ripple.x, ripple.y, ripple.radius);
 
-    g.lineStyle(ripple.thickness * 0.5, 0xffffff, ripple.alpha * 0.5);
+    g.lineStyle(ripple.thickness * 0.5, 0xccaaff, ripple.alpha * 0.5);
     g.strokeCircle(ripple.x, ripple.y, ripple.radius * 0.8);
   }
 }
@@ -564,7 +564,7 @@ export function drawCleanFood(
   g.fillStyle(CLEAN_COLORS.snowmanBody, 0.95);
   g.fillCircle(foodX + m.wobble * 0.3, foodY + m.bodyY, m.bodyRadius);
 
-  g.fillStyle(0xffffff, 0.25);
+  g.fillStyle(0xccddff, 0.25);
   g.fillCircle(
     foodX + m.wobble * 0.3 - m.bodyRadius * 0.3,
     foodY + m.bodyY - m.bodyRadius * 0.25,
@@ -574,7 +574,7 @@ export function drawCleanFood(
   g.fillStyle(CLEAN_COLORS.snowmanBody, 0.95);
   g.fillCircle(foodX + m.wobble * 0.5, foodY + m.headY, m.headRadius);
 
-  g.fillStyle(0xffffff, 0.3);
+  g.fillStyle(0xccddff, 0.3);
   g.fillCircle(
     foodX + m.wobble * 0.5 - m.headRadius * 0.3,
     foodY + m.headY - m.headRadius * 0.25,
@@ -659,7 +659,7 @@ export function drawCleanSnake(
     g.fillStyle(fill, 0.95);
     g.fillCircle(centerX, centerY, radius);
 
-    g.fillStyle(0xffffff, 0.15);
+    g.fillStyle(0xaaddff, 0.15);
     g.fillCircle(centerX - radius * 0.2, centerY - radius * 0.15, radius * 0.4);
 
     if (i === 0) {
@@ -670,7 +670,7 @@ export function drawCleanSnake(
       g.fillStyle(CLEAN_COLORS.candyRed, 1);
       g.fillCircle(centerX, centerY, radius);
 
-      g.fillStyle(0xffffff, 0.7);
+      g.fillStyle(0xaaddff, 0.7);
       g.fillCircle(centerX - radius * 0.3, centerY - radius * 0.2, radius * 0.15);
     }
   }
@@ -685,7 +685,7 @@ export function drawCleanVignette(
   for (let i = 0; i < layers; i++) {
     const inset = i * 25;
     const alpha = 0.08 * (1 - i / layers);
-    g.lineStyle(50, 0x000000, alpha);
+    g.lineStyle(50, 0x080012, alpha);
     g.strokeRect(inset - 25, inset - 25, width - inset * 2 + 50, height - inset * 2 + 50);
   }
 }
@@ -724,7 +724,7 @@ export function drawBlood(
       g.fillCircle(drop.x, drop.y, drop.size * 2);
       g.fillStyle(CLEAN_COLORS.blood, effectiveAlpha);
       g.fillCircle(drop.x, drop.y, drop.size);
-      g.fillStyle(0xffffff, effectiveAlpha * 0.3);
+      g.fillStyle(0xff8888, effectiveAlpha * 0.3);
       g.fillCircle(drop.x - drop.size * 0.3, drop.y - drop.size * 0.3, drop.size * 0.25);
     }
   }
@@ -832,7 +832,7 @@ export function drawSnowballs(
     g.fillStyle(CLEAN_COLORS.snowmanBody, ball.alpha);
     g.fillCircle(ball.x, ball.y, ball.size * 0.9);
 
-    g.fillStyle(0xffffff, ball.alpha * 0.5);
+    g.fillStyle(0xccddff, ball.alpha * 0.5);
     g.fillCircle(
       ball.x - ball.size * 0.3,
       ball.y - ball.size * 0.25,
@@ -1037,7 +1037,7 @@ export function drawFoodOrbits(
     g.fillStyle(orbit.color, alpha * 0.7);
     g.fillCircle(x, y, orbit.size * 1.5);
 
-    g.fillStyle(0xffffff, alpha * 0.6);
+    g.fillStyle(0xffddaa, alpha * 0.6);
     g.fillCircle(x, y, orbit.size * 0.6);
   }
 }

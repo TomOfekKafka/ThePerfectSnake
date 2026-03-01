@@ -116,15 +116,15 @@ export const drawPortals = (
     const alpha = p.life * 0.7;
     g.fillStyle(0x66eeff, alpha * 0.4);
     g.fillCircle(p.x, p.y, p.size * 1.5);
-    g.fillStyle(0xffffff, alpha);
+    g.fillStyle(0xaaddff, alpha);
     g.fillCircle(p.x, p.y, p.size * 0.6);
   }
 
   for (const f of state.warpFlashes) {
     const alpha = f.life * 0.5;
-    g.lineStyle(2, 0xffffff, alpha);
+    g.lineStyle(2, 0xaaddff, alpha);
     g.strokeCircle(f.x, f.y, f.radius);
-    g.fillStyle(0xffffff, alpha * 0.3);
+    g.fillStyle(0x88ccff, alpha * 0.3);
     g.fillCircle(f.x, f.y, f.radius * 0.5 * f.life);
   }
 };

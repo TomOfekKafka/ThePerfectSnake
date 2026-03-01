@@ -163,11 +163,11 @@ function drawKeanuAura(
   const pulse = 1.0 + Math.sin(frameCount * 0.08) * 0.15;
   const auraSize = size * 2.8 * pulse;
 
-  g.fillStyle(0x001122, alpha * 0.15);
+  g.fillStyle(0x220044, alpha * 0.18);
   g.fillCircle(cx, cy, auraSize);
-  g.fillStyle(0x003366, alpha * 0.1);
+  g.fillStyle(0x4400aa, alpha * 0.12);
   g.fillCircle(cx, cy, auraSize * 0.7);
-  g.fillStyle(0x004488, alpha * 0.08);
+  g.fillStyle(0x6622cc, alpha * 0.10);
   g.fillCircle(cx, cy, auraSize * 0.5);
 }
 
@@ -177,11 +177,11 @@ function drawSoulParticles(
 ): void {
   for (const p of state.soulParticles) {
     const a = Math.max(0, p.life);
-    g.fillStyle(0x4499cc, a * 0.3);
+    g.fillStyle(0x7733cc, a * 0.3);
     g.fillCircle(p.x, p.y, p.size * 1.5);
-    g.fillStyle(0x66ccff, a * 0.6);
+    g.fillStyle(0xaa55ff, a * 0.6);
     g.fillCircle(p.x, p.y, p.size);
-    g.fillStyle(0xccddff, a * 0.3);
+    g.fillStyle(0xddaaff, a * 0.3);
     g.fillCircle(p.x, p.y, p.size * 0.4);
   }
 }
@@ -252,12 +252,12 @@ function drawKeanuWhoa(
   const whoaY = cy - s * 1.3;
   const whoaAlpha = alpha * (0.7 + Math.sin(frameCount * 0.08) * 0.3);
 
-  g.fillStyle(0x000000, whoaAlpha * 0.6);
+  g.fillStyle(0x110022, whoaAlpha * 0.7);
   g.fillRoundedRect(cx - s * 1.2 * whoaScale, whoaY - s * 0.3, s * 2.4 * whoaScale, s * 0.55, 4);
-  g.lineStyle(2, 0x66ccff, whoaAlpha * 0.8);
+  g.lineStyle(2, 0xaa55ff, whoaAlpha * 0.8);
   g.strokeRoundedRect(cx - s * 1.2 * whoaScale, whoaY - s * 0.3, s * 2.4 * whoaScale, s * 0.55, 4);
 
-  g.fillStyle(0x66ccff, whoaAlpha * 0.08);
+  g.fillStyle(0x7733cc, whoaAlpha * 0.1);
   g.fillRoundedRect(cx - s * 1.3 * whoaScale, whoaY - s * 0.35, s * 2.6 * whoaScale, s * 0.65, 5);
 
   const letterSpacing = s * 0.5 * whoaScale;
@@ -282,10 +282,10 @@ function drawWhoaLetter(
   index: number
 ): void {
   const glow = 0.3 + Math.sin(frameCount * 0.1 + index * 1.2) * 0.2;
-  g.fillStyle(0x66ccff, alpha * glow);
+  g.fillStyle(0xaa55ff, alpha * glow);
   g.fillCircle(x, y, size * 2);
 
-  g.lineStyle(2.5, 0xffffff, alpha);
+  g.lineStyle(2.5, 0xddaaff, alpha);
   g.beginPath();
 
   switch (letter) {
