@@ -27,10 +27,3 @@ dist-ssr
 
 # Vercel
 .vercel
-.env*.local
-claude-output.json
-
-# Platform repo (separate repository)
-perfect-snake-platform/
-.env.check
-.env.prod-check
