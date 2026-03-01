@@ -209,7 +209,6 @@ export function drawSpermSnake(
     rightEdge.push({ x: points[i].x - n.x * w, y: points[i].y - n.y * w });
   }
 
-  drawBodyShadow(g, leftEdge, rightEdge);
   drawNoirBody(g, points, leftEdge, rightEdge, len, frameCount);
   drawNoirStripes(g, points, leftEdge, rightEdge, cellSize, frameCount);
   drawNoirHeadGlow(g, points, cellSize, frameCount);
@@ -227,9 +226,6 @@ function drawSingleCellHead(
   const pulse = 1.0 + Math.sin(frameCount * 0.05) * 0.03;
   const r = radius * pulse;
 
-  g.fillStyle(0x000000, 0.2);
-  g.fillCircle(pt.x + 2, pt.y + 3, r);
-
   g.fillStyle(NOIR_SILVER, 0.1);
   g.fillCircle(pt.x, pt.y, r * 1.4);
 
@@ -240,24 +236,6 @@ function drawSingleCellHead(
   g.fillCircle(pt.x - r * 0.2, pt.y - r * 0.2, r * 0.4);
 
   drawNoirEyesAt(g, pt.x, pt.y, r, frameCount);
-}
-
-function drawBodyShadow(
-  g: Phaser.GameObjects.Graphics,
-  leftEdge: Vec2[],
-  rightEdge: Vec2[]
-): void {
-  g.fillStyle(0x000000, 0.25);
-  g.beginPath();
-  g.moveTo(leftEdge[0].x + 2, leftEdge[0].y + 3);
-  for (let i = 1; i < leftEdge.length; i++) {
-    g.lineTo(leftEdge[i].x + 2, leftEdge[i].y + 3);
-  }
-  for (let i = rightEdge.length - 1; i >= 0; i--) {
-    g.lineTo(rightEdge[i].x + 2, rightEdge[i].y + 3);
-  }
-  g.closePath();
-  g.fillPath();
 }
 
 function drawNoirBody(

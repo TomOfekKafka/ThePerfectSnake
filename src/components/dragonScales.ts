@@ -49,11 +49,6 @@ const LIGHT_ANGLE = -Math.PI / 4;
 const LIGHT_COS = Math.cos(LIGHT_ANGLE);
 const LIGHT_SIN = Math.sin(LIGHT_ANGLE);
 
-function drawDragonShadow(g: Phaser.GameObjects.Graphics, seg: DragonSegment): void {
-  g.fillStyle(0x000000, 0.2);
-  g.fillEllipse(seg.cx + 2, seg.cy + 4, seg.radius * 2.2, seg.radius * 1.3);
-}
-
 function drawScalePattern(
   g: Phaser.GameObjects.Graphics,
   seg: DragonSegment,
@@ -227,10 +222,6 @@ export function drawDragonSnake(
   if (len === 0) return;
 
   const segments = snake.map((s, i) => computeDragonSegment(s.x, s.y, cellSize, i, len));
-
-  for (let i = len - 1; i >= 0; i--) {
-    drawDragonShadow(g, segments[i]);
-  }
 
   drawDragonConnectors(g, segments);
 

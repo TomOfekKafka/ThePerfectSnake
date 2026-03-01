@@ -67,12 +67,6 @@ export function solidEdgeColor(taper: number): number {
   return (Math.min(0xff, r) << 16) | (Math.min(0xff, g) << 8) | Math.min(0xff, b);
 }
 
-function drawSolidShadow(g: Phaser.GameObjects.Graphics, seg: SolidSegment): void {
-  const half = seg.size / 2;
-  g.fillStyle(0x000000, 0.25);
-  g.fillRect(seg.cx - half + 2, seg.cy - half + 3, seg.size, seg.size);
-}
-
 function drawSolidBody(
   g: Phaser.GameObjects.Graphics,
   seg: SolidSegment,

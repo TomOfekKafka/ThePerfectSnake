@@ -1,9 +1,6 @@
 import Phaser from 'phaser';
 import { FoodType } from './foodVariety';
 
-const SHADOW_OFFSET_X = 3;
-const SHADOW_OFFSET_Y = 4;
-const SHADOW_COLOR = 0x000000;
 const LIGHT_ANGLE = -Math.PI / 4;
 const LIGHT_COS = Math.cos(LIGHT_ANGLE);
 const LIGHT_SIN = Math.sin(LIGHT_ANGLE);
@@ -38,18 +35,6 @@ export function computeSegmentDepth(
   const highlightColor = (greenDark << 16) | (Math.min(0xff, greenBase + 0x40) << 8) | (greenDark >> 1);
 
   return { cx, cy, radius, baseColor, highlightColor, isHead: index === 0 };
-}
-
-export function drawSegmentShadow(
-  g: Phaser.GameObjects.Graphics,
-  seg: DepthSegment
-): void {
-  const shadowX = seg.cx + SHADOW_OFFSET_X;
-  const shadowY = seg.cy + SHADOW_OFFSET_Y;
-  const shadowRadius = seg.radius * 1.05;
-
-  g.fillStyle(SHADOW_COLOR, 0.35);
-  g.fillEllipse(shadowX, shadowY + 2, shadowRadius * 2, shadowRadius * 1.3);
 }
 
 export function drawSegmentBody(
@@ -134,10 +119,6 @@ export function drawSnake3D(
   const segments = snake.map((s, i) => computeSegmentDepth(s.x, s.y, cellSize, i, len));
 
   for (let i = len - 1; i >= 0; i--) {
-    drawSegmentShadow(g, segments[i]);
-  }
-
-  for (let i = len - 1; i >= 0; i--) {
     if (segments[i].isHead) continue;
     drawSegmentBody(g, segments[i], frameCount);
   }
@@ -157,11 +138,6 @@ export function drawFood3D(
   const baseRadius = cellSize * 0.35;
   const pulse = 1.0 + Math.sin(frameCount * 0.1) * 0.08;
   const radius = baseRadius * pulse;
-
-  const shadowScale = 1.0 - hover / 20;
-  const shadowAlpha = 0.25 * Math.max(0.3, shadowScale);
-  g.fillStyle(SHADOW_COLOR, shadowAlpha);
-  g.fillEllipse(foodX + 2, foodY + 5, radius * 2 * shadowScale, radius * 0.8 * shadowScale);
 
   g.fillStyle(0xff8800, 0.2);
   g.fillCircle(foodX, floatY, radius * 2);
@@ -301,11 +277,6 @@ export function drawVariedFood(
   const pulse = 1.0 + Math.sin(frameCount * 0.1) * 0.08;
   const radius = baseRadius * pulse;
   const rotation = frameCount * 0.02;
-
-  const shadowScale = 1.0 - hover / 20;
-  const shadowAlpha = 0.25 * Math.max(0.3, shadowScale);
-  g.fillStyle(SHADOW_COLOR, shadowAlpha);
-  g.fillEllipse(foodX + 2, foodY + 5, radius * 2 * shadowScale, radius * 0.8 * shadowScale);
 
   g.fillStyle(foodType.glowColor, 0.18);
   g.fillCircle(foodX, floatY, radius * 2.2);
