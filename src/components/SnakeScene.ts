@@ -357,6 +357,14 @@ import {
   updateFoodPrison,
   drawFoodPrison,
 } from './foodPrison';
+import {
+  DeleteEffectState,
+  createDeleteEffectState,
+  initDeleteEffect,
+  updateDeleteEffect,
+  drawDeleteEffect,
+  spawnDeleteBurst,
+} from './deleteEffect';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -881,6 +889,7 @@ export class SnakeScene extends Phaser.Scene {
   private noirEffects: NoirEffectsState = createNoirEffectsState();
   private gravityWells: GravityWellsState = createGravityWellsState();
   private foodPrison: FoodPrisonState = createFoodPrisonState();
+  private deleteEffect: DeleteEffectState = createDeleteEffectState();
   private depth3d: Depth3DState = createDepth3D();
 
   constructor() {
