@@ -338,6 +338,13 @@ import {
   drawFilmGrain,
   drawNoirVignette,
 } from './noirEffects';
+import {
+  GravityWellsState,
+  createGravityWellsState,
+  updateGravityWells,
+  drawGravityWells,
+  applyGravityToPoint,
+} from './gravityWells';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -860,6 +867,7 @@ export class SnakeScene extends Phaser.Scene {
   private sameDirectionExplosion: SameDirectionExplosionState = createSameDirectionExplosionState();
   private dropDeath: DropDeathState = createDropDeathState();
   private noirEffects: NoirEffectsState = createNoirEffectsState();
+  private gravityWells: GravityWellsState = createGravityWellsState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2527,6 +2535,7 @@ export class SnakeScene extends Phaser.Scene {
       this.silk = resetSilkVisited(this.silk);
       this.deathCinematic = createDeathCinematicState();
       this.dropDeath = createDropDeathState();
+      this.gravityWells = createGravityWellsState();
       this.deathDelayActive = false;
       this.deathDelayFrames = 0;
       resetFlagLifeBar(this.flagLifeBar);
@@ -2858,6 +2867,11 @@ export class SnakeScene extends Phaser.Scene {
     updateSameDirectionExplosion(this.sameDirectionExplosion);
     updateSpaceBackground(this.spaceBackground, width, height);
     updateMotes(this.cleanEffects, width, height);
+    for (const mote of this.cleanEffects.motes) {
+      const pull = applyGravityToPoint(this.gravityWells, mote.x, mote.y);
+      mote.vx += pull.dx * 0.02;
+      mote.vy += pull.dy * 0.02;
+    }
     updateRipples(this.cleanEffects);
     updateFoodOrbits(this.cleanEffects);
     updateScoreBursts(this.mathParticles);
@@ -2891,6 +2905,11 @@ export class SnakeScene extends Phaser.Scene {
       this.currentState?.obstacles || [],
       CELL_SIZE
     );
+
+    {
+      const gameActive = !!(this.currentState && this.currentState.gameStarted && !this.currentState.gameOver);
+      updateGravityWells(this.gravityWells, width, height, gameActive);
+    }
 
     if (this.currentState && this.currentState.gameStarted) {
       const score = this.currentState.score || 0;
@@ -3036,10 +3055,12 @@ export class SnakeScene extends Phaser.Scene {
     if (!this.currentState) return;
 
     drawRipples(g, this.cleanEffects);
+    drawGravityWells(g, this.gravityWells, this.frameCount);
 
     const food = this.currentState.food;
-    const foodX = food.x * CELL_SIZE + CELL_SIZE / 2;
-    const foodY = food.y * CELL_SIZE + CELL_SIZE / 2;
+    const gravPull = applyGravityToPoint(this.gravityWells, food.x * CELL_SIZE + CELL_SIZE / 2, food.y * CELL_SIZE + CELL_SIZE / 2);
+    const foodX = food.x * CELL_SIZE + CELL_SIZE / 2 + gravPull.dx;
+    const foodY = food.y * CELL_SIZE + CELL_SIZE / 2 + gravPull.dy;
 
     if (this.currentState.snake.length > 0 && !this.currentState.gameOver) {
       const head = this.currentState.snake[0];
