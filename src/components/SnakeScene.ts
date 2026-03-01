@@ -345,6 +345,12 @@ import {
   drawGravityWells,
   applyGravityToPoint,
 } from './gravityWells';
+import {
+  FoodPrisonState,
+  createFoodPrisonState,
+  updateFoodPrison,
+  drawFoodPrison,
+} from './foodPrison';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -868,6 +874,7 @@ export class SnakeScene extends Phaser.Scene {
   private dropDeath: DropDeathState = createDropDeathState();
   private noirEffects: NoirEffectsState = createNoirEffectsState();
   private gravityWells: GravityWellsState = createGravityWellsState();
+  private foodPrison: FoodPrisonState = createFoodPrisonState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2874,6 +2881,7 @@ export class SnakeScene extends Phaser.Scene {
     }
     updateRipples(this.cleanEffects);
     updateFoodOrbits(this.cleanEffects);
+    updateFoodPrison(this.foodPrison);
     updateScoreBursts(this.mathParticles);
     updateNuclearBlasts(this.nuclearBlast);
     updateComboStreak(this.comboStreak);
@@ -3081,6 +3089,7 @@ export class SnakeScene extends Phaser.Scene {
     drawSnitchWings(g, this.wizardEffects, foodX, foodY, CELL_SIZE);
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
     drawHoloFood(g, this.sciFi, foodX, foodY, CELL_SIZE);
+    drawFoodPrison(g, this.foodPrison, foodX, foodY, CELL_SIZE, this.frameCount);
 
     drawObstacles(g, this.obstacleRender, this.currentState.obstacles || [], CELL_SIZE, this.frameCount);
 
