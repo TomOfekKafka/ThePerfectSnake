@@ -365,6 +365,13 @@ import {
   drawDeleteEffect,
   spawnDeleteBurst,
 } from './deleteEffect';
+import {
+  FoodProtestState,
+  createFoodProtestState,
+  spawnProtestSigns,
+  updateFoodProtest,
+  drawFoodProtest,
+} from './foodProtest';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -890,6 +897,7 @@ export class SnakeScene extends Phaser.Scene {
   private gravityWells: GravityWellsState = createGravityWellsState();
   private foodPrison: FoodPrisonState = createFoodPrisonState();
   private deleteEffect: DeleteEffectState = createDeleteEffectState();
+  private foodProtest: FoodProtestState = createFoodProtestState();
   private depth3d: Depth3DState = createDepth3D();
 
   constructor() {
@@ -2489,6 +2497,7 @@ export class SnakeScene extends Phaser.Scene {
       resetSkullDrop(this.skullDrop);
       this.hugeHead = triggerChomp(this.hugeHead);
       spawnFireHearts(this.fireHearts, headX, headY);
+      spawnProtestSigns(this.foodProtest, headX, headY, 5 + Math.floor(Math.random() * 3));
     }
     this.lastSnakeLength = state.snake.length;
 
@@ -2916,6 +2925,7 @@ export class SnakeScene extends Phaser.Scene {
       this.frameCount
     );
     updateFireHearts(this.fireHearts);
+    updateFoodProtest(this.foodProtest);
     updateSpiderlings(this.spiderlingsList);
     updateBackgroundBand(this.backgroundBand);
     {
@@ -3120,6 +3130,7 @@ export class SnakeScene extends Phaser.Scene {
     drawSnake3DHighlights(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.depth3d.headPulse);
     drawSnakeEnergyField(g, this.sciFi, this.currentState.snake, CELL_SIZE);
     drawFireHearts(g, this.fireHearts);
+    drawFoodProtest(g, this.foodProtest, this.drawLetter.bind(this));
     drawElectricStorm(g, this.electricStorm, this.frameCount);
     this.drawDroolDrops(g);
     drawWandSparkles(g, this.wizardEffects);
