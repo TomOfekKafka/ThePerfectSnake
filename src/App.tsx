@@ -1,49 +1,101 @@
-import { PayPalScriptProvider } from '@paypal/react-paypal-js';
-import { useSnakeGame } from './hooks/useSnakeGame';
+import { useSnakeGame } from './game';
 import { GameBoard } from './components/GameBoard';
-import PayPalButton from './components/PayPalButton';
 import './App.css';
 
 function App() {
-  const { gameState, gridSize } = useSnakeGame();
+  const { gameState, resetGame, changeDirection, gridSize, isEmbedded } = useSnakeGame();
 
-  return (
-    <PayPalScriptProvider
-      options={{
-        clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || '',
-        currency: 'USD',
-        intent: 'capture'
-      }}
-    >
-      <div className="app">
+  // When embedded, render only the game board (platform handles UI)
+  if (isEmbedded) {
+    return (
+      <div className="app embedded">
         <div className="game-container">
-          <h1>The Perfect Snake</h1>
-
-          <div className="game-info">
-            <div className="score">Score: {gameState.score}</div>
-            {!gameState.gameStarted && (
-              <div className="message">Press SPACE to start</div>
-            )}
-            {gameState.gameOver && (
-              <div className="message game-over">
-                Game Over! Press SPACE to restart
-              </div>
-            )}
-          </div>
-
           <GameBoard gameState={gameState} gridSize={gridSize} />
-
-          <div className="instructions">
-            <p>Use arrow keys to move</p>
-            <p>Press SPACE to start/restart</p>
-          </div>
         </div>
-
-        <aside className="payment-sidebar">
-          <PayPalButton />
-        </aside>
       </div>
-    </PayPalScriptProvider>
+    );
+  }
+
+  // Standalone mode: full UI
+  return (
+    <div className="app">
+      <div className="game-container">
+        <h1>Snake Game</h1>
+        <div className="score">Score: {gameState.score}</div>
+
+        {!gameState.gameStarted && (
+          <div className="message">
+            <button className="start-button" onClick={resetGame}>
+              Start Game
+            </button>
+          </div>
+        )}
+
+        {gameState.gameOver && (
+          <div className="message game-over">
+            <div>Game Over!</div>
+            <button className="start-button" onClick={resetGame}>
+              Play Again
+            </button>
+          </div>
+        )}
+
+        <GameBoard gameState={gameState} gridSize={gridSize} />
+
+        <MobileControls
+          onDirection={changeDirection}
+          disabled={!gameState.gameStarted || gameState.gameOver}
+        />
+
+        <div className="instructions">
+          <p>Desktop: Use arrow keys • Mobile: Swipe or use buttons</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface MobileControlsProps {
+  onDirection: (dir: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT') => void;
+  disabled: boolean;
+}
+
+function MobileControls({ onDirection, disabled }: MobileControlsProps) {
+  return (
+    <div className="mobile-controls">
+      <div className="control-row">
+        <button
+          className="control-btn"
+          onClick={() => onDirection('UP')}
+          disabled={disabled}
+        >
+          ▲
+        </button>
+      </div>
+      <div className="control-row">
+        <button
+          className="control-btn"
+          onClick={() => onDirection('LEFT')}
+          disabled={disabled}
+        >
+          ◀
+        </button>
+        <button
+          className="control-btn"
+          onClick={() => onDirection('DOWN')}
+          disabled={disabled}
+        >
+          ▼
+        </button>
+        <button
+          className="control-btn"
+          onClick={() => onDirection('RIGHT')}
+          disabled={disabled}
+        >
+          ▶
+        </button>
+      </div>
+    </div>
   );
 }
 

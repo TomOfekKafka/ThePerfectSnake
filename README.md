@@ -2,6 +2,8 @@
 
 A classic Snake game built with React + TypeScript + Vite.
 
+This is the standalone game component that can be embedded via iframe or deployed independently.
+
 ## Getting Started
 
 1. Install dependencies:
@@ -16,26 +18,34 @@ npm start
 
 The game will open in your browser at `http://localhost:5173`
 
+3. Build for production:
+```bash
+npm run build
+```
+
 ## How to Play
 
+**Desktop:**
 - Press **SPACE** to start the game
-- Use **Arrow Keys** to control the snake:
-  - ↑ Move up
-  - ↓ Move down
-  - ← Move left
-  - → Move right
+- Use **Arrow Keys** to control the snake
+
+**Mobile:**
+- Tap **Start Game** button
+- Swipe in any direction OR use on-screen arrow buttons to control the snake
+
+**Goal:**
 - Eat the red food to grow and score points
 - Avoid hitting walls or your own tail
-- Press **SPACE** to restart after game over
 
-## Game Features
+## Features
 
-- 20x20 grid
+- Fully responsive design (works on desktop and mobile)
+- Touch/swipe controls for mobile devices
+- On-screen control buttons
 - Real-time snake movement
-- Food spawning system
 - Score tracking
-- Collision detection (walls and self)
-- Responsive keyboard controls
+- Collision detection
+- Embeddable via iframe
 
 ## Tech Stack
 
@@ -43,5 +53,23 @@ The game will open in your browser at `http://localhost:5173`
 - TypeScript
 - Vite
 - CSS3
+
+## Embedding
+
+This game can be embedded in other applications using an iframe:
+
+```html
+<iframe
+  src="https://your-game-url.vercel.app"
+  width="600"
+  height="700"
+  allow="accelerometer; autoplay"
+  sandbox="allow-scripts allow-same-origin"
+/>
+```
+
+## Architecture
+
+This repository contains only the pure game code. The payment and AI improvement platform is maintained separately in a private repository.
 
 Enjoy the game!

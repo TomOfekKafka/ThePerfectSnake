@@ -8,20 +8,29 @@
     "start": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "echo \"No tests configured\" && exit 0",
-    "test:perf": "node scripts/perf-test.js"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:perf": "npx playwright test",
+    "reset-to-baseline": "cp .baseline/App.css src/App.css && cp .baseline/GameBoard.css src/components/GameBoard.css && cp .baseline/GameBoard.tsx src/components/GameBoard.tsx && cp .baseline/SnakeScene.ts src/components/SnakeScene.ts && echo '✅ Reset to boring baseline (v0)'",
+    "upload-version": "node scripts/upload-version.js"
   },
   "dependencies": {
-    "@paypal/react-paypal-js": "^8.9.2",
+    "@vercel/blob": "^2.0.1",
+    "phaser": "^3.90.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@testing-library/react": "^14.1.2",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
-    "@vercel/node": "^5.5.28",
     "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/ui": "^1.1.0",
+    "jsdom": "^23.0.1",
     "typescript": "^5.2.2",
-    "vite": "^5.0.8"
+    "vite": "^5.0.8",
+    "vitest": "^1.1.0"
   }
 }
