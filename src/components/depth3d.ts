@@ -182,19 +182,19 @@ export function drawFood3DEffect(
     const brightness = 0.5 + lightDot * 0.5;
 
     const hue = ((i / facetCount) + state.gemPhase / (Math.PI * 8)) % 1;
-    const gemColor = hslToHex(hue, 0.7, brightness * 0.5);
+    const gemColor = hslToHex(hue, 0.85, brightness * 0.6);
 
-    g.fillStyle(gemColor, 0.35);
+    g.fillStyle(gemColor, 0.55);
     g.fillCircle(fx, fy, facetR);
 
-    if (lightDot > 0.3) {
-      g.fillStyle(C.WHITE, lightDot * 0.15);
+    if (lightDot > 0.2) {
+      g.fillStyle(C.WHITE, lightDot * 0.25);
       g.fillCircle(fx + LIGHT_COS * facetR * 0.2, fy + LIGHT_SIN * facetR * 0.2, facetR * 0.3);
     }
   }
 
-  const pulseR = baseRadius * 1.4 + Math.sin(frameCount * 0.07) * baseRadius * 0.15;
-  g.fillStyle(0xff8844, 0.06);
+  const pulseR = baseRadius * 1.5 + Math.sin(frameCount * 0.07) * baseRadius * 0.2;
+  g.fillStyle(0xff8844, 0.12);
   g.fillCircle(foodX, bobY, pulseR);
 }
 

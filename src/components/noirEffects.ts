@@ -123,11 +123,11 @@ export function drawNoirSmoke(
   state: NoirEffectsState
 ): void {
   for (const smoke of state.smoke) {
-    const alpha = smoke.alpha * smoke.life;
+    const alpha = smoke.alpha * smoke.life * 0.4;
     g.fillStyle(NOIR_GRAY, alpha);
-    g.fillCircle(smoke.x, smoke.y, smoke.size);
+    g.fillCircle(smoke.x, smoke.y, smoke.size * 0.7);
     g.fillStyle(NOIR_WHITE, alpha * 0.3);
-    g.fillCircle(smoke.x, smoke.y, smoke.size * 0.5);
+    g.fillCircle(smoke.x, smoke.y, smoke.size * 0.35);
   }
 }
 
@@ -142,19 +142,19 @@ export function drawNoirSpotlight(
   const cy = state.spotlightY || height / 2;
   const pulse = 0.9 + Math.sin(frameCount * 0.03) * 0.1;
 
-  g.fillStyle(0x000000, 0.55);
+  g.fillStyle(0x000000, 0.15);
   g.fillRect(0, 0, width, height);
 
   const layers = 5;
   for (let i = layers; i > 0; i--) {
-    const layerRadius = (width * 0.35 + i * 25) * pulse;
-    const layerAlpha = 0.12 * (1 - i / (layers + 1));
+    const layerRadius = (width * 0.4 + i * 30) * pulse;
+    const layerAlpha = 0.18 * (1 - i / (layers + 1));
     g.fillStyle(NOIR_WHITE, layerAlpha);
     g.fillCircle(cx, cy, layerRadius);
   }
 
-  g.fillStyle(NOIR_WHITE, 0.06 * pulse);
-  g.fillCircle(cx, cy, width * 0.2);
+  g.fillStyle(NOIR_WHITE, 0.12 * pulse);
+  g.fillCircle(cx, cy, width * 0.25);
 }
 
 export function drawVenetianBlinds(
@@ -164,17 +164,17 @@ export function drawVenetianBlinds(
   height: number,
   frameCount: number
 ): void {
-  const blindSpacing = 25;
-  const blindWidth = 8;
+  const blindSpacing = 30;
+  const blindWidth = 5;
   const waveOffset = Math.sin(state.venetianPhase) * 10;
 
   for (let y = waveOffset; y < height; y += blindSpacing) {
-    const brightness = 0.03 + Math.sin(y * 0.02 + state.venetianPhase * 2) * 0.015;
+    const brightness = 0.015 + Math.sin(y * 0.02 + state.venetianPhase * 2) * 0.008;
     g.fillStyle(NOIR_WHITE, brightness);
     g.fillRect(0, y, width, blindWidth);
   }
 
-  const diagonalAlpha = 0.04 + Math.sin(frameCount * 0.02) * 0.01;
+  const diagonalAlpha = 0.02 + Math.sin(frameCount * 0.02) * 0.005;
   g.fillStyle(0x000000, diagonalAlpha);
   for (let i = -2; i < 6; i++) {
     const x1 = i * 100 + Math.sin(state.venetianPhase) * 20;
@@ -195,14 +195,14 @@ export function drawFilmGrain(
   seed: number
 ): void {
   let s = seed;
-  const step = 6;
+  const step = 8;
   for (let y = 0; y < height; y += step) {
     for (let x = 0; x < width; x += step) {
       s = (s * 16807 + 1) % 2147483647;
       const noise = (s / 2147483647);
-      if (noise > 0.7) {
-        const grainAlpha = (noise - 0.7) * 0.08;
-        g.fillStyle(noise > 0.85 ? 0xffffff : 0x000000, grainAlpha);
+      if (noise > 0.8) {
+        const grainAlpha = (noise - 0.8) * 0.04;
+        g.fillStyle(noise > 0.9 ? 0xffffff : 0x000000, grainAlpha);
         g.fillRect(x, y, step, step);
       }
     }
@@ -214,16 +214,16 @@ export function drawNoirVignette(
   width: number,
   height: number
 ): void {
-  const layers = 6;
+  const layers = 4;
   for (let i = 0; i < layers; i++) {
-    const inset = i * 28;
-    const alpha = 0.2 * (1 - i / layers);
-    g.lineStyle(55, 0x000000, alpha);
-    g.strokeRect(inset - 28, inset - 28, width - inset * 2 + 56, height - inset * 2 + 56);
+    const inset = i * 20;
+    const alpha = 0.1 * (1 - i / layers);
+    g.lineStyle(25, 0x000000, alpha);
+    g.strokeRect(inset - 12, inset - 12, width - inset * 2 + 24, height - inset * 2 + 24);
   }
 
-  const borderSize = 3;
-  g.fillStyle(0x000000, 0.9);
+  const borderSize = 2;
+  g.fillStyle(0x000000, 0.7);
   g.fillRect(0, 0, width, borderSize);
   g.fillRect(0, height - borderSize, width, borderSize);
   g.fillRect(0, 0, borderSize, height);

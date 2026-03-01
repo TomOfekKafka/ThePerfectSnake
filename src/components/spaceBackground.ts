@@ -197,10 +197,10 @@ export function drawSpaceBase(
   width: number,
   height: number
 ): void {
-  g.fillStyle(0x030812, 1);
+  g.fillStyle(0x050e1a, 1);
   g.fillRect(0, 0, width, height);
 
-  g.fillStyle(0x0a1628, 0.5);
+  g.fillStyle(0x0e1e38, 0.5);
   g.fillCircle(width / 2, height / 2, width * 0.5);
 }
 
@@ -240,15 +240,15 @@ export function drawWarpStars(
     const streakLen = Math.sqrt(dx * dx + dy * dy);
 
     if (streakLen > 1.5) {
-      g.lineStyle(Math.max(0.5, size * 0.7), 0xccddff, alpha * 0.6);
+      g.lineStyle(Math.max(0.5, size * 0.7), 0xccddff, alpha * 0.8);
       g.lineBetween(star.prevX, star.prevY, screenX, screenY);
     }
 
-    g.fillStyle(0xeeeeff, alpha);
+    g.fillStyle(0xeeeeff, Math.min(1, alpha * 1.3));
     g.fillCircle(screenX, screenY, size);
 
     if (size > 1.5) {
-      g.fillStyle(0xffffff, alpha * 0.5);
+      g.fillStyle(0xffffff, alpha * 0.7);
       g.fillCircle(screenX, screenY, size * 0.5);
     }
   }

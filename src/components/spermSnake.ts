@@ -339,12 +339,12 @@ function drawNoirHeadGlow(
 ): void {
   const headPt = points[0];
   const pulse = 1.0 + Math.sin(frameCount * 0.04) * 0.08;
-  const glowRadius = cellSize * 0.6 * pulse;
-
-  g.fillStyle(NOIR_SILVER, 0.04);
-  g.fillCircle(headPt.x, headPt.y, glowRadius * 1.3);
+  const glowRadius = cellSize * 0.7 * pulse;
 
   g.fillStyle(NOIR_SILVER, 0.08);
+  g.fillCircle(headPt.x, headPt.y, glowRadius * 1.3);
+
+  g.fillStyle(NOIR_WHITE, 0.14);
   g.fillCircle(headPt.x, headPt.y, glowRadius);
 }
 
