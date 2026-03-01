@@ -4,6 +4,7 @@ import { getTapDirection } from './tapDirection';
 import { CELL_SIZE, GRID_SIZE } from './constants';
 
 const SWIPE_THRESHOLD = 30;
+const DIAGONAL_RATIO = 0.6;
 
 export interface TapEvent {
   x: number;
@@ -60,18 +61,19 @@ export function useTouch({
       const isSwipe = Math.abs(deltaX) > SWIPE_THRESHOLD || Math.abs(deltaY) > SWIPE_THRESHOLD;
 
       if (isSwipe) {
-        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-          if (deltaX > SWIPE_THRESHOLD) {
-            onDirectionChange('RIGHT');
-          } else if (deltaX < -SWIPE_THRESHOLD) {
-            onDirectionChange('LEFT');
-          }
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+        const ratio = Math.min(absX, absY) / Math.max(absX, absY);
+        const isDiagonalSwipe = ratio > DIAGONAL_RATIO && absX > SWIPE_THRESHOLD && absY > SWIPE_THRESHOLD;
+
+        if (isDiagonalSwipe) {
+          const vertical: 'UP' | 'DOWN' = deltaY < 0 ? 'UP' : 'DOWN';
+          const horizontal: 'LEFT' | 'RIGHT' = deltaX < 0 ? 'LEFT' : 'RIGHT';
+          onDirectionChange(`${vertical}_${horizontal}` as Direction);
+        } else if (absX > absY) {
+          onDirectionChange(deltaX > 0 ? 'RIGHT' : 'LEFT');
         } else {
-          if (deltaY > SWIPE_THRESHOLD) {
-            onDirectionChange('DOWN');
-          } else if (deltaY < -SWIPE_THRESHOLD) {
-            onDirectionChange('UP');
-          }
+          onDirectionChange(deltaY > 0 ? 'DOWN' : 'UP');
         }
         return;
       }

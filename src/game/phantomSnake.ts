@@ -1,4 +1,4 @@
-import { Position, Direction } from './types';
+import { Position, Direction, CardinalDirection, isCardinal } from './types';
 import { GRID_SIZE } from './constants';
 import { positionsEqual, collidesWithSnake, isInBounds } from './logic';
 
@@ -39,20 +39,20 @@ const choosePhantomDirection = (
 
   const candidates: { dir: Direction; score: number }[] = [];
 
-  const dirs: Direction[] = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
-  const moves: Record<Direction, Position> = {
+  const dirs: CardinalDirection[] = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
+  const moves: Record<CardinalDirection, Position> = {
     UP: { x: head.x, y: head.y - 1 },
     DOWN: { x: head.x, y: head.y + 1 },
     LEFT: { x: head.x - 1, y: head.y },
     RIGHT: { x: head.x + 1, y: head.y },
   };
 
-  const opposite: Record<Direction, Direction> = {
+  const opposite: Record<CardinalDirection, Direction> = {
     UP: 'DOWN', DOWN: 'UP', LEFT: 'RIGHT', RIGHT: 'LEFT',
   };
 
   for (const dir of dirs) {
-    if (dir === opposite[currentDir] && segments.length > 1) continue;
+    if (isCardinal(currentDir) && dir === opposite[currentDir] && segments.length > 1) continue;
 
     const next = moves[dir];
     if (!isInBounds(next)) continue;
@@ -93,12 +93,12 @@ const spawnPhantomSnake = (
   const spawnHead = ranked[0].pos;
 
   const segments: Position[] = [];
-  const dirToCenter: Direction =
+  const dirToCenter: CardinalDirection =
     spawnHead.x < GRID_SIZE / 2
       ? (spawnHead.y < GRID_SIZE / 2 ? 'DOWN' : 'UP')
       : (spawnHead.y < GRID_SIZE / 2 ? 'DOWN' : 'UP');
 
-  const tailOffset: Record<Direction, Position> = {
+  const tailOffset: Record<CardinalDirection, Position> = {
     UP: { x: 0, y: 1 },
     DOWN: { x: 0, y: -1 },
     LEFT: { x: 1, y: 0 },
@@ -184,14 +184,15 @@ export const tickPhantom = (
   const head = phantom.segments[0];
   const dir = choosePhantomDirection(head, food, phantom.direction, phantom.segments);
 
-  const moves: Record<Direction, Position> = {
+  const moves: Record<CardinalDirection, Position> = {
     UP: { x: head.x, y: head.y - 1 },
     DOWN: { x: head.x, y: head.y + 1 },
     LEFT: { x: head.x - 1, y: head.y },
     RIGHT: { x: head.x + 1, y: head.y },
   };
 
-  const newHead = moves[dir];
+  const cardinalDir = dir as CardinalDirection;
+  const newHead = moves[cardinalDir];
 
   if (!isInBounds(newHead) || collidesWithSnake(newHead, phantom.segments.slice(0, -1))) {
     return {

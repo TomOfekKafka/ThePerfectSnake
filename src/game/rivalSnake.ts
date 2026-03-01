@@ -1,4 +1,4 @@
-import { Position, Direction, RivalSnakeState } from './types';
+import { Position, Direction, CardinalDirection, RivalSnakeState, isCardinal } from './types';
 import { GRID_SIZE } from './constants';
 import { positionsEqual, isInBounds, collidesWithSnake, getNextHead } from './logic';
 
@@ -29,15 +29,15 @@ const chooseRivalDirection = (
   ownSegments: Position[],
   playerSnake: Position[]
 ): Direction => {
-  const dirs: Direction[] = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
-  const opposite: Record<Direction, Direction> = {
+  const dirs: CardinalDirection[] = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
+  const opposite: Record<CardinalDirection, Direction> = {
     UP: 'DOWN', DOWN: 'UP', LEFT: 'RIGHT', RIGHT: 'LEFT',
   };
 
   const candidates: { dir: Direction; score: number }[] = [];
 
   for (const dir of dirs) {
-    if (dir === opposite[currentDir] && ownSegments.length > 1) continue;
+    if (isCardinal(currentDir) && dir === opposite[currentDir] && ownSegments.length > 1) continue;
 
     const next = getNextHead(head, dir);
     if (!isInBounds(next)) continue;
@@ -81,12 +81,12 @@ const spawnRivalSnake = (
 
   const spawnHead = ranked[0].pos;
 
-  const dirToCenter: Direction =
+  const dirToCenter: CardinalDirection =
     spawnHead.x < GRID_SIZE / 2
       ? (spawnHead.y < GRID_SIZE / 2 ? 'RIGHT' : 'RIGHT')
       : (spawnHead.y < GRID_SIZE / 2 ? 'LEFT' : 'LEFT');
 
-  const tailOffset: Record<Direction, Position> = {
+  const tailOffset: Record<CardinalDirection, Position> = {
     UP: { x: 0, y: 1 },
     DOWN: { x: 0, y: -1 },
     LEFT: { x: 1, y: 0 },

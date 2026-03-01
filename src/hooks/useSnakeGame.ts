@@ -54,22 +54,18 @@ export const useSnakeGame = () => {
 
       const direction = directionRef.current;
       const head = prevState.snake[0];
-      let newHead: Position;
-
-      switch (direction) {
-        case 'UP':
-          newHead = { x: head.x, y: head.y - 1 };
-          break;
-        case 'DOWN':
-          newHead = { x: head.x, y: head.y + 1 };
-          break;
-        case 'LEFT':
-          newHead = { x: head.x - 1, y: head.y };
-          break;
-        case 'RIGHT':
-          newHead = { x: head.x + 1, y: head.y };
-          break;
-      }
+      const deltas: Record<Direction, { dx: number; dy: number }> = {
+        UP: { dx: 0, dy: -1 },
+        DOWN: { dx: 0, dy: 1 },
+        LEFT: { dx: -1, dy: 0 },
+        RIGHT: { dx: 1, dy: 0 },
+        UP_LEFT: { dx: -1, dy: -1 },
+        UP_RIGHT: { dx: 1, dy: -1 },
+        DOWN_LEFT: { dx: -1, dy: 1 },
+        DOWN_RIGHT: { dx: 1, dy: 1 },
+      };
+      const delta = deltas[direction];
+      const newHead: Position = { x: head.x + delta.dx, y: head.y + delta.dy };
 
       // Check wall collision
       if (

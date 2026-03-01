@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SolidSegment } from './solidSnake';
 
-export type FaceDirection = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+export type FaceDirection = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT' | 'UP_LEFT' | 'UP_RIGHT' | 'DOWN_LEFT' | 'DOWN_RIGHT';
 
 export interface FaceState {
   blinkTimer: number;
@@ -41,12 +41,18 @@ export function updateFaceState(
   };
 }
 
+const SQRT2_INV = 1 / Math.sqrt(2);
+
 function directionOffset(dir: FaceDirection): { dx: number; dy: number } {
   switch (dir) {
     case 'UP': return { dx: 0, dy: -1 };
     case 'DOWN': return { dx: 0, dy: 1 };
     case 'LEFT': return { dx: -1, dy: 0 };
     case 'RIGHT': return { dx: 1, dy: 0 };
+    case 'UP_LEFT': return { dx: -SQRT2_INV, dy: -SQRT2_INV };
+    case 'UP_RIGHT': return { dx: SQRT2_INV, dy: -SQRT2_INV };
+    case 'DOWN_LEFT': return { dx: -SQRT2_INV, dy: SQRT2_INV };
+    case 'DOWN_RIGHT': return { dx: SQRT2_INV, dy: SQRT2_INV };
   }
 }
 
@@ -178,10 +184,8 @@ function drawMouth(
   const mouthH = baseGap + openGap;
   const mouthY = seg.cy + headSize * 0.18;
 
-  const isHorizontal = direction === 'LEFT' || direction === 'RIGHT';
-  const mouthShiftX = isHorizontal
-    ? (direction === 'RIGHT' ? headSize * 0.08 : -headSize * 0.08)
-    : 0;
+  const d = directionOffset(direction);
+  const mouthShiftX = d.dx * headSize * 0.08;
 
   g.fillStyle(0x331111, 0.8);
   g.fillRect(

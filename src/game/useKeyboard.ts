@@ -1,15 +1,28 @@
 /**
  * Keyboard input hook for standalone mode
+ * Supports diagonal movement via simultaneous arrow key presses
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Direction } from './types';
 
-const KEY_TO_DIRECTION: Record<string, Direction> = {
-  ArrowUp: 'UP',
-  ArrowDown: 'DOWN',
-  ArrowLeft: 'LEFT',
-  ArrowRight: 'RIGHT'
+type ArrowKey = 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight';
+
+const ARROW_KEYS = new Set<string>(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+
+const resolveDirection = (keys: Set<ArrowKey>): Direction | null => {
+  const up = keys.has('ArrowUp');
+  const down = keys.has('ArrowDown');
+  const left = keys.has('ArrowLeft');
+  const right = keys.has('ArrowRight');
+
+  const vertical = up && !down ? 'UP' : down && !up ? 'DOWN' : null;
+  const horizontal = left && !right ? 'LEFT' : right && !left ? 'RIGHT' : null;
+
+  if (vertical && horizontal) {
+    return `${vertical}_${horizontal}` as Direction;
+  }
+  return vertical ?? horizontal ?? null;
 };
 
 interface UseKeyboardOptions {
@@ -27,11 +40,21 @@ export function useKeyboard({
   onDirectionChange,
   onStartOrReset
 }: UseKeyboardOptions) {
+  const pressedArrows = useRef(new Set<ArrowKey>());
+  const lastSentDirection = useRef<Direction | null>(null);
+
   useEffect(() => {
     if (!enabled) return;
 
+    const sendDirection = () => {
+      const dir = resolveDirection(pressedArrows.current);
+      if (dir && dir !== lastSentDirection.current && gameStarted && !gameOver) {
+        lastSentDirection.current = dir;
+        onDirectionChange(dir);
+      }
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Space to start or reset
       if (e.code === 'Space') {
         if (!gameStarted || gameOver) {
           e.preventDefault();
@@ -40,15 +63,27 @@ export function useKeyboard({
         return;
       }
 
-      // Arrow keys for direction
-      const direction = KEY_TO_DIRECTION[e.key];
-      if (direction && gameStarted && !gameOver) {
+      if (ARROW_KEYS.has(e.key)) {
         e.preventDefault();
-        onDirectionChange(direction);
+        pressedArrows.current.add(e.key as ArrowKey);
+        sendDirection();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (ARROW_KEYS.has(e.key)) {
+        pressedArrows.current.delete(e.key as ArrowKey);
+        lastSentDirection.current = null;
+        sendDirection();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      pressedArrows.current.clear();
+    };
   }, [enabled, gameStarted, gameOver, onDirectionChange, onStartOrReset]);
 }

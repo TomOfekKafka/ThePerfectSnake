@@ -128,7 +128,15 @@ export interface GameState {
   rival: RivalSnakeState;
 }
 
-export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT' | 'UP_LEFT' | 'UP_RIGHT' | 'DOWN_LEFT' | 'DOWN_RIGHT';
+
+export type CardinalDirection = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+
+export const isCardinal = (d: Direction): d is CardinalDirection =>
+  d === 'UP' || d === 'DOWN' || d === 'LEFT' || d === 'RIGHT';
+
+export const isDiagonal = (d: Direction): boolean =>
+  !isCardinal(d);
 
 export interface RivalSnakeState {
   segments: Position[];
@@ -146,5 +154,20 @@ export const OPPOSITE_DIRECTIONS: Record<Direction, Direction> = {
   UP: 'DOWN',
   DOWN: 'UP',
   LEFT: 'RIGHT',
-  RIGHT: 'LEFT'
+  RIGHT: 'LEFT',
+  UP_LEFT: 'DOWN_RIGHT',
+  UP_RIGHT: 'DOWN_LEFT',
+  DOWN_LEFT: 'UP_RIGHT',
+  DOWN_RIGHT: 'UP_LEFT'
+};
+
+export const DIRECTION_DELTAS: Record<Direction, { dx: number; dy: number }> = {
+  UP: { dx: 0, dy: -1 },
+  DOWN: { dx: 0, dy: 1 },
+  LEFT: { dx: -1, dy: 0 },
+  RIGHT: { dx: 1, dy: 0 },
+  UP_LEFT: { dx: -1, dy: -1 },
+  UP_RIGHT: { dx: 1, dy: -1 },
+  DOWN_LEFT: { dx: -1, dy: 1 },
+  DOWN_RIGHT: { dx: 1, dy: 1 }
 };

@@ -1,9 +1,11 @@
 import { Direction, Position } from './types';
 import { CELL_SIZE } from './constants';
 
+type CardinalOnly = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+
 interface TapResult {
   direction: Direction;
-  quadrant: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+  quadrant: CardinalOnly;
 }
 
 export const getTapDirection = (
@@ -33,7 +35,7 @@ export const getTapDirection = (
   }
 
   const direction = resolveQuadrant(deltaX, deltaY, currentDirection);
-  return { direction, quadrant: direction };
+  return { direction, quadrant: direction as CardinalOnly };
 };
 
 const resolveQuadrant = (

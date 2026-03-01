@@ -1,4 +1,4 @@
-import { Position, Direction } from './types';
+import { Position, Direction, CardinalDirection, OPPOSITE_DIRECTIONS } from './types';
 import { GRID_SIZE } from './constants';
 import { positionsEqual, isInBounds, collidesWithSnake, getNextHead } from './logic';
 
@@ -39,15 +39,12 @@ const choosePoliceDirection = (
   avoidSegments: Position[],
   fleeing: boolean
 ): Direction => {
-  const dirs: Direction[] = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
-  const opposite: Record<Direction, Direction> = {
-    UP: 'DOWN', DOWN: 'UP', LEFT: 'RIGHT', RIGHT: 'LEFT',
-  };
+  const dirs: CardinalDirection[] = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
 
   const candidates: { dir: Direction; score: number }[] = [];
 
   for (const dir of dirs) {
-    if (dir === opposite[currentDir] && ownSegments.length > 1) continue;
+    if (dir === OPPOSITE_DIRECTIONS[currentDir] && ownSegments.length > 1) continue;
 
     const next = getNextHead(head, dir);
     if (!isInBounds(next)) continue;
@@ -91,12 +88,12 @@ const spawnPolice = (
 
   const spawnHead = ranked[0].pos;
 
-  const dirToCenter: Direction =
+  const dirToCenter: CardinalDirection =
     spawnHead.x === 0 ? 'RIGHT' :
     spawnHead.x === GRID_SIZE - 1 ? 'LEFT' :
     spawnHead.y === 0 ? 'DOWN' : 'UP';
 
-  const tailOffset: Record<Direction, Position> = {
+  const tailOffset: Record<CardinalDirection, Position> = {
     UP: { x: 0, y: 1 },
     DOWN: { x: 0, y: -1 },
     LEFT: { x: 1, y: 0 },

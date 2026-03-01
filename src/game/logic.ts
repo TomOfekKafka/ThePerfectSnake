@@ -3,7 +3,7 @@
  * Easy to test, easy to reason about
  */
 
-import { Position, Direction, GameState, OPPOSITE_DIRECTIONS, PowerUp, PowerUpType, ActivePowerUp, RealmPortal } from './types';
+import { Position, Direction, GameState, OPPOSITE_DIRECTIONS, DIRECTION_DELTAS, PowerUp, PowerUpType, ActivePowerUp, RealmPortal } from './types';
 import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE, BONUS_FOOD_SCORE, FLAG_FOOD_MULTIPLIER, OBSTACLE_MIN_FOOD_EATEN, OBSTACLE_SPAWN_INTERVAL } from './constants';
 import { tickPhantom } from './phantomSnake';
 import { shouldSpawnBonusFood, generateBonusFood, isBonusFoodExpired, shrinkSnake } from './bonusFood';
@@ -34,13 +34,8 @@ export const wouldCollide = (head: Position, snake: Position[]): boolean =>
 
 /** Get next head position based on direction */
 export const getNextHead = (head: Position, direction: Direction): Position => {
-  const moves: Record<Direction, Position> = {
-    UP: { x: head.x, y: head.y - 1 },
-    DOWN: { x: head.x, y: head.y + 1 },
-    LEFT: { x: head.x - 1, y: head.y },
-    RIGHT: { x: head.x + 1, y: head.y }
-  };
-  return moves[direction];
+  const delta = DIRECTION_DELTAS[direction];
+  return { x: head.x + delta.dx, y: head.y + delta.dy };
 };
 
 /** Check if direction change is valid (not 180-degree turn) */

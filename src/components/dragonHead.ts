@@ -29,6 +29,10 @@ export function getDirectionVectors(direction: FaceDirection): DirectionVectors 
     case 'LEFT': return { fx: -1, fy: 0, rx: 0, ry: -1 };
     case 'UP': return { fx: 0, fy: -1, rx: 1, ry: 0 };
     case 'DOWN': return { fx: 0, fy: 1, rx: -1, ry: 0 };
+    case 'UP_LEFT': return { fx: -0.707, fy: -0.707, rx: 0.707, ry: -0.707 };
+    case 'UP_RIGHT': return { fx: 0.707, fy: -0.707, rx: -0.707, ry: -0.707 };
+    case 'DOWN_LEFT': return { fx: -0.707, fy: 0.707, rx: -0.707, ry: 0.707 };
+    case 'DOWN_RIGHT': return { fx: 0.707, fy: 0.707, rx: 0.707, ry: 0.707 };
   }
 }
 
