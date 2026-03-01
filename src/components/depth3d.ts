@@ -32,13 +32,14 @@ export function drawSnake3DShadows(
   g: Phaser.GameObjects.Graphics,
   snake: { x: number; y: number }[],
   cellSize: number,
-  frameCount: number
+  frameCount: number,
+  widthMultiplier = 1.0
 ): void {
   if (snake.length < 2) {
     if (snake.length === 1) {
       const cx = snake[0].x * cellSize + cellSize / 2;
       const cy = snake[0].y * cellSize + cellSize / 2;
-      drawOvalShadow(g, cx + 3, cy + 5, cellSize * 0.5, cellSize * 0.3, 0.2);
+      drawOvalShadow(g, cx + 3, cy + 5, cellSize * 0.5 * widthMultiplier, cellSize * 0.3 * widthMultiplier, 0.2);
     }
     return;
   }
@@ -52,7 +53,7 @@ export function drawSnake3DShadows(
 
   for (let i = points.length - 1; i >= 0; i -= step) {
     const progress = i / (points.length - 1);
-    const width = getWidthAtProgress(progress, cellSize, snake.length);
+    const width = getWidthAtProgress(progress, cellSize, snake.length, widthMultiplier);
     const radius = width / 2;
 
     const elevation = progress < 0.15 ? 1.5 : 1.0 + (1 - progress) * 0.3;

@@ -184,7 +184,8 @@ export function drawSolidSnake(
   cellSize: number,
   frameCount: number,
   _direction: FaceDirection,
-  _faceState: FaceState
+  _faceState: FaceState,
+  widthMultiplier = 1.0
 ): void {
-  drawSpermSnake(g, snake, cellSize, frameCount);
+  drawSpermSnake(g, snake, cellSize, frameCount, widthMultiplier);
 }

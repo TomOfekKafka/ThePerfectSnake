@@ -878,6 +878,8 @@ export class SnakeScene extends Phaser.Scene {
   private upgradeState: UpgradeState = createUpgradeState();
   private upgradeHud: UpgradeHudState = createUpgradeHudState();
   private lastFoodEaten = 0;
+  private snakeWidthMultiplier = 1.0;
+  private snakeWidthTarget = 1.0;
   private upgradeKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   private silk: SilkState = createSilkState();
   private auroraTrail: AuroraTrailState = createAuroraTrailState();
@@ -2558,12 +2560,15 @@ export class SnakeScene extends Phaser.Scene {
     if (foodEaten > this.lastFoodEaten) {
       this.upgradeState = tickUpgrades(this.upgradeState, foodEaten);
     }
+    this.snakeWidthTarget = foodEaten >= 5 ? 2.0 : 1.0;
     this.lastFoodEaten = foodEaten;
 
     if (state.gameStarted && !state.gameOver && this.currentState?.gameOver) {
       this.upgradeState = createUpgradeState();
       this.upgradeHud = createUpgradeHudState();
       this.lastFoodEaten = 0;
+      this.snakeWidthMultiplier = 1.0;
+      this.snakeWidthTarget = 1.0;
       this.silk = resetSilkVisited(this.silk);
       this.deathCinematic = createDeathCinematicState();
       this.dropDeath = createDropDeathState();
@@ -2893,6 +2898,8 @@ export class SnakeScene extends Phaser.Scene {
     this.frameCount++;
     this.cleanEffects.frameCount = this.frameCount;
 
+    this.snakeWidthMultiplier += (this.snakeWidthTarget - this.snakeWidthMultiplier) * 0.08;
+
     const width = this.scale.width;
     const height = this.scale.height;
 
@@ -3126,7 +3133,7 @@ export class SnakeScene extends Phaser.Scene {
     drawFireTrail(g, this.fireTrail);
     drawAuroraTrail(g, this.auroraTrail, this.frameCount);
     drawSnake3DShadows(g, this.currentState.snake, CELL_SIZE, this.frameCount);
-    drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState);
+    drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState, this.snakeWidthMultiplier);
     drawSnake3DHighlights(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.depth3d.headPulse);
     drawSnakeEnergyField(g, this.sciFi, this.currentState.snake, CELL_SIZE);
     drawFireHearts(g, this.fireHearts);

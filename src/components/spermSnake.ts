@@ -97,26 +97,28 @@ export function buildSplinePoints(
 export function getWidthAtProgress(
   progress: number,
   cellSize: number,
-  _snakeLen: number
+  _snakeLen: number,
+  widthMultiplier = 1.0
 ): number {
   const headWidth = cellSize * 0.85;
   const neckWidth = cellSize * 0.5;
   const tailWidth = cellSize * 0.15;
 
+  let w: number;
   if (progress < 0.04) {
     const t = progress / 0.04;
-    return headWidth * t;
-  }
-  if (progress < 0.12) {
-    return headWidth;
-  }
-  if (progress < 0.22) {
+    w = headWidth * t;
+  } else if (progress < 0.12) {
+    w = headWidth;
+  } else if (progress < 0.22) {
     const t = (progress - 0.12) / 0.10;
-    return headWidth - (headWidth - neckWidth) * t;
+    w = headWidth - (headWidth - neckWidth) * t;
+  } else {
+    const tailProgress = (progress - 0.22) / 0.78;
+    w = neckWidth - (neckWidth - tailWidth) * Math.pow(tailProgress, 0.6);
   }
 
-  const tailProgress = (progress - 0.22) / 0.78;
-  return neckWidth - (neckWidth - tailWidth) * Math.pow(tailProgress, 0.6);
+  return w * widthMultiplier;
 }
 
 export function getNormalAt(points: Vec2[], index: number): Vec2 {
@@ -184,14 +186,15 @@ export function drawSpermSnake(
   g: Phaser.GameObjects.Graphics,
   snake: { x: number; y: number }[],
   cellSize: number,
-  frameCount: number
+  frameCount: number,
+  widthMultiplier = 1.0
 ): void {
   const len = snake.length;
   if (len === 0) return;
 
   if (len === 1) {
     const pt = gridToPixel(snake[0].x, snake[0].y, cellSize);
-    drawSingleCellHead(g, pt, cellSize, frameCount);
+    drawSingleCellHead(g, pt, cellSize, frameCount, widthMultiplier);
     return;
   }
 
@@ -203,7 +206,7 @@ export function drawSpermSnake(
 
   for (let i = 0; i < points.length; i++) {
     const progress = i / (points.length - 1);
-    const w = getWidthAtProgress(progress, cellSize, len) / 2;
+    const w = getWidthAtProgress(progress, cellSize, len, widthMultiplier) / 2;
     const n = getNormalAt(points, i);
     leftEdge.push({ x: points[i].x + n.x * w, y: points[i].y + n.y * w });
     rightEdge.push({ x: points[i].x - n.x * w, y: points[i].y - n.y * w });
@@ -212,17 +215,18 @@ export function drawSpermSnake(
   drawNoirBody(g, points, leftEdge, rightEdge, len, frameCount);
   drawNoirStripes(g, points, leftEdge, rightEdge, cellSize, frameCount);
   drawNoirHeadGlow(g, points, cellSize, frameCount);
-  drawNoirHead(g, points, leftEdge, rightEdge, cellSize, frameCount);
-  drawNoirEyes(g, points, cellSize, frameCount);
+  drawNoirHead(g, points, leftEdge, rightEdge, cellSize, frameCount, widthMultiplier);
+  drawNoirEyes(g, points, cellSize, frameCount, widthMultiplier);
 }
 
 function drawSingleCellHead(
   g: Phaser.GameObjects.Graphics,
   pt: Vec2,
   cellSize: number,
-  frameCount: number
+  frameCount: number,
+  widthMultiplier = 1.0
 ): void {
-  const radius = cellSize * 0.45;
+  const radius = cellSize * 0.45 * widthMultiplier;
   const pulse = 1.0 + Math.sin(frameCount * 0.05) * 0.03;
   const r = radius * pulse;
 
@@ -354,7 +358,8 @@ function drawNoirHead(
   leftEdge: Vec2[],
   rightEdge: Vec2[],
   cellSize: number,
-  frameCount: number
+  frameCount: number,
+  widthMultiplier = 1.0
 ): void {
   const headEnd = Math.min(
     Math.floor(points.length * 0.18),
@@ -378,7 +383,7 @@ function drawNoirHead(
   g.strokePath();
 
   const headPt = points[0];
-  const headW = getWidthAtProgress(0, cellSize, 1) / 2;
+  const headW = getWidthAtProgress(0, cellSize, 1, widthMultiplier) / 2;
 
   g.fillStyle(NOIR_WHITE, 0.2);
   g.fillCircle(headPt.x - headW * 0.15, headPt.y - headW * 0.15, headW * 0.4);
@@ -392,10 +397,11 @@ function drawNoirEyes(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   cellSize: number,
-  frameCount: number
+  frameCount: number,
+  widthMultiplier = 1.0
 ): void {
   const headPt = points[0];
-  const headW = getWidthAtProgress(0.06, cellSize, 1) / 2;
+  const headW = getWidthAtProgress(0.06, cellSize, 1, widthMultiplier) / 2;
   drawNoirEyesAt(g, headPt.x, headPt.y, headW, frameCount);
 }
 
