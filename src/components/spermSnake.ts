@@ -33,7 +33,7 @@ function gridToPixel(gx: number, gy: number, cellSize: number): Vec2 {
   };
 }
 
-function buildSplinePoints(
+export function buildSplinePoints(
   snake: { x: number; y: number }[],
   cellSize: number,
   frameCount: number
@@ -94,7 +94,7 @@ function buildSplinePoints(
   return result;
 }
 
-function getWidthAtProgress(
+export function getWidthAtProgress(
   progress: number,
   cellSize: number,
   _snakeLen: number
@@ -119,7 +119,7 @@ function getWidthAtProgress(
   return neckWidth - (neckWidth - tailWidth) * Math.pow(tailProgress, 0.6);
 }
 
-function getNormalAt(points: Vec2[], index: number): Vec2 {
+export function getNormalAt(points: Vec2[], index: number): Vec2 {
   let dx: number, dy: number;
 
   if (index === 0) {

@@ -64,6 +64,12 @@ import {
 import {
   drawVariedFood,
   drawGrid3D,
+  createDepth3D,
+  updateDepth3D,
+  drawSnake3DShadows,
+  drawSnake3DHighlights,
+  drawFood3DEffect,
+  Depth3DState,
 } from './depth3d';
 import { pickFoodType, FoodType } from './foodVariety';
 import { drawSolidSnake } from './solidSnake';
@@ -875,6 +881,7 @@ export class SnakeScene extends Phaser.Scene {
   private noirEffects: NoirEffectsState = createNoirEffectsState();
   private gravityWells: GravityWellsState = createGravityWellsState();
   private foodPrison: FoodPrisonState = createFoodPrisonState();
+  private depth3d: Depth3DState = createDepth3D();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2913,6 +2920,7 @@ export class SnakeScene extends Phaser.Scene {
       this.currentState?.obstacles || [],
       CELL_SIZE
     );
+    updateDepth3D(this.depth3d, this.frameCount);
 
     {
       const gameActive = !!(this.currentState && this.currentState.gameStarted && !this.currentState.gameOver);
@@ -3089,6 +3097,7 @@ export class SnakeScene extends Phaser.Scene {
     drawSnitchWings(g, this.wizardEffects, foodX, foodY, CELL_SIZE);
     drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
     drawHoloFood(g, this.sciFi, foodX, foodY, CELL_SIZE);
+    drawFood3DEffect(g, foodX, foodY, CELL_SIZE, this.frameCount, this.depth3d);
     drawFoodPrison(g, this.foodPrison, foodX, foodY, CELL_SIZE, this.frameCount);
 
     drawObstacles(g, this.obstacleRender, this.currentState.obstacles || [], CELL_SIZE, this.frameCount);
@@ -3097,7 +3106,9 @@ export class SnakeScene extends Phaser.Scene {
     drawFireGlow(g, this.currentState.snake, CELL_SIZE, this.frameCount);
     drawFireTrail(g, this.fireTrail);
     drawAuroraTrail(g, this.auroraTrail, this.frameCount);
+    drawSnake3DShadows(g, this.currentState.snake, CELL_SIZE, this.frameCount);
     drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState);
+    drawSnake3DHighlights(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.depth3d.headPulse);
     drawSnakeEnergyField(g, this.sciFi, this.currentState.snake, CELL_SIZE);
     drawFireHearts(g, this.fireHearts);
     drawElectricStorm(g, this.electricStorm, this.frameCount);
