@@ -142,22 +142,6 @@ import {
   HogwartsBackgroundState,
 } from './hogwartsBackground';
 import {
-  PatronusTrailState,
-  createPatronusTrailState,
-} from './patronusTrail';
-import {
-  FireTrailState,
-  createFireTrailState,
-  updateFireTrail,
-  drawFireTrail,
-} from './fireTrail';
-import {
-  WebTrailState,
-  createWebTrailState,
-  updateWebTrail,
-  drawWebTrail,
-} from './webTrail';
-import {
   createWebShotState,
   updateWebShots,
   drawWebTargetingLine,
@@ -239,13 +223,6 @@ import {
   drawSilkWeave,
 } from './silkWeave';
 import {
-  AuroraTrailState,
-  createAuroraTrailState,
-  spawnAuroraWisps,
-  updateAuroraTrail,
-  drawAuroraTrail,
-} from './auroraTrail';
-import {
   PoliceVisualsState,
   createPoliceVisualsState,
   updatePoliceVisuals,
@@ -317,9 +294,6 @@ import {
   drawFireHearts,
 } from './fireHearts';
 import {
-  drawFireGlow,
-} from './fireTrail';
-import {
   ObstacleRenderState,
   createObstacleRenderState,
   updateObstacleEffects,
@@ -332,18 +306,6 @@ import {
   updateSameDirectionExplosion,
   drawSameDirectionExplosion,
 } from './sameDirectionExplosion';
-import {
-  NoirEffectsState,
-  createNoirEffectsState,
-  initNoirEffects,
-  updateNoirEffects,
-  drawNoirRain,
-  drawNoirSmoke,
-  drawNoirSpotlight,
-  drawVenetianBlinds,
-  drawFilmGrain,
-  drawNoirVignette,
-} from './noirEffects';
 import {
   GravityWellsState,
   createGravityWellsState,
@@ -372,6 +334,42 @@ import {
   updateFoodProtest,
   drawFoodProtest,
 } from './foodProtest';
+import {
+  PatronusTrailState,
+  createPatronusTrailState,
+} from './patronusTrail';
+import {
+  FireTrailState,
+  createFireTrailState,
+  updateFireTrail,
+  drawFireTrail,
+  drawFireGlow,
+} from './fireTrail';
+import {
+  WebTrailState,
+  createWebTrailState,
+  updateWebTrail,
+  drawWebTrail,
+} from './webTrail';
+import {
+  AuroraTrailState,
+  createAuroraTrailState,
+  spawnAuroraWisps,
+  updateAuroraTrail,
+  drawAuroraTrail,
+} from './auroraTrail';
+import {
+  NoirEffectsState,
+  createNoirEffectsState,
+  initNoirEffects,
+  updateNoirEffects,
+  drawVenetianBlinds,
+  drawNoirRain,
+  drawNoirSmoke,
+  drawNoirSpotlight,
+  drawFilmGrain,
+  drawNoirVignette,
+} from './noirEffects';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -515,13 +513,13 @@ const NUM_VORTEX_PARTICLES = 20;
 const NUM_METEORS = 8;
 const MAX_DEATH_DEBRIS = 24;
 const NUM_SPIRITS_PER_EDGE = 2;
-const MAX_FLAME_PARTICLES = 60;
 const NUM_BEES = 8;
 const BEE_SPAWN_CHANCE = 0.02;
-const MAX_TRAIL_PARTICLES = 40;
-const MAX_AFTERIMAGES = 6;
+const MAX_TRAIL_PARTICLES = 50;
+const MAX_AFTERIMAGES = 5;
+const MAX_FLAME_PARTICLES = 30;
 const MAX_COMET_TRAIL_LENGTH = 30;
-const MAX_ETHEREAL_PARTICLES = 40;
+const MAX_ETHEREAL_PARTICLES = 20;
 
 interface SnakeTrailParticle {
   x: number;
