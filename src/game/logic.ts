@@ -13,7 +13,7 @@ import { shouldSpawnFakeFood, generateFakeFood, expireFakeFoods, collectFakeFood
 import { tickPolice, POLICE_PENALTY } from './policeChase';
 import { FAKE_FOOD_PENALTY } from './constants';
 import { shouldSpawnObstacles, spawnObstacles, collidesWithObstacle } from './obstacles';
-import { randomGrowth, tickGrowPending } from './growthBurst';
+import { tripleGrowth, tickGrowPending } from './growthBurst';
 import { shouldSpawnRealmPortal, generateRealmPortal, isRealmPortalExpired, checkRealmPortalEntry } from './realmPortal';
 
 /** Check if two positions are equal */
@@ -207,7 +207,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
   }
 
   if (ateFood) {
-    const growth = randomGrowth();
+    const growth = tripleGrowth(state.snake.length);
     let resultSnake = newSnake;
     if (ateBonusFood) {
       resultSnake = shrinkSnake(resultSnake);
