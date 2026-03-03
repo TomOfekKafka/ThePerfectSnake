@@ -116,6 +116,7 @@ export interface GameState {
   police: PoliceChaseState;
   obstacles: Obstacle[];
   lastObstacleSpawnFood: number;
+  legalEntities: LegalEntity[];
   growPending: number;
   immortalActive: boolean;
   immortalProgress: number;
@@ -146,6 +147,17 @@ export interface RivalSnakeState {
   moveTimer: number;
   spawnCooldown: number;
   foodEaten: number;
+}
+
+export type LegalEntityType = 'LAWYER' | 'JUDGE' | 'CORP';
+
+export interface LegalEntity {
+  position: Position;
+  entityType: LegalEntityType;
+  spawnTick: number;
+  lifetime: number;
+  moveTimer: number;
+  direction: CardinalDirection;
 }
 
 export type DeathReason = 'wall' | 'self' | 'rival' | 'obstacle' | null;

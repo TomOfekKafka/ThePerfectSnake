@@ -15,6 +15,7 @@ import { FAKE_FOOD_PENALTY } from './constants';
 import { shouldSpawnObstacles, spawnObstacles, collidesWithObstacle } from './obstacles';
 import { tripleGrowth, tickGrowPending } from './growthBurst';
 import { shouldSpawnRealmPortal, generateRealmPortal, isRealmPortalExpired, checkRealmPortalEntry } from './realmPortal';
+import { shouldSpawnLegal, generateLegalEntity, expireLegalEntities, moveLegalEntities, collectLegalEntities, LEGAL_SCORE_BONUS } from './legalEntities';
 
 /** Check if two positions are equal */
 export const positionsEqual = (a: Position, b: Position): boolean =>
@@ -206,6 +207,15 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     fakeFoods = [...fakeFoods, generateFakeFood(newSnake, state.food, fakeFoods, tickCount, newPowerUp?.position)];
   }
 
+  let legalEntities = moveLegalEntities(expireLegalEntities(state.legalEntities, tickCount));
+  const legalResult = collectLegalEntities(legalEntities, newHead);
+  legalEntities = legalResult.remaining;
+  const legalGain = legalResult.collected.length * LEGAL_SCORE_BONUS;
+
+  if (shouldSpawnLegal(legalEntities, foodEatenCount)) {
+    legalEntities = [...legalEntities, generateLegalEntity(newSnake, state.food, legalEntities, tickCount, newPowerUp?.position)];
+  }
+
   if (ateFood) {
     const growth = tripleGrowth(state.snake.length);
     let resultSnake = newSnake;
@@ -264,7 +274,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       ...state,
       snake: resultSnake,
       food: newFood,
-      score: Math.max(0, state.score + scoreGain + bonusScoreGain + flagScoreGain + cashGain - fakePenalty - policePenalty),
+      score: Math.max(0, state.score + scoreGain + bonusScoreGain + flagScoreGain + cashGain + legalGain - fakePenalty - policePenalty),
       foodEaten: foodEatenCount,
       direction,
       powerUp: newPowerUp,
@@ -283,6 +293,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       police: shockwavePolice,
       obstacles: newObstacles,
       lastObstacleSpawnFood: newLastObstacleSpawnFood,
+      legalEntities: shockwaveTriggered ? [] : legalEntities,
       growPending: growth - 1,
       currentRealm,
       realmPortal,
@@ -349,7 +360,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     ...state,
     snake: resultSnake,
     food: phantomFood,
-    score: Math.max(0, state.score + bonusScoreGain + flagScoreGain + cashGain - fakePenalty - policePenalty),
+    score: Math.max(0, state.score + bonusScoreGain + flagScoreGain + cashGain + legalGain - fakePenalty - policePenalty),
     direction,
     powerUp: newPowerUp,
     activePowerUps: newActivePowerUps,
@@ -367,6 +378,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     police: shockwavePolice,
     obstacles: finalObstacles,
     lastObstacleSpawnFood: finalLastObstacleSpawnFood,
+    legalEntities: shockwaveTriggered ? [] : legalEntities,
     growPending: growResult.growPending,
     currentRealm,
     realmPortal,
@@ -413,6 +425,7 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
   },
   obstacles: [],
   lastObstacleSpawnFood: 0,
+  legalEntities: [],
   growPending: 0,
   immortalActive: false,
   immortalProgress: 0,
