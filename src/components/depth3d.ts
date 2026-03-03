@@ -118,10 +118,8 @@ export function drawSnake3DHighlights(
 
     const shimmer = baseIntensity * (0.85 + Math.sin(frameCount * 0.06 + progress * 8) * 0.15);
 
-    g.fillStyle(C.NOIR.white, shimmer * 0.4);
-    g.fillCircle(specX, specY, radius * 0.3);
-    g.fillStyle(C.WHITE, shimmer * 0.55);
-    g.fillCircle(specX, specY, radius * 0.15);
+    g.fillStyle(C.NOIR.silver, shimmer * 0.35);
+    g.fillCircle(specX, specY, radius * 0.25);
 
     if (progress < 0.25) {
       const rimStrength = 0.2 * (1 - progress / 0.25) * headPulse;
@@ -138,7 +136,7 @@ export function drawSnake3DHighlights(
   const headSpecX = headPt.x + LIGHT_COS * headRadius * 0.3;
   const headSpecY = headPt.y + LIGHT_SIN * headRadius * 0.3;
   const headFlash = 0.3 + Math.sin(frameCount * 0.1) * 0.1;
-  g.fillStyle(C.WHITE, headFlash * headPulse);
+  g.fillStyle(C.NOIR.silver, headFlash * headPulse * 0.6);
   g.fillCircle(headSpecX, headSpecY, headRadius * 0.18);
 }
 
@@ -153,7 +151,7 @@ function drawSpecularDot(
   const specX = cx + LIGHT_COS * radius * 0.3;
   const specY = cy + LIGHT_SIN * radius * 0.3;
   const pulse = intensity * (0.8 + Math.sin(frameCount * 0.06) * 0.2);
-  g.fillStyle(C.WHITE, pulse * 0.5);
+  g.fillStyle(C.NOIR.silver, pulse * 0.4);
   g.fillCircle(specX, specY, radius * 0.2);
 }
 
@@ -189,8 +187,8 @@ export function drawFood3DEffect(
     g.fillCircle(fx, fy, facetR);
 
     if (lightDot > 0.2) {
-      g.fillStyle(C.WHITE, lightDot * 0.25);
-      g.fillCircle(fx + LIGHT_COS * facetR * 0.2, fy + LIGHT_SIN * facetR * 0.2, facetR * 0.3);
+      g.fillStyle(gemColor, lightDot * 0.3);
+      g.fillCircle(fx + LIGHT_COS * facetR * 0.2, fy + LIGHT_SIN * facetR * 0.2, facetR * 0.25);
     }
   }
 
@@ -264,10 +262,8 @@ export function drawSegmentBody(
   const specX = seg.cx + LIGHT_COS * seg.radius * 0.35;
   const specY = seg.cy + LIGHT_SIN * seg.radius * 0.35;
   const specPulse = 0.35 + Math.sin(frameCount * 0.08) * 0.1;
-  g.fillStyle(0xffffff, specPulse);
-  g.fillCircle(specX, specY, seg.radius * 0.25);
-  g.fillStyle(0xffffff, specPulse * 0.5);
-  g.fillCircle(specX - seg.radius * 0.1, specY - seg.radius * 0.05, seg.radius * 0.12);
+  g.fillStyle(seg.highlightColor, specPulse * 0.7);
+  g.fillCircle(specX, specY, seg.radius * 0.2);
 }
 
 export function drawSnakeHead3D(
@@ -286,7 +282,7 @@ export function drawSnakeHead3D(
   const specY = seg.cy + LIGHT_SIN * seg.radius * 0.3;
   g.fillStyle(seg.highlightColor, 0.5);
   g.fillCircle(specX, specY, seg.radius * 0.6);
-  g.fillStyle(0xffffff, 0.45);
+  g.fillStyle(seg.highlightColor, 0.45);
   g.fillCircle(specX, specY, seg.radius * 0.22);
 }
 
@@ -330,8 +326,8 @@ export function drawFood3D(
   const hlY = floatY + LIGHT_SIN * radius * 0.3;
   g.fillStyle(0xffcc44, 0.6);
   g.fillCircle(hlX, hlY, radius * 0.6);
-  g.fillStyle(0xffffff, 0.5);
-  g.fillCircle(hlX, hlY, radius * 0.2);
+  g.fillStyle(0xffcc44, 0.4);
+  g.fillCircle(hlX, hlY, radius * 0.15);
 }
 
 function drawFoodShape(
@@ -417,8 +413,8 @@ export function drawVariedFood(
   const hlY = floatY + LIGHT_SIN * radius * 0.3;
   g.fillStyle(foodType.highlightColor, 0.55);
   g.fillCircle(hlX, hlY, radius * 0.55);
-  g.fillStyle(0xffffff, 0.45);
-  g.fillCircle(hlX, hlY, radius * 0.18);
+  g.fillStyle(foodType.highlightColor, 0.35);
+  g.fillCircle(hlX, hlY, radius * 0.15);
 }
 
 export function drawGrid3D(

@@ -136,8 +136,8 @@ export function drawWandSparkles(
     g.fillCircle(s.x, s.y, s.size * 2.5);
     g.fillStyle(s.color, alpha * 0.7);
     g.fillCircle(s.x, s.y, s.size);
-    g.fillStyle(0xffffff, alpha * 0.9);
-    g.fillCircle(s.x, s.y, s.size * 0.4);
+    g.fillStyle(s.color, alpha * 0.9);
+    g.fillCircle(s.x, s.y, s.size * 0.35);
   }
 }
 

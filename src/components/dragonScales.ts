@@ -90,8 +90,8 @@ function drawScalePattern(
   const specPulse = 0.4 + Math.sin(frameCount * 0.07 + seg.taper * Math.PI) * 0.12;
   const specX = seg.cx + LIGHT_COS * seg.radius * 0.35;
   const specY = seg.cy + LIGHT_SIN * seg.radius * 0.35;
-  g.fillStyle(0xffffff, specPulse * 0.5);
-  g.fillCircle(specX, specY, seg.radius * 0.2);
+  g.fillStyle(highlight, specPulse * 0.5);
+  g.fillCircle(specX, specY, seg.radius * 0.18);
 }
 
 function drawDragonHead(
@@ -120,8 +120,8 @@ function drawDragonHead(
   const specX = seg.cx + LIGHT_COS * headR * 0.3;
   const specY = seg.cy + LIGHT_SIN * headR * 0.3;
   const specPulse = 0.45 + Math.sin(frameCount * 0.1) * 0.15;
-  g.fillStyle(0xffffff, specPulse * 0.5);
-  g.fillCircle(specX, specY, headR * 0.25);
+  g.fillStyle(highlight, specPulse * 0.5);
+  g.fillCircle(specX, specY, headR * 0.22);
 
   const eyeSpread = headR * 0.38;
   const eyeY = seg.cy - headR * 0.1;

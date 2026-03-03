@@ -223,7 +223,7 @@ function drawKeanuWhoa(
   g.fillCircle(cx + eyeSpacing, eyeY, s * 0.1);
 
   const glint = 0.5 + Math.sin(frameCount * 0.2) * 0.3;
-  g.fillStyle(0xffffff, alpha * glint);
+  g.fillStyle(0xddccee, alpha * glint);
   g.fillCircle(cx - eyeSpacing - s * 0.05, eyeY - s * 0.06, s * 0.04);
   g.fillCircle(cx + eyeSpacing - s * 0.05, eyeY - s * 0.06, s * 0.04);
 

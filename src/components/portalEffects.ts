@@ -177,7 +177,7 @@ const drawSinglePortal = (
   g.fillCircle(cx, cy, baseRadius);
   g.fillStyle(color, 0.4 * pulse);
   g.fillCircle(cx, cy, baseRadius * 0.6);
-  g.fillStyle(0xffffff, 0.5 * pulse);
+  g.fillStyle(color, 0.6 * pulse);
   g.fillCircle(cx, cy, baseRadius * 0.25);
 
   // Swirling inner particles
@@ -186,7 +186,7 @@ const drawSinglePortal = (
     const swirlDist = baseRadius * 0.5 * (0.5 + Math.sin(frameCount * 0.08 + i) * 0.5);
     const sx = cx + Math.cos(swirlAngle) * swirlDist;
     const sy = cy + Math.sin(swirlAngle) * swirlDist;
-    g.fillStyle(0xffffff, 0.4);
+    g.fillStyle(color, 0.5);
     g.fillCircle(sx, sy, 1.5);
   }
 };

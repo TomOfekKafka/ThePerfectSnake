@@ -389,7 +389,7 @@ function drawNoirHead(
   g.fillCircle(headPt.x - headW * 0.15, headPt.y - headW * 0.15, headW * 0.4);
 
   const specAlpha = 0.12 + Math.sin(frameCount * 0.06) * 0.06;
-  g.fillStyle(0xffffff, specAlpha);
+  g.fillStyle(NOIR_SILVER, specAlpha);
   g.fillCircle(headPt.x - headW * 0.2, headPt.y - headW * 0.25, headW * 0.15);
 }
 
@@ -434,7 +434,7 @@ function drawNoirEyesAt(
   g.fillCircle(leftEyeX + 0.5, eyeY + 0.3, pupilSize);
   g.fillCircle(rightEyeX + 0.5, eyeY + 0.3, pupilSize);
 
-  g.fillStyle(0xffffff, 0.7);
+  g.fillStyle(NOIR_SILVER, 0.5);
   g.fillCircle(leftEyeX - pupilSize * 0.3, eyeY - pupilSize * 0.3, pupilSize * 0.3);
   g.fillCircle(rightEyeX - pupilSize * 0.3, eyeY - pupilSize * 0.3, pupilSize * 0.3);
 }
