@@ -214,7 +214,6 @@ export function drawSpermSnake(
 
   drawSnakeBody(g, points, leftEdge, rightEdge, len, frameCount);
   drawSnakeStripes(g, points, leftEdge, rightEdge, cellSize, frameCount);
-  drawSnakeHeadGlow(g, points, cellSize, frameCount);
   drawSnakeHeadShape(g, points, leftEdge, rightEdge, cellSize, frameCount, widthMultiplier);
   drawSnakeEyes(g, points, cellSize, frameCount, widthMultiplier);
 }
@@ -230,14 +229,8 @@ function drawSingleCellHead(
   const pulse = 1.0 + Math.sin(frameCount * 0.05) * 0.03;
   const r = radius * pulse;
 
-  g.fillStyle(S_GLOW, 0.15);
-  g.fillCircle(pt.x, pt.y, r * 1.4);
-
   g.fillStyle(S_HEAD, 0.95);
   g.fillCircle(pt.x, pt.y, r);
-
-  g.fillStyle(S_HIGHLIGHT, 0.3);
-  g.fillCircle(pt.x - r * 0.2, pt.y - r * 0.2, r * 0.4);
 
   drawSnakeEyesAt(g, pt.x, pt.y, r, frameCount);
 }
@@ -280,26 +273,6 @@ function drawSnakeBody(
       g.strokePath();
     }
 
-    const shimmer = 0.08 + Math.sin(frameCount * 0.04 + midProgress * Math.PI * 3) * 0.04;
-    g.beginPath();
-    for (let i = startIdx; i <= endIdx; i++) {
-      const lp = leftEdge[i];
-      const rp = rightEdge[i];
-      const mx = lp.x * 0.7 + rp.x * 0.3;
-      const my = lp.y * 0.7 + rp.y * 0.3;
-      if (i === startIdx) g.moveTo(mx, my);
-      else g.lineTo(mx, my);
-    }
-    for (let i = endIdx; i >= startIdx; i--) {
-      const lp = leftEdge[i];
-      const rp = rightEdge[i];
-      const cx = lp.x * 0.55 + rp.x * 0.45;
-      const cy = lp.y * 0.55 + rp.y * 0.45;
-      g.lineTo(cx, cy);
-    }
-    g.closePath();
-    g.fillStyle(colors.highlight, shimmer * colors.alpha);
-    g.fillPath();
   }
 }
 
@@ -335,22 +308,6 @@ function drawSnakeStripes(
   }
 }
 
-function drawSnakeHeadGlow(
-  g: Phaser.GameObjects.Graphics,
-  points: Vec2[],
-  cellSize: number,
-  frameCount: number
-): void {
-  const headPt = points[0];
-  const pulse = 1.0 + Math.sin(frameCount * 0.04) * 0.08;
-  const glowRadius = cellSize * 0.7 * pulse;
-
-  g.fillStyle(S_GLOW, 0.12);
-  g.fillCircle(headPt.x, headPt.y, glowRadius * 1.3);
-
-  g.fillStyle(S_HIGHLIGHT, 0.18);
-  g.fillCircle(headPt.x, headPt.y, glowRadius);
-}
 
 function drawSnakeHeadShape(
   g: Phaser.GameObjects.Graphics,
@@ -385,12 +342,6 @@ function drawSnakeHeadShape(
   const headPt = points[0];
   const headW = getWidthAtProgress(0, cellSize, 1, widthMultiplier) / 2;
 
-  g.fillStyle(S_HIGHLIGHT, 0.25);
-  g.fillCircle(headPt.x - headW * 0.15, headPt.y - headW * 0.15, headW * 0.4);
-
-  const specAlpha = 0.15 + Math.sin(frameCount * 0.06) * 0.06;
-  g.fillStyle(S_HIGHLIGHT, specAlpha);
-  g.fillCircle(headPt.x - headW * 0.2, headPt.y - headW * 0.25, headW * 0.15);
 }
 
 function drawSnakeEyes(
