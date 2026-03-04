@@ -129,6 +129,7 @@ export interface GameState {
   realmPortal: RealmPortal | null;
   lastRealmTransitionFood: number;
   rival: RivalSnakeState;
+  foodFlee: FoodFleeState;
 }
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT' | 'UP_LEFT' | 'UP_RIGHT' | 'DOWN_LEFT' | 'DOWN_RIGHT';
@@ -160,6 +161,11 @@ export interface LegalEntity {
   lifetime: number;
   moveTimer: number;
   direction: CardinalDirection;
+}
+
+export interface FoodFleeState {
+  lastMoveTick: number;
+  panicLevel: number;
 }
 
 export type DeathReason = 'wall' | 'self' | 'rival' | 'obstacle' | null;

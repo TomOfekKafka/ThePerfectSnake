@@ -45,6 +45,7 @@ describe('GameBoard', () => {
       legalEntities: [],
       shields: 0,
       shieldHitTick: 0,
+      foodFlee: { lastMoveTick: 0, panicLevel: 0 },
     } satisfies GameState;
 
     const { container } = render(<GameBoard gameState={mockGameState} gridSize={20} />);

@@ -3,8 +3,8 @@
  * Easy to test, easy to reason about
  */
 
-import { Position, Direction, GameState, OPPOSITE_DIRECTIONS, DIRECTION_DELTAS, PowerUp, PowerUpType, ActivePowerUp, RealmPortal } from './types';
-import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE, BONUS_FOOD_SCORE, FLAG_FOOD_MULTIPLIER, OBSTACLE_MIN_FOOD_EATEN, OBSTACLE_SPAWN_INTERVAL, INITIAL_SHIELDS, MAX_SHIELDS, SHIELD_EARN_INTERVAL, SHIELD_INVULN_TICKS } from './constants';
+import { Position, Direction, GameState, OPPOSITE_DIRECTIONS, DIRECTION_DELTAS, PowerUp, PowerUpType, ActivePowerUp, RealmPortal, FoodFleeState } from './types';
+import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE, BONUS_FOOD_SCORE, FLAG_FOOD_MULTIPLIER, OBSTACLE_MIN_FOOD_EATEN, OBSTACLE_SPAWN_INTERVAL, INITIAL_SHIELDS, MAX_SHIELDS, SHIELD_EARN_INTERVAL, SHIELD_INVULN_TICKS, FOOD_FLEE_RANGE, FOOD_FLEE_INTERVAL_BASE, FOOD_FLEE_INTERVAL_MIN } from './constants';
 import { tickPhantom } from './phantomSnake';
 import { shouldSpawnBonusFood, generateBonusFood, isBonusFoodExpired, shrinkSnake } from './bonusFood';
 import { shouldSpawnFlagFood, generateFlagFood, isFlagFoodExpired } from './flagFood';
@@ -16,6 +16,7 @@ import { shouldSpawnObstacles, spawnObstacles, collidesWithObstacle } from './ob
 import { tripleGrowth, tickGrowPending } from './growthBurst';
 import { shouldSpawnRealmPortal, generateRealmPortal, isRealmPortalExpired, checkRealmPortalEntry } from './realmPortal';
 import { shouldSpawnLegal, generateLegalEntity, expireLegalEntities, moveLegalEntities, collectLegalEntities, LEGAL_SCORE_BONUS } from './legalEntities';
+import { tickFoodFlee } from './foodFlee';
 
 /** Check if two positions are equal */
 export const positionsEqual = (a: Position, b: Position): boolean =>
@@ -321,6 +322,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       currentRealm,
       realmPortal,
       lastRealmTransitionFood,
+      foodFlee: { lastMoveTick: tickCount, panicLevel: 0 },
     };
   }
 
@@ -346,6 +348,13 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
   const phantomFood = phantomResult.foodStolen
     ? generateFood(resultSnake, newPowerUp?.position)
     : state.food;
+
+  const obstaclePositions = (shockwaveTriggered ? [] : state.obstacles).map(o => o.position);
+  const fleeResult = isFrozen
+    ? { food: phantomFood, foodFlee: state.foodFlee, fled: false }
+    : tickFoodFlee(phantomFood, state.foodFlee, newHead, resultSnake, obstaclePositions, tickCount);
+  const finalFood = fleeResult.food;
+  const finalFoodFlee = fleeResult.foodFlee;
 
   const isInvincibleNow = hasPowerUp(newActivePowerUps, 'INVINCIBILITY') || immortal;
   const policeResult = isFrozen
@@ -376,13 +385,14 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     realmPortal = null;
   }
   if (!realmPortal && shouldSpawnRealmPortal(null, foodEatenCount, lastRealmTransitionFood)) {
-    realmPortal = generateRealmPortal(resultSnake, phantomFood, tickCount, currentRealm, newPowerUp?.position);
+    realmPortal = generateRealmPortal(resultSnake, finalFood, tickCount, currentRealm, newPowerUp?.position);
   }
 
   return {
     ...state,
     snake: resultSnake,
-    food: phantomFood,
+    food: finalFood,
+    foodFlee: finalFoodFlee,
     score: Math.max(0, state.score + bonusScoreGain + flagScoreGain + cashGain + legalGain - fakePenalty - policePenalty),
     direction,
     powerUp: newPowerUp,
@@ -471,6 +481,10 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
     spawnCooldown: 0,
     foodEaten: 0,
   },
+  foodFlee: {
+    lastMoveTick: 0,
+    panicLevel: 0,
+  },
 });
 
 /** Revive the snake after a correct trivia answer. Trims half the tail and spawns safe. */
@@ -505,5 +519,6 @@ export const reviveSnake = (state: GameState): GameState => {
     immortalProgress: 0,
     deathReason: null,
     realmPortal: null,
+    foodFlee: { lastMoveTick: 0, panicLevel: 0 },
   };
 };

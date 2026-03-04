@@ -59,6 +59,10 @@ export const MAX_SHIELDS = 5;
 export const SHIELD_EARN_INTERVAL = 7;
 export const SHIELD_INVULN_TICKS = 8;
 
+export const FOOD_FLEE_RANGE = 6;
+export const FOOD_FLEE_INTERVAL_BASE = 3;
+export const FOOD_FLEE_INTERVAL_MIN = 1;
+
 export const OBSTACLE_SPAWN_INTERVAL = 3;
 export const OBSTACLE_MAX_ON_BOARD = 12;
 export const OBSTACLE_MIN_FOOD_EATEN = 2;
@@ -122,5 +126,9 @@ export const createInitialState = (): GameState => ({
     moveTimer: 0,
     spawnCooldown: 0,
     foodEaten: 0,
+  },
+  foodFlee: {
+    lastMoveTick: 0,
+    panicLevel: 0,
   },
 });
