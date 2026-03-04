@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { FoodType } from './foodVariety';
 import { buildSplinePoints, getWidthAtProgress, getNormalAt } from './spermSnake';
 import { lerpColor } from './colorUtils';
-import { C } from './palette';
+import { THEME } from './gameTheme';
 
 const LIGHT_ANGLE = -Math.PI / 4;
 const LIGHT_COS = Math.cos(LIGHT_ANGLE);
@@ -118,7 +118,7 @@ export function drawSnake3DHighlights(
 
     const shimmer = baseIntensity * (0.85 + Math.sin(frameCount * 0.06 + progress * 8) * 0.15);
 
-    g.fillStyle(C.NOIR.silver, shimmer * 0.35);
+    g.fillStyle(THEME.snake.highlight, shimmer * 0.35);
     g.fillCircle(specX, specY, radius * 0.25);
 
     if (progress < 0.25) {
@@ -126,7 +126,7 @@ export function drawSnake3DHighlights(
       const rimAngle = LIGHT_ANGLE - Math.PI * 0.3;
       const rimX = pt.x + Math.cos(rimAngle) * radius * 0.8;
       const rimY = pt.y + Math.sin(rimAngle) * radius * 0.8;
-      g.fillStyle(C.NOIR.silver, rimStrength);
+      g.fillStyle(THEME.snake.highlight, rimStrength);
       g.fillCircle(rimX, rimY, radius * 0.25);
     }
   }
@@ -136,7 +136,7 @@ export function drawSnake3DHighlights(
   const headSpecX = headPt.x + LIGHT_COS * headRadius * 0.3;
   const headSpecY = headPt.y + LIGHT_SIN * headRadius * 0.3;
   const headFlash = 0.3 + Math.sin(frameCount * 0.1) * 0.1;
-  g.fillStyle(C.NOIR.silver, headFlash * headPulse * 0.6);
+  g.fillStyle(THEME.snake.highlight, headFlash * headPulse * 0.6);
   g.fillCircle(headSpecX, headSpecY, headRadius * 0.18);
 }
 
@@ -151,7 +151,7 @@ function drawSpecularDot(
   const specX = cx + LIGHT_COS * radius * 0.3;
   const specY = cy + LIGHT_SIN * radius * 0.3;
   const pulse = intensity * (0.8 + Math.sin(frameCount * 0.06) * 0.2);
-  g.fillStyle(C.NOIR.silver, pulse * 0.4);
+  g.fillStyle(THEME.snake.highlight, pulse * 0.4);
   g.fillCircle(specX, specY, radius * 0.2);
 }
 

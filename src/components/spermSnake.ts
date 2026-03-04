@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { lerpColor } from './colorUtils';
-import { C } from './palette';
+import { THEME } from './gameTheme';
 
 interface Vec2 {
   x: number;
@@ -139,14 +139,14 @@ export function getNormalAt(points: Vec2[], index: number): Vec2 {
   return { x: -dy / mag, y: dx / mag };
 }
 
-const NOIR_SILVER = C.NOIR.silver;
-const NOIR_LIGHT = C.NOIR.light;
-const NOIR_MID = C.NOIR.mid;
-const NOIR_DARK = C.NOIR.dark;
-const NOIR_SHADOW = C.NOIR.shadow;
-const NOIR_WHITE = C.NOIR.white;
+const S_HIGHLIGHT = THEME.snake.highlight;
+const S_HEAD = THEME.snake.head;
+const S_GLOW = THEME.snake.glow;
+const S_BODY = THEME.snake.body;
+const S_TAIL = THEME.snake.tail;
+const S_EDGE = THEME.snake.edge;
 
-function getNoirColors(
+function getSnakeColors(
   progress: number
 ): { base: number; highlight: number; edge: number; alpha: number } {
   let base: number;
@@ -155,27 +155,27 @@ function getNoirColors(
   let alpha: number;
 
   if (progress < 0.2) {
-    base = lerpColor(NOIR_SILVER, NOIR_LIGHT, progress / 0.2);
-    highlight = NOIR_WHITE;
-    edge = NOIR_MID;
+    base = lerpColor(S_HEAD, S_GLOW, progress / 0.2);
+    highlight = S_HIGHLIGHT;
+    edge = S_BODY;
     alpha = 0.95;
   } else if (progress < 0.5) {
     const t = (progress - 0.2) / 0.3;
-    base = lerpColor(NOIR_LIGHT, NOIR_MID, t);
-    highlight = lerpColor(NOIR_WHITE, NOIR_SILVER, t);
-    edge = lerpColor(NOIR_MID, NOIR_DARK, t);
+    base = lerpColor(S_GLOW, S_BODY, t);
+    highlight = lerpColor(S_HIGHLIGHT, S_HEAD, t);
+    edge = lerpColor(S_BODY, S_TAIL, t);
     alpha = 0.92;
   } else if (progress < 0.8) {
     const t = (progress - 0.5) / 0.3;
-    base = lerpColor(NOIR_MID, NOIR_DARK, t);
-    highlight = lerpColor(NOIR_SILVER, NOIR_LIGHT, t);
-    edge = NOIR_SHADOW;
+    base = lerpColor(S_BODY, S_TAIL, t);
+    highlight = lerpColor(S_HEAD, S_GLOW, t);
+    edge = S_EDGE;
     alpha = 0.85;
   } else {
     const t = (progress - 0.8) / 0.2;
-    base = lerpColor(NOIR_DARK, NOIR_SHADOW, t);
-    highlight = NOIR_MID;
-    edge = NOIR_SHADOW;
+    base = lerpColor(S_TAIL, S_EDGE, t);
+    highlight = S_BODY;
+    edge = S_EDGE;
     alpha = 0.7 - t * 0.2;
   }
 
@@ -212,11 +212,11 @@ export function drawSpermSnake(
     rightEdge.push({ x: points[i].x - n.x * w, y: points[i].y - n.y * w });
   }
 
-  drawNoirBody(g, points, leftEdge, rightEdge, len, frameCount);
-  drawNoirStripes(g, points, leftEdge, rightEdge, cellSize, frameCount);
-  drawNoirHeadGlow(g, points, cellSize, frameCount);
-  drawNoirHead(g, points, leftEdge, rightEdge, cellSize, frameCount, widthMultiplier);
-  drawNoirEyes(g, points, cellSize, frameCount, widthMultiplier);
+  drawSnakeBody(g, points, leftEdge, rightEdge, len, frameCount);
+  drawSnakeStripes(g, points, leftEdge, rightEdge, cellSize, frameCount);
+  drawSnakeHeadGlow(g, points, cellSize, frameCount);
+  drawSnakeHeadShape(g, points, leftEdge, rightEdge, cellSize, frameCount, widthMultiplier);
+  drawSnakeEyes(g, points, cellSize, frameCount, widthMultiplier);
 }
 
 function drawSingleCellHead(
@@ -230,19 +230,19 @@ function drawSingleCellHead(
   const pulse = 1.0 + Math.sin(frameCount * 0.05) * 0.03;
   const r = radius * pulse;
 
-  g.fillStyle(NOIR_SILVER, 0.1);
+  g.fillStyle(S_GLOW, 0.15);
   g.fillCircle(pt.x, pt.y, r * 1.4);
 
-  g.fillStyle(NOIR_SILVER, 0.95);
+  g.fillStyle(S_HEAD, 0.95);
   g.fillCircle(pt.x, pt.y, r);
 
-  g.fillStyle(NOIR_WHITE, 0.25);
+  g.fillStyle(S_HIGHLIGHT, 0.3);
   g.fillCircle(pt.x - r * 0.2, pt.y - r * 0.2, r * 0.4);
 
-  drawNoirEyesAt(g, pt.x, pt.y, r, frameCount);
+  drawSnakeEyesAt(g, pt.x, pt.y, r, frameCount);
 }
 
-function drawNoirBody(
+function drawSnakeBody(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   leftEdge: Vec2[],
@@ -261,7 +261,7 @@ function drawNoirBody(
     if (startIdx >= endIdx) continue;
 
     const midProgress = ((startIdx + endIdx) / 2) / (points.length - 1);
-    const colors = getNoirColors(midProgress);
+    const colors = getSnakeColors(midProgress);
 
     g.beginPath();
     g.moveTo(leftEdge[startIdx].x, leftEdge[startIdx].y);
@@ -303,7 +303,7 @@ function drawNoirBody(
   }
 }
 
-function drawNoirStripes(
+function drawSnakeStripes(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   leftEdge: Vec2[],
@@ -316,7 +316,7 @@ function drawNoirStripes(
 
   const shimmer = 0.15 + Math.sin(frameCount * 0.03) * 0.04;
 
-  g.lineStyle(0.6, NOIR_WHITE, shimmer * 0.5);
+  g.lineStyle(0.6, S_HIGHLIGHT, shimmer * 0.5);
   g.beginPath();
   g.moveTo(points[0].x, points[0].y);
   for (let i = 1; i < totalPts; i++) {
@@ -330,12 +330,12 @@ function drawNoirStripes(
     if (progress < 0.1) continue;
 
     const life = 1 - progress * 0.3;
-    g.lineStyle(0.5, NOIR_LIGHT, shimmer * life * 0.5);
+    g.lineStyle(0.5, S_GLOW, shimmer * life * 0.5);
     g.lineBetween(leftEdge[i].x, leftEdge[i].y, rightEdge[i].x, rightEdge[i].y);
   }
 }
 
-function drawNoirHeadGlow(
+function drawSnakeHeadGlow(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   cellSize: number,
@@ -345,14 +345,14 @@ function drawNoirHeadGlow(
   const pulse = 1.0 + Math.sin(frameCount * 0.04) * 0.08;
   const glowRadius = cellSize * 0.7 * pulse;
 
-  g.fillStyle(NOIR_SILVER, 0.08);
+  g.fillStyle(S_GLOW, 0.12);
   g.fillCircle(headPt.x, headPt.y, glowRadius * 1.3);
 
-  g.fillStyle(NOIR_WHITE, 0.14);
+  g.fillStyle(S_HIGHLIGHT, 0.18);
   g.fillCircle(headPt.x, headPt.y, glowRadius);
 }
 
-function drawNoirHead(
+function drawSnakeHeadShape(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   leftEdge: Vec2[],
@@ -376,24 +376,24 @@ function drawNoirHead(
   }
   g.closePath();
 
-  g.fillStyle(NOIR_SILVER, 0.95);
+  g.fillStyle(S_HEAD, 0.95);
   g.fillPath();
 
-  g.lineStyle(1, NOIR_DARK, 0.4);
+  g.lineStyle(1, S_TAIL, 0.4);
   g.strokePath();
 
   const headPt = points[0];
   const headW = getWidthAtProgress(0, cellSize, 1, widthMultiplier) / 2;
 
-  g.fillStyle(NOIR_WHITE, 0.2);
+  g.fillStyle(S_HIGHLIGHT, 0.25);
   g.fillCircle(headPt.x - headW * 0.15, headPt.y - headW * 0.15, headW * 0.4);
 
-  const specAlpha = 0.12 + Math.sin(frameCount * 0.06) * 0.06;
-  g.fillStyle(NOIR_SILVER, specAlpha);
+  const specAlpha = 0.15 + Math.sin(frameCount * 0.06) * 0.06;
+  g.fillStyle(S_HIGHLIGHT, specAlpha);
   g.fillCircle(headPt.x - headW * 0.2, headPt.y - headW * 0.25, headW * 0.15);
 }
 
-function drawNoirEyes(
+function drawSnakeEyes(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   cellSize: number,
@@ -402,10 +402,10 @@ function drawNoirEyes(
 ): void {
   const headPt = points[0];
   const headW = getWidthAtProgress(0.06, cellSize, 1, widthMultiplier) / 2;
-  drawNoirEyesAt(g, headPt.x, headPt.y, headW, frameCount);
+  drawSnakeEyesAt(g, headPt.x, headPt.y, headW, frameCount);
 }
 
-function drawNoirEyesAt(
+function drawSnakeEyesAt(
   g: Phaser.GameObjects.Graphics,
   x: number,
   y: number,
@@ -421,7 +421,7 @@ function drawNoirEyesAt(
   const rightEyeX = x + eyeSpacing;
   const eyeY = y - headW * 0.05;
 
-  g.fillStyle(NOIR_SHADOW, 0.9);
+  g.fillStyle(S_EDGE, 0.9);
   drawAngledEye(g, leftEyeX, eyeY, eyeW + 1.5, eyeH + 1.5, -0.15 + squint);
   drawAngledEye(g, rightEyeX, eyeY, eyeW + 1.5, eyeH + 1.5, 0.15 - squint);
 
@@ -430,11 +430,11 @@ function drawNoirEyesAt(
   drawAngledEye(g, rightEyeX, eyeY, eyeW, eyeH, 0.15 - squint);
 
   const pupilSize = eyeW * 0.35;
-  g.fillStyle(0x111111, 0.9);
+  g.fillStyle(THEME.snake.pupil, 0.9);
   g.fillCircle(leftEyeX + 0.5, eyeY + 0.3, pupilSize);
   g.fillCircle(rightEyeX + 0.5, eyeY + 0.3, pupilSize);
 
-  g.fillStyle(NOIR_SILVER, 0.5);
+  g.fillStyle(S_HIGHLIGHT, 0.6);
   g.fillCircle(leftEyeX - pupilSize * 0.3, eyeY - pupilSize * 0.3, pupilSize * 0.3);
   g.fillCircle(rightEyeX - pupilSize * 0.3, eyeY - pupilSize * 0.3, pupilSize * 0.3);
 }

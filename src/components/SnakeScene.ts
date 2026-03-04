@@ -358,18 +358,6 @@ import {
   updateAuroraTrail,
   drawAuroraTrail,
 } from './auroraTrail';
-import {
-  NoirEffectsState,
-  createNoirEffectsState,
-  initNoirEffects,
-  updateNoirEffects,
-  drawVenetianBlinds,
-  drawNoirRain,
-  drawNoirSmoke,
-  drawNoirSpotlight,
-  drawFilmGrain,
-  drawNoirVignette,
-} from './noirEffects';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -733,6 +721,18 @@ import {
   getDropDeathShake,
 } from './dropDeath';
 import { THEME } from './gameTheme';
+import {
+  NoirEffectsState,
+  createNoirEffectsState,
+  initNoirEffects,
+  updateNoirEffects,
+  drawNoirRain,
+  drawNoirSmoke,
+  drawNoirSpotlight,
+  drawVenetianBlinds,
+  drawFilmGrain,
+  drawNoirVignette,
+} from './noirEffects';
 
 const COLORS = {
   bgDark: THEME.bg.deep,
@@ -758,9 +758,8 @@ const COLORS = {
   plasma2: THEME.bg.light,
   plasma3: THEME.bg.mid,
   screenFlash: THEME.food.glow,
-  noirWhite: THEME.hud.text,
-  noirGray: THEME.hud.textDim,
-  noirDark: THEME.bg.mid,
+  hudText: THEME.hud.text,
+  hudDim: THEME.hud.textDim,
   spotlight: THEME.food.glow,
   chaosRed: THEME.effects.trail,
   chaosOrange: THEME.food.glow,
@@ -776,6 +775,8 @@ const COLORS = {
   candyCorn1: THEME.food.core,
   candyCorn2: THEME.food.glow,
   candyCorn3: THEME.hud.text,
+  noirWhite: 0xe0ddd0,
+  noirGray: 0x706858,
 };
 
 export class SnakeScene extends Phaser.Scene {
