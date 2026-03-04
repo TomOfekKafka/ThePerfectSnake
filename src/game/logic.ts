@@ -17,6 +17,7 @@ import { tripleGrowth, tickGrowPending } from './growthBurst';
 import { shouldSpawnRealmPortal, generateRealmPortal, isRealmPortalExpired, checkRealmPortalEntry } from './realmPortal';
 import { shouldSpawnLegal, generateLegalEntity, expireLegalEntities, moveLegalEntities, collectLegalEntities, LEGAL_SCORE_BONUS } from './legalEntities';
 import { tickFoodFlee } from './foodFlee';
+import { tickFoodMagnet } from './foodMagnet';
 
 /** Check if two positions are equal */
 export const positionsEqual = (a: Position, b: Position): boolean =>
@@ -349,12 +350,36 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     ? generateFood(resultSnake, newPowerUp?.position)
     : state.food;
 
+  const isMagnetActive = hasPowerUp(newActivePowerUps, 'MAGNET');
+
   const obstaclePositions = (shockwaveTriggered ? [] : state.obstacles).map(o => o.position);
-  const fleeResult = isFrozen
+  const fleeResult = (isFrozen || isMagnetActive)
     ? { food: phantomFood, foodFlee: state.foodFlee, fled: false }
     : tickFoodFlee(phantomFood, state.foodFlee, newHead, resultSnake, obstaclePositions, tickCount);
-  const finalFood = fleeResult.food;
-  const finalFoodFlee = fleeResult.foodFlee;
+
+  let finalFood = fleeResult.food;
+  let finalFoodFlee = fleeResult.foodFlee;
+  let magnetBonusFood = newBonusFood;
+  let magnetFlagFood = newFlagFood;
+  let magnetCashItems = shockwaveTriggered ? [] as typeof cashItems : cashItems;
+
+  if (isMagnetActive) {
+    const magnetState = {
+      ...state,
+      food: finalFood,
+      bonusFood: magnetBonusFood,
+      flagFood: magnetFlagFood,
+      cashItems: magnetCashItems,
+      snake: resultSnake,
+      obstacles: shockwaveTriggered ? [] : state.obstacles,
+    };
+    const magnetResult = tickFoodMagnet(magnetState, tickCount);
+    finalFood = magnetResult.food;
+    magnetBonusFood = magnetResult.bonusFood;
+    magnetFlagFood = magnetResult.flagFood;
+    magnetCashItems = magnetResult.cashItems;
+    finalFoodFlee = { lastMoveTick: tickCount, panicLevel: 0 };
+  }
 
   const isInvincibleNow = hasPowerUp(newActivePowerUps, 'INVINCIBILITY') || immortal;
   const policeResult = isFrozen
@@ -403,9 +428,9 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     wormhole: null,
     lastWormholeDespawn: 0,
     phantom: shockwavePhantom,
-    bonusFood: newBonusFood,
-    flagFood: newFlagFood,
-    cashItems: shockwaveTriggered ? [] : cashItems,
+    bonusFood: magnetBonusFood,
+    flagFood: magnetFlagFood,
+    cashItems: shockwaveTriggered ? [] : magnetCashItems,
     totalCash: state.totalCash + cashGain,
     fakeFoods: shockwaveTriggered ? [] : fakeFoods,
     police: shockwavePolice,

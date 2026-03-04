@@ -358,6 +358,12 @@ import {
   updateAuroraTrail,
   drawAuroraTrail,
 } from './auroraTrail';
+import {
+  MagnetEffectState,
+  createMagnetEffectState,
+  updateMagnetEffect,
+  drawMagnetEffect,
+} from './magnetEffect';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -900,6 +906,7 @@ export class SnakeScene extends Phaser.Scene {
   private deleteEffect: DeleteEffectState = createDeleteEffectState();
   private foodProtest: FoodProtestState = createFoodProtestState();
   private depth3d: Depth3DState = createDepth3D();
+  private magnetEffect: MagnetEffectState = createMagnetEffectState();
 
   constructor() {
     super({ key: 'SnakeScene' });
