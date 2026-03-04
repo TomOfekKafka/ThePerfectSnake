@@ -60,6 +60,7 @@ describe('foodEaten counter', () => {
       food: { x: 15, y: 15 },
       foodEaten: 5,
       direction: 'LEFT',
+      shields: 0,
     };
 
     const next = tick(state, 'LEFT');

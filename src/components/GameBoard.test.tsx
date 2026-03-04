@@ -43,6 +43,8 @@ describe('GameBoard', () => {
       lastRealmTransitionFood: 0,
       rival: { segments: [], direction: 'RIGHT' as const, active: false, growPending: 0, moveTimer: 0, spawnCooldown: 0, foodEaten: 0 },
       legalEntities: [],
+      shields: 0,
+      shieldHitTick: 0,
     } satisfies GameState;
 
     const { container } = render(<GameBoard gameState={mockGameState} gridSize={20} />);

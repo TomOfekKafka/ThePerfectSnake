@@ -4,7 +4,7 @@
  */
 
 import { Position, Direction, GameState, OPPOSITE_DIRECTIONS, DIRECTION_DELTAS, PowerUp, PowerUpType, ActivePowerUp, RealmPortal } from './types';
-import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE, BONUS_FOOD_SCORE, FLAG_FOOD_MULTIPLIER, OBSTACLE_MIN_FOOD_EATEN, OBSTACLE_SPAWN_INTERVAL } from './constants';
+import { GRID_SIZE, POINTS_PER_FOOD, POWERUP_SPAWN_CHANCE, POWERUP_DESPAWN_TICKS, POWERUP_DURATIONS, POWERUP_TYPES, SCORE_MULTIPLIER_VALUE, BONUS_FOOD_SCORE, FLAG_FOOD_MULTIPLIER, OBSTACLE_MIN_FOOD_EATEN, OBSTACLE_SPAWN_INTERVAL, INITIAL_SHIELDS, MAX_SHIELDS, SHIELD_EARN_INTERVAL, SHIELD_INVULN_TICKS } from './constants';
 import { tickPhantom } from './phantomSnake';
 import { shouldSpawnBonusFood, generateBonusFood, isBonusFoodExpired, shrinkSnake } from './bonusFood';
 import { shouldSpawnFlagFood, generateFlagFood, isFlagFoodExpired } from './flagFood';
@@ -118,7 +118,11 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
 
   const isGhostMode = hasPowerUp(state.activePowerUps, 'GHOST_MODE');
 
+  const shieldCooldownActive = (tickCount - state.shieldHitTick) < SHIELD_INVULN_TICKS;
+
   if (immortal || isGhostMode) {
+    newHead = wrapPosition(newHead);
+  } else if (shieldCooldownActive) {
     newHead = wrapPosition(newHead);
   } else {
     const isInvincible = hasPowerUp(state.activePowerUps, 'INVINCIBILITY');
@@ -132,7 +136,21 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
 
     const hitObstacle = collidesWithObstacle(newHead, state.obstacles);
 
-    if (hitWall || (hitSelf && !isInvincible) || (hitObstacle && !isInvincible)) {
+    const wouldDie = hitWall || (hitSelf && !isInvincible) || (hitObstacle && !isInvincible);
+
+    if (wouldDie && state.shields > 0) {
+      const safeHead = wrapPosition(newHead);
+      return {
+        ...state,
+        snake: [safeHead, ...state.snake.slice(0, -1)],
+        shields: state.shields - 1,
+        shieldHitTick: tickCount,
+        tickCount,
+        direction,
+      };
+    }
+
+    if (wouldDie) {
       const deathReason = hitWall ? 'wall' as const : hitObstacle ? 'obstacle' as const : 'self' as const;
       return { ...state, gameOver: true, tickCount, deathReason };
     }
@@ -175,6 +193,9 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
   const ateFlagFood = newFlagFood !== null && positionsEqual(newHead, newFlagFood.position);
 
   const foodEatenCount = ateFood ? state.foodEaten + 1 : state.foodEaten;
+
+  const earnedShield = ateFood && foodEatenCount > 0 && foodEatenCount % SHIELD_EARN_INTERVAL === 0;
+  const newShields = Math.min(MAX_SHIELDS, state.shields + (earnedShield ? 1 : 0));
 
   const hasMultiplier = hasPowerUp(newActivePowerUps, 'SCORE_MULTIPLIER');
   const scoreGain = ateFood ? (hasMultiplier ? POINTS_PER_FOOD * SCORE_MULTIPLIER_VALUE : POINTS_PER_FOOD) : 0;
@@ -295,6 +316,8 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
       lastObstacleSpawnFood: newLastObstacleSpawnFood,
       legalEntities: shockwaveTriggered ? [] : legalEntities,
       growPending: growth - 1,
+      shields: newShields,
+      shieldHitTick: state.shieldHitTick,
       currentRealm,
       realmPortal,
       lastRealmTransitionFood,
@@ -380,6 +403,8 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
     lastObstacleSpawnFood: finalLastObstacleSpawnFood,
     legalEntities: shockwaveTriggered ? [] : legalEntities,
     growPending: growResult.growPending,
+    shields: newShields,
+    shieldHitTick: state.shieldHitTick,
     currentRealm,
     realmPortal,
     lastRealmTransitionFood,
@@ -431,6 +456,8 @@ export const createNewGame = (initialSnake: Position[]): GameState => ({
   immortalProgress: 0,
   immortalCharges: 1,
   immortalRechargeProgress: 0,
+  shields: INITIAL_SHIELDS,
+  shieldHitTick: -100,
   deathReason: null,
   currentRealm: 0,
   realmPortal: null,

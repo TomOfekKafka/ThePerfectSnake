@@ -54,6 +54,11 @@ export const FAKE_FOOD_PENALTY = 20;
 export const FAKE_FOOD_SHRINK = 2;
 export const FAKE_FOOD_MIN_FOOD_EATEN = 3;
 
+export const INITIAL_SHIELDS = 3;
+export const MAX_SHIELDS = 5;
+export const SHIELD_EARN_INTERVAL = 7;
+export const SHIELD_INVULN_TICKS = 8;
+
 export const OBSTACLE_SPAWN_INTERVAL = 3;
 export const OBSTACLE_MAX_ON_BOARD = 12;
 export const OBSTACLE_MIN_FOOD_EATEN = 2;
@@ -103,6 +108,8 @@ export const createInitialState = (): GameState => ({
   immortalProgress: 0,
   immortalCharges: 1,
   immortalRechargeProgress: 0,
+  shields: INITIAL_SHIELDS,
+  shieldHitTick: -100,
   deathReason: null,
   currentRealm: 0,
   realmPortal: null,

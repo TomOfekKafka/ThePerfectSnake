@@ -122,6 +122,8 @@ export interface GameState {
   immortalProgress: number;
   immortalCharges: number;
   immortalRechargeProgress: number;
+  shields: number;
+  shieldHitTick: number;
   deathReason: DeathReason;
   currentRealm: number;
   realmPortal: RealmPortal | null;
