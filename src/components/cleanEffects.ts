@@ -17,13 +17,6 @@ export interface FloatingMote {
   pulsePhase: number;
 }
 
-export interface SnakeGlowTrail {
-  x: number;
-  y: number;
-  alpha: number;
-  size: number;
-}
-
 export interface TearDrop {
   x: number;
   y: number;
@@ -43,6 +36,13 @@ export interface BloodSplatter {
   life: number;
   splashed: boolean;
   splashRadius: number;
+}
+
+export interface SnakeGlowTrail {
+  x: number;
+  y: number;
+  alpha: number;
+  size: number;
 }
 
 export interface Snowflake {
@@ -76,15 +76,6 @@ export interface BloodPuddle {
   age: number;
 }
 
-export interface FoodOrbit {
-  angle: number;
-  distance: number;
-  speed: number;
-  size: number;
-  pulsePhase: number;
-  color: number;
-}
-
 export interface RedFogParticle {
   x: number;
   y: number;
@@ -93,6 +84,15 @@ export interface RedFogParticle {
   size: number;
   alpha: number;
   pulsePhase: number;
+}
+
+export interface FoodOrbit {
+  angle: number;
+  distance: number;
+  speed: number;
+  size: number;
+  pulsePhase: number;
+  color: number;
 }
 
 export interface DramaRing {

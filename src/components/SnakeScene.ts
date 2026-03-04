@@ -11,34 +11,21 @@ import {
   initMotes,
   updateMotes,
   updateRipples,
-  updateGlowTrail,
   spawnRipple,
   spawnTears,
   spawnBlood,
   updateTears,
   updateBlood,
-  initSnowflakes,
-  updateSnowflakes,
-  updateSnowballs,
   spawnDramaRings,
   updateDramaRings,
   dramaShakeOffset,
   drawDramaRings,
-  drawSnowflakes,
-  drawSnowballs,
   drawMotes,
   drawRipples,
-  drawGlowTrail,
   drawCleanVignette,
   drawCleanHUD,
   drawTears,
   drawBlood,
-  spawnBloodPuddle,
-  updateBloodPuddles,
-  drawBloodPuddles,
-  initRedFog,
-  updateRedFog,
-  drawRedFog,
   initFoodOrbits,
   updateFoodOrbits,
   drawFoodOrbits,
@@ -918,8 +905,6 @@ export class SnakeScene extends Phaser.Scene {
     const width = GRID_SIZE * CELL_SIZE;
     const height = GRID_SIZE * CELL_SIZE;
     initMotes(this.cleanEffects, width, height);
-    initSnowflakes(this.cleanEffects, width, height);
-    initRedFog(this.cleanEffects, width, height);
     initFoodOrbits(this.cleanEffects);
     initVeins(this.horrorEffects, width, height);
     initTendrils(this.horrorEffects, width, height);
@@ -2918,6 +2903,9 @@ export class SnakeScene extends Phaser.Scene {
       mote.vy += pull.dy * 0.02;
     }
     updateRipples(this.cleanEffects);
+    updateDramaRings(this.cleanEffects);
+    updateTears(this.cleanEffects, height);
+    updateBlood(this.cleanEffects, height);
     updateFoodOrbits(this.cleanEffects);
     updateFoodPrison(this.foodPrison);
     updateScoreBursts(this.mathParticles);
@@ -3103,6 +3091,7 @@ export class SnakeScene extends Phaser.Scene {
     if (!this.currentState) return;
 
     drawRipples(g, this.cleanEffects);
+    drawDramaRings(g, this.cleanEffects);
     drawGravityWells(g, this.gravityWells, this.frameCount);
 
     const food = this.currentState.food;
@@ -3194,6 +3183,8 @@ export class SnakeScene extends Phaser.Scene {
       }
 
       drawDropDeath(this.dropDeath, g, width, height, this.frameCount, this.drawText.bind(this));
+      drawBlood(g, this.cleanEffects);
+      drawTears(g, this.cleanEffects);
     }
     this.needsRedraw = false;
   }
