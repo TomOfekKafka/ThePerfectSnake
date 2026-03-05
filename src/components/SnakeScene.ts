@@ -253,6 +253,13 @@ import {
   drawDeathCinematic,
 } from './deathCinematic';
 import {
+  OuroborosState,
+  createOuroborosState,
+  triggerOuroboros,
+  updateOuroboros,
+  drawOuroboros,
+} from './ouroboros';
+import {
   FlagLifeBarState,
   createFlagLifeBarState,
   resetFlagLifeBar,
@@ -880,6 +887,7 @@ export class SnakeScene extends Phaser.Scene {
   private sciFi: SciFiState = createSciFiState();
   private electricStorm: ElectricStormState = createElectricStormState();
   private deathCinematic: DeathCinematicState = createDeathCinematicState();
+  private ouroboros: OuroborosState = createOuroborosState();
   private deathDelayFrames = 0;
   private deathDelayActive = false;
   private fireHearts: FireHeartsState = createFireHeartsState();
@@ -2543,6 +2551,9 @@ export class SnakeScene extends Phaser.Scene {
         }, i * 50);
       }
       triggerDeathCinematic(this.deathCinematic, state.snake, CELL_SIZE);
+      if (state.deathReason === 'self') {
+        triggerOuroboros(this.ouroboros, state.snake, CELL_SIZE, GRID_SIZE);
+      }
       this.deathDelayFrames = 0;
       this.deathDelayActive = true;
     }
@@ -2562,6 +2573,7 @@ export class SnakeScene extends Phaser.Scene {
       this.snakeWidthTarget = 1.0;
       this.silk = resetSilkVisited(this.silk);
       this.deathCinematic = createDeathCinematicState();
+      this.ouroboros = createOuroborosState();
       this.dropDeath = createDropDeathState();
       this.gravityWells = createGravityWellsState();
       this.deathDelayActive = false;
@@ -2941,6 +2953,7 @@ export class SnakeScene extends Phaser.Scene {
       CELL_SIZE
     );
     updateDepth3D(this.depth3d, this.frameCount);
+    updateOuroboros(this.ouroboros);
 
     {
       const gameActive = !!(this.currentState && this.currentState.gameStarted && !this.currentState.gameOver);
@@ -3173,6 +3186,7 @@ export class SnakeScene extends Phaser.Scene {
     drawOptimizationMeter(g, this.optimization, this.lastEfficiency.grade, width, this.frameCount, this.drawDigit.bind(this));
 
     if (this.currentState.gameOver) {
+      drawOuroboros(g, this.ouroboros, width, height, this.frameCount);
       updateDeathCinematic(this.deathCinematic);
       drawDeathCinematic(this.deathCinematic, g, width, height, this.frameCount);
       updateDropDeath(this.dropDeath);
