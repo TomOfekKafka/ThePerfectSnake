@@ -314,6 +314,13 @@ import {
   drawFoodPrison,
 } from './foodPrison';
 import {
+  FoodIdleState,
+  createFoodIdle,
+  updateFoodIdle,
+  drawFoodIdle,
+  getFoodIdleOffset,
+} from './foodIdle';
+import {
   DeleteEffectState,
   createDeleteEffectState,
   initDeleteEffect,
@@ -898,6 +905,7 @@ export class SnakeScene extends Phaser.Scene {
   private noirEffects: NoirEffectsState = createNoirEffectsState();
   private gravityWells: GravityWellsState = createGravityWellsState();
   private foodPrison: FoodPrisonState = createFoodPrisonState();
+  private foodIdle: FoodIdleState = createFoodIdle();
   private deleteEffect: DeleteEffectState = createDeleteEffectState();
   private foodProtest: FoodProtestState = createFoodProtestState();
   private depth3d: Depth3DState = createDepth3D();
@@ -2920,6 +2928,12 @@ export class SnakeScene extends Phaser.Scene {
     updateBlood(this.cleanEffects, height);
     updateFoodOrbits(this.cleanEffects);
     updateFoodPrison(this.foodPrison);
+    {
+      const food = this.currentState?.food;
+      const fx = food ? food.x * CELL_SIZE + CELL_SIZE / 2 : 0;
+      const fy = food ? food.y * CELL_SIZE + CELL_SIZE / 2 : 0;
+      updateFoodIdle(this.foodIdle, fx, fy, CELL_SIZE);
+    }
     updateScoreBursts(this.mathParticles);
     updateNuclearBlasts(this.nuclearBlast);
     updateComboStreak(this.comboStreak);
@@ -3109,8 +3123,11 @@ export class SnakeScene extends Phaser.Scene {
 
     const food = this.currentState.food;
     const gravPull = applyGravityToPoint(this.gravityWells, food.x * CELL_SIZE + CELL_SIZE / 2, food.y * CELL_SIZE + CELL_SIZE / 2);
-    const foodX = food.x * CELL_SIZE + CELL_SIZE / 2 + gravPull.dx;
-    const foodY = food.y * CELL_SIZE + CELL_SIZE / 2 + gravPull.dy;
+    const idleOff = getFoodIdleOffset(this.foodIdle);
+    const foodX = food.x * CELL_SIZE + CELL_SIZE / 2 + gravPull.dx + idleOff.dx;
+    const foodY = food.y * CELL_SIZE + CELL_SIZE / 2 + gravPull.dy + idleOff.dy;
+
+    drawFoodIdle(g, this.foodIdle, foodX, foodY, CELL_SIZE, this.frameCount);
 
     if (this.currentState.snake.length > 0 && !this.currentState.gameOver) {
       const head = this.currentState.snake[0];
