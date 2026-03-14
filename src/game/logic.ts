@@ -16,7 +16,7 @@ import { shouldSpawnObstacles, spawnObstacles, collidesWithObstacle } from './ob
 import { tripleGrowth, tickGrowPending } from './growthBurst';
 import { shouldSpawnRealmPortal, generateRealmPortal, isRealmPortalExpired, checkRealmPortalEntry } from './realmPortal';
 import { shouldSpawnLegal, generateLegalEntity, expireLegalEntities, moveLegalEntities, collectLegalEntities, LEGAL_SCORE_BONUS } from './legalEntities';
-import { tickFoodFlee } from './foodFlee';
+
 import { tickFoodMagnet } from './foodMagnet';
 
 /** Check if two positions are equal */
@@ -353,9 +353,7 @@ export const tick = (state: GameState, direction: Direction, immortal = false): 
   const isMagnetActive = hasPowerUp(newActivePowerUps, 'MAGNET');
 
   const obstaclePositions = (shockwaveTriggered ? [] : state.obstacles).map(o => o.position);
-  const fleeResult = (isFrozen || isMagnetActive)
-    ? { food: phantomFood, foodFlee: state.foodFlee, fled: false }
-    : tickFoodFlee(phantomFood, state.foodFlee, newHead, resultSnake, obstaclePositions, tickCount);
+  const fleeResult = { food: phantomFood, foodFlee: state.foodFlee, fled: false };
 
   let finalFood = fleeResult.food;
   let finalFoodFlee = fleeResult.foodFlee;

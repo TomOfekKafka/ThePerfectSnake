@@ -224,7 +224,6 @@ import {
   drawSciFiGrid,
   drawShieldRings,
   drawHoloFood,
-  drawSnakeEnergyField,
   drawCornerHUD,
 } from './sciFiEffects';
 import {
@@ -3159,7 +3158,7 @@ export class SnakeScene extends Phaser.Scene {
     drawSnake3DShadows(g, this.currentState.snake, CELL_SIZE, this.frameCount);
     drawSolidSnake(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.snakeDirection, this.faceState, this.snakeWidthMultiplier);
     drawSnake3DHighlights(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.depth3d.headPulse);
-    drawSnakeEnergyField(g, this.sciFi, this.currentState.snake, CELL_SIZE);
+    // Energy field glow removed
     drawFireHearts(g, this.fireHearts);
     drawFoodProtest(g, this.foodProtest, this.drawLetter.bind(this));
     drawElectricStorm(g, this.electricStorm, this.frameCount);
