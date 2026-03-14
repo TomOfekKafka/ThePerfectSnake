@@ -3154,7 +3154,6 @@ export class SnakeScene extends Phaser.Scene {
     drawObstacles(g, this.obstacleRender, this.currentState.obstacles || [], CELL_SIZE, this.frameCount);
 
     drawWebTrail(g, this.webTrail, this.frameCount);
-    drawFireGlow(g, this.currentState.snake, CELL_SIZE, this.frameCount);
     drawFireTrail(g, this.fireTrail);
     drawAuroraTrail(g, this.auroraTrail, this.frameCount);
     drawSnake3DShadows(g, this.currentState.snake, CELL_SIZE, this.frameCount);
