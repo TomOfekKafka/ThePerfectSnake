@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { FoodType } from './foodVariety';
-import { buildSplinePoints, getWidthAtProgress, getNormalAt } from './spermSnake';
+import { buildSplinePoints, getWidthAtProgress } from './spermSnake';
 import { lerpColor } from './colorUtils';
 import { THEME } from './gameTheme';
 
@@ -81,79 +81,14 @@ function drawOvalShadow(
 }
 
 export function drawSnake3DHighlights(
-  g: Phaser.GameObjects.Graphics,
-  snake: { x: number; y: number }[],
-  cellSize: number,
-  frameCount: number,
-  headPulse: number
+  _g: Phaser.GameObjects.Graphics,
+  _snake: { x: number; y: number }[],
+  _cellSize: number,
+  _frameCount: number,
+  _headPulse: number
 ): void {
-  if (snake.length < 2) {
-    if (snake.length === 1) {
-      const cx = snake[0].x * cellSize + cellSize / 2;
-      const cy = snake[0].y * cellSize + cellSize / 2;
-      drawSpecularDot(g, cx, cy, cellSize * 0.4, 0.5, frameCount);
-    }
-    return;
-  }
-
-  const points = buildSplinePoints(snake, cellSize, frameCount);
-  if (points.length < 4) return;
-
-  const step = Math.max(1, Math.floor(points.length / 18));
-
-  for (let i = 0; i < points.length; i += step) {
-    const progress = i / (points.length - 1);
-    const width = getWidthAtProgress(progress, cellSize, snake.length);
-    const radius = width / 2;
-    const pt = points[i];
-
-    const normal = getNormalAt(points, i);
-    const highlightOffset = radius * 0.35;
-    const specX = pt.x + LIGHT_COS * highlightOffset + normal.x * radius * 0.1;
-    const specY = pt.y + LIGHT_SIN * highlightOffset + normal.y * radius * 0.1;
-
-    const baseIntensity = progress < 0.2
-      ? 0.5 * headPulse
-      : 0.3 * (1 - progress * 0.6);
-
-    const shimmer = baseIntensity * (0.85 + Math.sin(frameCount * 0.06 + progress * 8) * 0.15);
-
-    g.fillStyle(THEME.snake.highlight, shimmer * 0.35);
-    g.fillCircle(specX, specY, radius * 0.25);
-
-    if (progress < 0.25) {
-      const rimStrength = 0.2 * (1 - progress / 0.25) * headPulse;
-      const rimAngle = LIGHT_ANGLE - Math.PI * 0.3;
-      const rimX = pt.x + Math.cos(rimAngle) * radius * 0.8;
-      const rimY = pt.y + Math.sin(rimAngle) * radius * 0.8;
-      g.fillStyle(THEME.snake.highlight, rimStrength);
-      g.fillCircle(rimX, rimY, radius * 0.25);
-    }
-  }
-
-  const headPt = points[0];
-  const headRadius = getWidthAtProgress(0.06, cellSize, snake.length) / 2;
-  const headSpecX = headPt.x + LIGHT_COS * headRadius * 0.3;
-  const headSpecY = headPt.y + LIGHT_SIN * headRadius * 0.3;
-  const headFlash = 0.3 + Math.sin(frameCount * 0.1) * 0.1;
-  g.fillStyle(THEME.snake.highlight, headFlash * headPulse * 0.6);
-  g.fillCircle(headSpecX, headSpecY, headRadius * 0.18);
 }
 
-function drawSpecularDot(
-  g: Phaser.GameObjects.Graphics,
-  cx: number,
-  cy: number,
-  radius: number,
-  intensity: number,
-  frameCount: number
-): void {
-  const specX = cx + LIGHT_COS * radius * 0.3;
-  const specY = cy + LIGHT_SIN * radius * 0.3;
-  const pulse = intensity * (0.8 + Math.sin(frameCount * 0.06) * 0.2);
-  g.fillStyle(THEME.snake.highlight, pulse * 0.4);
-  g.fillCircle(specX, specY, radius * 0.2);
-}
 
 export function drawFood3DEffect(
   g: Phaser.GameObjects.Graphics,
