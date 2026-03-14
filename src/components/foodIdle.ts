@@ -86,14 +86,12 @@ export function updateFoodIdle(state: FoodIdleState, foodX: number, foodY: numbe
 
 export function getFoodIdleOffset(state: FoodIdleState): { dx: number; dy: number; scale: number } {
   const breathScale = 1 + Math.sin(state.breathPhase) * 0.12;
-  const swayX = Math.sin(state.swayPhase) * 1.8;
-  const swayY = Math.cos(state.swayPhase * 0.7) * 1.2;
 
   const squishX = 1 + Math.sin(state.squishPhase) * 0.06;
   const squishY = 1 - Math.sin(state.squishPhase) * 0.06;
   const combinedScale = breathScale * ((squishX + squishY) / 2);
 
-  return { dx: swayX, dy: swayY, scale: combinedScale };
+  return { dx: 0, dy: 0, scale: combinedScale };
 }
 
 export function drawFoodIdle(
