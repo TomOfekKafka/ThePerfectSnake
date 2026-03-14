@@ -727,18 +727,6 @@ import {
   getDropDeathShake,
 } from './dropDeath';
 import { THEME } from './gameTheme';
-import {
-  NoirEffectsState,
-  createNoirEffectsState,
-  initNoirEffects,
-  updateNoirEffects,
-  drawNoirRain,
-  drawNoirSmoke,
-  drawNoirSpotlight,
-  drawVenetianBlinds,
-  drawFilmGrain,
-  drawNoirVignette,
-} from './noirEffects';
 
 const COLORS = {
   bgDark: THEME.bg.deep,
@@ -781,8 +769,6 @@ const COLORS = {
   candyCorn1: THEME.food.core,
   candyCorn2: THEME.food.glow,
   candyCorn3: THEME.hud.text,
-  noirWhite: 0xe0ddd0,
-  noirGray: 0x706858,
 };
 
 export class SnakeScene extends Phaser.Scene {
@@ -814,7 +800,6 @@ export class SnakeScene extends Phaser.Scene {
   private energyFieldPulse = 0;
   private foodBurstParticles: { x: number; y: number; vx: number; vy: number; life: number; size: number; hue: number; trail: { x: number; y: number }[] }[] = [];
   private chromaticIntensity = 0;
-  // Film noir effects
   private venetianPhase = 0;
   private spotlightX = 0;
   private spotlightY = 0;
@@ -901,7 +886,6 @@ export class SnakeScene extends Phaser.Scene {
   private obstacleRender: ObstacleRenderState = createObstacleRenderState();
   private sameDirectionExplosion: SameDirectionExplosionState = createSameDirectionExplosionState();
   private dropDeath: DropDeathState = createDropDeathState();
-  private noirEffects: NoirEffectsState = createNoirEffectsState();
   private gravityWells: GravityWellsState = createGravityWellsState();
   private foodPrison: FoodPrisonState = createFoodPrisonState();
   private foodIdle: FoodIdleState = createFoodIdle();
@@ -929,7 +913,6 @@ export class SnakeScene extends Phaser.Scene {
     initCrownBeam(this.cosmicCrown, width, height);
     initDataStreams(this.sciFi, width, height);
     initBackgroundBand(this.backgroundBand, width);
-    initNoirEffects(this.noirEffects, width, height);
 
     this.upgradeKeyHandler = (e: KeyboardEvent) => {
       if (!this.upgradeState.choice || !this.upgradeState.choice.active) return;
@@ -2859,7 +2842,7 @@ export class SnakeScene extends Phaser.Scene {
     for (const ring of tf.impactRings) {
       g.lineStyle(3, COLORS.foodGlow, ring.alpha * 0.5);
       g.strokeCircle(tf.targetX, tf.targetY, ring.radius);
-      g.lineStyle(1.5, COLORS.noirWhite, ring.alpha * 0.7);
+      g.lineStyle(1.5, COLORS.hudText, ring.alpha * 0.7);
       g.strokeCircle(tf.targetX, tf.targetY, ring.radius);
     }
 
@@ -2867,7 +2850,7 @@ export class SnakeScene extends Phaser.Scene {
     for (const p of tf.landingParticles) {
       g.fillStyle(COLORS.foodGlow, p.life * 0.6);
       g.fillCircle(p.x, p.y, p.size * 1.3 * p.life);
-      g.fillStyle(COLORS.noirWhite, p.life * 0.9);
+      g.fillStyle(COLORS.hudText, p.life * 0.9);
       g.fillCircle(p.x, p.y, p.size * p.life);
     }
 
@@ -2881,7 +2864,7 @@ export class SnakeScene extends Phaser.Scene {
       g.fillCircle(tf.x, tf.y, foodSize * 2);
 
       // Outer glow
-      g.fillStyle(COLORS.noirWhite, 0.4);
+      g.fillStyle(COLORS.hudText, 0.4);
       g.fillCircle(tf.x, tf.y, foodSize * 1.5);
 
       // Main food body
@@ -2954,12 +2937,6 @@ export class SnakeScene extends Phaser.Scene {
     updateFoodProtest(this.foodProtest);
     updateSpiderlings(this.spiderlingsList);
     updateBackgroundBand(this.backgroundBand);
-    {
-      const head = this.currentState?.snake?.[0];
-      const headPx = head ? head.x * CELL_SIZE + CELL_SIZE / 2 : width / 2;
-      const headPy = head ? head.y * CELL_SIZE + CELL_SIZE / 2 : height / 2;
-      updateNoirEffects(this.noirEffects, headPx, headPy, width, height);
-    }
     updateObstacleEffects(
       this.obstacleRender,
       this.currentState?.obstacles || [],
@@ -3107,12 +3084,10 @@ export class SnakeScene extends Phaser.Scene {
 
     drawSpaceBackground(g, this.spaceBackground, width, height);
     drawBackgroundBand(g, this.backgroundBand, width, height);
-    drawVenetianBlinds(g, this.noirEffects, width, height, this.frameCount);
     drawSciFiGrid(g, this.sciFi, width, height, CELL_SIZE, GRID_SIZE);
     drawCrownBeam(g, this.cosmicCrown.beam);
     drawSilkWeave(g, this.silk, CELL_SIZE, GRID_SIZE, this.frameCount);
     drawMotes(g, this.cleanEffects);
-    drawNoirRain(g, this.noirEffects);
 
     if (!this.currentState) return;
 
@@ -3183,10 +3158,6 @@ export class SnakeScene extends Phaser.Scene {
 
     drawShieldRings(g, this.sciFi);
     drawWeather(g, this.weather, width, height, this.frameCount);
-    drawNoirSpotlight(g, this.noirEffects, width, height, this.frameCount);
-    drawNoirSmoke(g, this.noirEffects);
-    drawFilmGrain(g, width, height, this.noirEffects.filmGrainSeed);
-    drawNoirVignette(g, width, height);
     drawCornerHUD(g, this.sciFi, width, height);
     drawWebLabels(g, this.spellProjectile, this.drawText.bind(this));
     drawSpellTexts(g, this.wizardEffects, this.drawText.bind(this));
@@ -3231,7 +3202,6 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   private drawStars(g: Phaser.GameObjects.Graphics): void {
-    // In film noir mode, stars are subtle distant lights
     for (const star of this.stars) {
       const twinkle = 0.5 + Math.sin(this.frameCount * star.speed + star.x) * 0.5;
       const alpha = star.brightness * twinkle * 0.25;
@@ -3279,7 +3249,7 @@ export class SnakeScene extends Phaser.Scene {
     }
 
     // Bright center
-    g.fillStyle(COLORS.noirWhite, 0.08 * pulse);
+    g.fillStyle(COLORS.hudText, 0.08 * pulse);
     g.fillCircle(cx, cy, width * 0.25);
   }
 
@@ -3291,7 +3261,7 @@ export class SnakeScene extends Phaser.Scene {
 
     for (let y = waveOffset; y < height; y += blindSpacing) {
       const brightness = 0.03 + Math.sin(y * 0.02 + this.venetianPhase * 2) * 0.015;
-      g.fillStyle(COLORS.noirWhite, brightness);
+      g.fillStyle(COLORS.hudText, brightness);
       g.fillRect(0, y, width, blindWidth);
     }
 
@@ -3313,9 +3283,9 @@ export class SnakeScene extends Phaser.Scene {
   private drawSmoke(g: Phaser.GameObjects.Graphics): void {
     for (const smoke of this.smokeParticles) {
       const alpha = smoke.alpha * smoke.life;
-      g.fillStyle(COLORS.noirGray, alpha);
+      g.fillStyle(COLORS.hudDim, alpha);
       g.fillCircle(smoke.x, smoke.y, smoke.size);
-      g.fillStyle(COLORS.noirWhite, alpha * 0.3);
+      g.fillStyle(COLORS.hudText, alpha * 0.3);
       g.fillCircle(smoke.x, smoke.y, smoke.size * 0.5);
     }
   }
@@ -3436,7 +3406,6 @@ export class SnakeScene extends Phaser.Scene {
     }
 
     for (const d of this.deathDebris) {
-      // Film noir: grayscale debris
       const brightness = 0.4 + (d.hue % 60) / 100;
       const color = this.hslToRgb(0, 0, brightness);
       const alpha = d.life * 0.9;
@@ -3757,10 +3726,9 @@ export class SnakeScene extends Phaser.Scene {
 
   private drawTrailParticles(g: Phaser.GameObjects.Graphics): void {
     for (const p of this.trailParticles) {
-      // Film noir: grayscale trail
-      g.fillStyle(COLORS.noirGray, p.life * 0.2);
+      g.fillStyle(COLORS.hudDim, p.life * 0.2);
       g.fillCircle(p.x, p.y, p.size * 1.5 * p.life);
-      g.fillStyle(COLORS.noirWhite, p.life * 0.5);
+      g.fillStyle(COLORS.hudText, p.life * 0.5);
       g.fillCircle(p.x, p.y, p.size * p.life);
     }
   }
@@ -3977,8 +3945,7 @@ export class SnakeScene extends Phaser.Scene {
     for (const bolt of this.lightningBolts) {
       const alpha = bolt.life;
 
-      // Film noir: white lightning
-      g.lineStyle(4, COLORS.noirGray, alpha * 0.3);
+      g.lineStyle(4, COLORS.hudDim, alpha * 0.3);
       this.drawLightningPath(g, bolt.points);
 
       g.lineStyle(2, 0xffffff, alpha * 0.8);
@@ -4016,8 +3983,7 @@ export class SnakeScene extends Phaser.Scene {
 
       const arcPoints = this.generateLightningPath(x1, y1, x2, y2);
 
-      // Film noir: grayscale arcs
-      g.lineStyle(3, COLORS.noirGray, 0.3);
+      g.lineStyle(3, COLORS.hudDim, 0.3);
       this.drawLightningPath(g, arcPoints);
       g.lineStyle(1, 0xffffff, 0.7);
       this.drawLightningPath(g, arcPoints);
@@ -4339,7 +4305,7 @@ export class SnakeScene extends Phaser.Scene {
     const labelText = 'CAUSE OF DEATH';
     const labelSize = 6;
     const labelWidth = labelText.length * labelSize * 0.7;
-    this.drawText(g, labelText, centerX - labelWidth / 2, reasonY - 12, labelSize, COLORS.noirGray, 0.7 * alpha);
+    this.drawText(g, labelText, centerX - labelWidth / 2, reasonY - 12, labelSize, COLORS.hudDim, 0.7 * alpha);
 
     // Second divider
     g.lineStyle(1, COLORS.snakeGlow, 0.3 * alpha);
@@ -4350,7 +4316,7 @@ export class SnakeScene extends Phaser.Scene {
     const scoreStr = String(score);
     const scoreY = panelY - slideOffset + 100;
 
-    this.drawText(g, 'FINAL SCORE', centerX - 44, scoreY - 16, 8, COLORS.noirGray, 0.8 * alpha);
+    this.drawText(g, 'FINAL SCORE', centerX - 44, scoreY - 16, 8, COLORS.hudDim, 0.8 * alpha);
 
     const scorePulse = 0.8 + Math.sin(this.gameOverScoreAnimPhase * 2) * 0.2;
     const scoreWidth = scoreStr.length * 14;
@@ -4361,7 +4327,7 @@ export class SnakeScene extends Phaser.Scene {
     // Snake length stat at bottom
     const snakeLen = this.currentState.snake.length;
     const statY = panelY - slideOffset + panelHeight - 22;
-    this.drawText(g, `LENGTH: ${snakeLen}`, centerX - 35, statY, 8, COLORS.noirGray, 0.7 * alpha);
+    this.drawText(g, `LENGTH: ${snakeLen}`, centerX - 35, statY, 8, COLORS.hudDim, 0.7 * alpha);
   }
 
   private drawGrid(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
@@ -4500,7 +4466,7 @@ export class SnakeScene extends Phaser.Scene {
 
       g.fillStyle(COLORS.foodCore, p.life * 0.7);
       g.fillCircle(p.x, p.y, p.size * p.life);
-      g.fillStyle(COLORS.noirWhite, p.life * 0.9);
+      g.fillStyle(COLORS.hudText, p.life * 0.9);
       g.fillCircle(p.x, p.y, p.size * p.life * 0.4);
     }
   }
@@ -4538,7 +4504,7 @@ export class SnakeScene extends Phaser.Scene {
         const x2 = seg2.x * CELL_SIZE + CELL_SIZE / 2;
         const y2 = seg2.y * CELL_SIZE + CELL_SIZE / 2;
 
-        g.lineStyle(3, COLORS.noirGray, this.energyFieldPulse * 0.3);
+        g.lineStyle(3, COLORS.hudDim, this.energyFieldPulse * 0.3);
         g.lineBetween(x1, y1, x2, y2);
         g.lineStyle(1.5, 0xffffff, this.energyFieldPulse * 0.5);
         g.lineBetween(x1, y1, x2, y2);
@@ -4552,7 +4518,6 @@ export class SnakeScene extends Phaser.Scene {
     const snake = this.currentState.snake;
     const offset = this.chromaticIntensity * 3;
 
-    // Film noir: grayscale ghosting effect instead of color split
     for (let i = 0; i < snake.length; i++) {
       const seg = snake[i];
       const cx = seg.x * CELL_SIZE + CELL_SIZE / 2;
@@ -4572,7 +4537,6 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   private drawGameOver(g: Phaser.GameObjects.Graphics, width: number, height: number): void {
-    // Film noir game over: dramatic fade to black with spotlight
     if (this.gameOverAlpha < 0.85) {
       this.gameOverAlpha += 0.03;
     }
@@ -4590,12 +4554,11 @@ export class SnakeScene extends Phaser.Scene {
 
     // Dramatic spotlight in center
     const spotPulse = 0.15 + Math.sin(this.frameCount * 0.05) * 0.05;
-    g.fillStyle(COLORS.noirWhite, spotPulse);
+    g.fillStyle(COLORS.hudText, spotPulse);
     g.fillCircle(width / 2, height / 2, 80);
-    g.fillStyle(COLORS.noirWhite, spotPulse * 0.5);
+    g.fillStyle(COLORS.hudText, spotPulse * 0.5);
     g.fillCircle(width / 2, height / 2, 120);
 
-    // Noir border: thick black frame
     const borderSize = 8;
     g.fillStyle(0x000000, 0.8);
     g.fillRect(0, 0, width, borderSize);
@@ -4606,7 +4569,7 @@ export class SnakeScene extends Phaser.Scene {
     // White inner border
     const innerBorder = 2;
     const innerOffset = borderSize;
-    g.fillStyle(COLORS.noirWhite, 0.3);
+    g.fillStyle(COLORS.hudText, 0.3);
     g.fillRect(innerOffset, innerOffset, width - innerOffset * 2, innerBorder);
     g.fillRect(innerOffset, height - innerOffset - innerBorder, width - innerOffset * 2, innerBorder);
     g.fillRect(innerOffset, innerOffset, innerBorder, height - innerOffset * 2);

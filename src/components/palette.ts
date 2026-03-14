@@ -3,15 +3,6 @@ export const C = {
   BLACK: 0x000000,
   NEAR_BLACK: 0x111111,
 
-  NOIR: {
-    white: 0xe8e8f0,
-    silver: 0xc8c8d0,
-    light: 0xa0a0a8,
-    mid: 0x707078,
-    dark: 0x404048,
-    shadow: 0x202028,
-  },
-
   FIRE: {
     whiteHot: 0xf8eeff,
     core: 0xf0eef5,
@@ -120,11 +111,6 @@ export const C = {
     dataStream: 0x00ff66,
     warnRed: 0xff3344,
     energyPurple: 0x8844ff,
-  },
-
-  HUD: {
-    noirWhite: 0xe0ddd0,
-    noirGray: 0x706858,
   },
 
   DEPTH: {
