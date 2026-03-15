@@ -446,10 +446,7 @@ export function drawSnowflakes(
   state: CleanEffectsState
 ): void {
   for (const flake of state.snowflakes) {
-    g.fillStyle(CLEAN_COLORS.snowGlow, flake.alpha * 0.3);
-    g.fillCircle(flake.x, flake.y, flake.size * 2);
-
-    g.fillStyle(CLEAN_COLORS.snow, flake.alpha);
+    g.fillStyle(CLEAN_COLORS.snow, flake.alpha * 0.8);
     g.fillCircle(flake.x, flake.y, flake.size);
   }
 }
@@ -464,10 +461,10 @@ export function drawCleanBackground(
   g.fillRect(0, 0, width, height);
 
   const pulse = 0.5 + Math.sin(frameCount * 0.01) * 0.1;
-  g.fillStyle(CLEAN_COLORS.bgMid, pulse * 0.4);
-  g.fillCircle(width / 2, height / 2, width * 0.6);
-  g.fillStyle(CLEAN_COLORS.bgLight, pulse * 0.2);
-  g.fillCircle(width / 2, height / 2, width * 0.3);
+  g.fillStyle(CLEAN_COLORS.bgMid, pulse * 0.2);
+  g.fillCircle(width / 2, height / 2, width * 0.5);
+  g.fillStyle(CLEAN_COLORS.bgLight, pulse * 0.1);
+  g.fillCircle(width / 2, height / 2, width * 0.25);
 }
 
 export function drawCleanGrid(
@@ -521,8 +518,8 @@ export function drawGlowTrail(
   state: CleanEffectsState
 ): void {
   for (const trail of state.glowTrail) {
-    g.fillStyle(CLEAN_COLORS.snakeGlow, trail.alpha * 0.3);
-    g.fillCircle(trail.x, trail.y, trail.size);
+    g.fillStyle(CLEAN_COLORS.snakeGlow, trail.alpha * 0.1);
+    g.fillCircle(trail.x, trail.y, trail.size * 0.7);
   }
 }
 
@@ -548,10 +545,10 @@ export function drawCleanFood(
 ): void {
   const m = snowmanMetrics(cellSize, frameCount);
 
-  g.fillStyle(CLEAN_COLORS.snowGlow, m.glowPulse * 0.3);
-  g.fillCircle(foodX, foodY, cellSize * 0.7);
-  g.fillStyle(CLEAN_COLORS.snowGlow, m.glowPulse * 0.5);
-  g.fillCircle(foodX, foodY, cellSize * 0.45);
+  g.fillStyle(CLEAN_COLORS.snowGlow, m.glowPulse * 0.1);
+  g.fillCircle(foodX, foodY, cellSize * 0.5);
+  g.fillStyle(CLEAN_COLORS.snowGlow, m.glowPulse * 0.2);
+  g.fillCircle(foodX, foodY, cellSize * 0.35);
 
   g.fillStyle(CLEAN_COLORS.snowmanShadow, 0.3);
   g.fillEllipse(foodX, foodY + m.bodyY + m.bodyRadius * 0.8, m.bodyRadius * 2.2, m.bodyRadius * 0.4);
@@ -636,8 +633,8 @@ export function drawCleanSnake(
     const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
 
     const { glow } = candyCaneSegmentColor(i, stripeWidth);
-    const glowAlpha = 0.15 * (1 - t * 0.5);
-    const glowSize = (cellSize / 2 + 6) * (0.6 + t * 0.4);
+    const glowAlpha = 0.05 * (1 - t * 0.5);
+    const glowSize = (cellSize / 2 + 3) * (0.6 + t * 0.4);
     g.fillStyle(glow, glowAlpha);
     g.fillCircle(centerX, centerY, glowSize);
   }
@@ -658,9 +655,9 @@ export function drawCleanSnake(
     g.fillCircle(centerX - radius * 0.2, centerY - radius * 0.15, radius * 0.4);
 
     if (i === 0) {
-      const pulse = 0.3 + Math.sin(frameCount * 0.1) * 0.1;
+      const pulse = 0.12 + Math.sin(frameCount * 0.1) * 0.05;
       g.fillStyle(CLEAN_COLORS.candyRedGlow, pulse);
-      g.fillCircle(centerX, centerY, radius + 4);
+      g.fillCircle(centerX, centerY, radius + 2);
 
       g.fillStyle(CLEAN_COLORS.candyRed, 1);
       g.fillCircle(centerX, centerY, radius);
@@ -814,9 +811,6 @@ export function drawSnowballs(
       g.fillStyle(CLEAN_COLORS.snow, trail.alpha * 0.5 * fade);
       g.fillCircle(trail.x, trail.y, trailSize);
     }
-
-    g.fillStyle(CLEAN_COLORS.snowGlow, ball.alpha * 0.25);
-    g.fillCircle(ball.x, ball.y, ball.size * 2);
 
     g.fillStyle(CLEAN_COLORS.snowmanBody, ball.alpha * 0.9);
     g.fillCircle(ball.x, ball.y, ball.size);
@@ -1026,14 +1020,11 @@ export function drawFoodOrbits(
     const pulse = 0.5 + Math.sin(orbit.pulsePhase) * 0.5;
     const alpha = 0.4 + pulse * 0.5;
 
-    g.fillStyle(orbit.color, alpha * 0.3);
-    g.fillCircle(x, y, orbit.size * 3);
+    g.fillStyle(orbit.color, alpha * 0.5);
+    g.fillCircle(x, y, orbit.size * 1.2);
 
-    g.fillStyle(orbit.color, alpha * 0.7);
-    g.fillCircle(x, y, orbit.size * 1.5);
-
-    g.fillStyle(0xffddaa, alpha * 0.6);
-    g.fillCircle(x, y, orbit.size * 0.6);
+    g.fillStyle(0xffddaa, alpha * 0.3);
+    g.fillCircle(x, y, orbit.size * 0.5);
   }
 }
 
@@ -1103,8 +1094,8 @@ export function drawHorrorSnake(
     const centerY = segment.y * cellSize + cellSize / 2;
     const t = snakeLen > 1 ? i / (snakeLen - 1) : 1;
 
-    const glowAlpha = 0.12 * (1 - t * 0.5);
-    const glowSize = (cellSize / 2 + 6) * (0.6 + t * 0.4);
+    const glowAlpha = 0.04 * (1 - t * 0.5);
+    const glowSize = (cellSize / 2 + 3) * (0.6 + t * 0.4);
     g.fillStyle(0x440000, glowAlpha);
     g.fillCircle(centerX, centerY, glowSize);
   }
@@ -1125,9 +1116,9 @@ export function drawHorrorSnake(
     g.fillCircle(centerX + radius * 0.2, centerY + radius * 0.1, radius * 0.5);
 
     if (i === 0) {
-      const pulse = 0.4 + Math.sin(frameCount * 0.12) * 0.15;
+      const pulse = 0.15 + Math.sin(frameCount * 0.12) * 0.05;
       g.fillStyle(0x330000, pulse);
-      g.fillCircle(centerX, centerY, radius + 4);
+      g.fillCircle(centerX, centerY, radius + 2);
 
       g.fillStyle(0x004422, 1);
       g.fillCircle(centerX, centerY, radius);

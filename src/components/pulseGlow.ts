@@ -86,24 +86,19 @@ export function drawPulseGlows(
   for (const pulse of state.pulses) {
     const eased = pulse.life * pulse.life;
     const color = hueToRgb(pulse.hue);
-    const ringCount = 3;
 
-    for (let r = 0; r < ringCount; r++) {
-      const offset = r * 6;
-      const ringRadius = pulse.radius + offset;
-      const alpha = eased * pulse.intensity * 0.35 * (1 - r * 0.25);
-      const thickness = (3 - r * 0.8) * eased;
+    const alpha = eased * pulse.intensity * 0.2;
+    const thickness = 2 * eased;
 
-      if (alpha > 0.01 && thickness > 0.1) {
-        g.lineStyle(thickness, color, alpha);
-        g.strokeCircle(pulse.x, pulse.y, ringRadius);
-      }
+    if (alpha > 0.01 && thickness > 0.1) {
+      g.lineStyle(thickness, color, alpha);
+      g.strokeCircle(pulse.x, pulse.y, pulse.radius);
     }
 
-    const coreAlpha = eased * pulse.intensity * 0.15;
+    const coreAlpha = eased * pulse.intensity * 0.08;
     if (coreAlpha > 0.01) {
       g.fillStyle(color, coreAlpha);
-      g.fillCircle(pulse.x, pulse.y, pulse.radius * 0.6);
+      g.fillCircle(pulse.x, pulse.y, pulse.radius * 0.4);
     }
   }
 }

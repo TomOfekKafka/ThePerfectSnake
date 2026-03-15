@@ -144,11 +144,8 @@ const drawSinglePortal = (
   const pulse = 0.8 + Math.sin(state.pulsePhase + phaseOffset) * 0.2;
   const baseRadius = CELL_SIZE * 0.45 * pulse;
 
-  // Outer glow
-  g.fillStyle(glowColor, 0.12);
-  g.fillCircle(cx, cy, baseRadius * 2.5);
-  g.fillStyle(glowColor, 0.08);
-  g.fillCircle(cx, cy, baseRadius * 3.2);
+  g.fillStyle(glowColor, 0.04);
+  g.fillCircle(cx, cy, baseRadius * 2.0);
 
   // Rotating ring segments
   const rotation = state.rotationPhase + phaseOffset;
@@ -172,13 +169,12 @@ const drawSinglePortal = (
   g.lineStyle(1, glowColor, 0.3 * pulse);
   g.strokeCircle(cx, cy, baseRadius * 1.6);
 
-  // Core vortex
-  g.fillStyle(glowColor, 0.25 * pulse);
-  g.fillCircle(cx, cy, baseRadius);
-  g.fillStyle(color, 0.4 * pulse);
-  g.fillCircle(cx, cy, baseRadius * 0.6);
-  g.fillStyle(color, 0.6 * pulse);
-  g.fillCircle(cx, cy, baseRadius * 0.25);
+  g.fillStyle(glowColor, 0.12 * pulse);
+  g.fillCircle(cx, cy, baseRadius * 0.8);
+  g.fillStyle(color, 0.3 * pulse);
+  g.fillCircle(cx, cy, baseRadius * 0.45);
+  g.fillStyle(color, 0.5 * pulse);
+  g.fillCircle(cx, cy, baseRadius * 0.2);
 
   // Swirling inner particles
   for (let i = 0; i < 4; i++) {

@@ -158,33 +158,21 @@ export function drawBodyPulse(
 
     const colors = getFireColors(i, len);
     const pulse = 0.6 + Math.sin(frameCount * 0.12 + segProgress * 8) * 0.4;
-    const glowAlpha = totalInfluence * 0.5 * pulse;
-    const glowSize = cellSize * (0.7 + totalInfluence * 0.6);
+    const glowAlpha = totalInfluence * 0.3 * pulse;
+    const glowSize = cellSize * (0.5 + totalInfluence * 0.4);
 
-    g.fillStyle(colors.base, glowAlpha * 0.2);
-    g.fillCircle(sx, sy, glowSize * 1.6);
-
-    g.fillStyle(colors.highlight, glowAlpha * 0.4);
+    g.fillStyle(colors.highlight, glowAlpha * 0.25);
     g.fillCircle(sx, sy, glowSize);
 
-    const coreAlpha = glowAlpha * 0.6;
-    g.fillStyle(0xffeeff, coreAlpha);
-    g.fillCircle(sx, sy, glowSize * 0.4);
+    g.fillStyle(0xffeeff, glowAlpha * 0.3);
+    g.fillCircle(sx, sy, glowSize * 0.35);
   }
 
   for (const s of state.sparks) {
     const t = s.life / s.maxLife;
-    const alpha = t * 0.8;
+    const alpha = t * 0.6;
 
-    g.fillStyle(0xcc55ee, alpha * 0.3);
-    g.fillCircle(s.x, s.y, s.size * 2.5);
-
-    g.fillStyle(0xeeaaff, alpha * 0.6);
-    g.fillCircle(s.x, s.y, s.size * 1.2);
-
-    if (t > 0.3) {
-      g.fillStyle(0xffeeff, alpha * 0.4);
-      g.fillCircle(s.x, s.y, s.size * 0.4);
-    }
+    g.fillStyle(0xeeaaff, alpha * 0.4);
+    g.fillCircle(s.x, s.y, s.size * 1.0);
   }
 }

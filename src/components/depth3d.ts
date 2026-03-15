@@ -127,8 +127,8 @@ export function drawFood3DEffect(
     }
   }
 
-  const pulseR = baseRadius * 1.5 + Math.sin(frameCount * 0.07) * baseRadius * 0.2;
-  g.fillStyle(0xff8844, 0.12);
+  const pulseR = baseRadius * 1.2 + Math.sin(frameCount * 0.07) * baseRadius * 0.15;
+  g.fillStyle(0xff8844, 0.05);
   g.fillCircle(foodX, bobY, pulseR);
 }
 
@@ -206,9 +206,9 @@ export function drawSnakeHead3D(
   seg: DepthSegment,
   frameCount: number
 ): void {
-  const pulse = 0.3 + Math.sin(frameCount * 0.12) * 0.1;
-  g.fillStyle(0x330000, pulse * 0.5);
-  g.fillCircle(seg.cx, seg.cy, seg.radius + 3);
+  const pulse = 0.12 + Math.sin(frameCount * 0.12) * 0.04;
+  g.fillStyle(0x330000, pulse);
+  g.fillCircle(seg.cx, seg.cy, seg.radius + 2);
   g.fillStyle(darkenColor(seg.baseColor, 0.5), 0.95);
   g.fillCircle(seg.cx, seg.cy + 1, seg.radius);
   g.fillStyle(seg.baseColor, 1);
@@ -249,10 +249,8 @@ export function drawFood3D(
   const baseRadius = cellSize * 0.35;
   const pulse = 1.0 + Math.sin(frameCount * 0.1) * 0.08;
   const radius = baseRadius * pulse;
-  g.fillStyle(0xff8800, 0.2);
-  g.fillCircle(foodX, floatY, radius * 2);
-  g.fillStyle(0xffaa00, 0.15);
-  g.fillCircle(foodX, floatY, radius * 1.5);
+  g.fillStyle(0xffaa00, 0.06);
+  g.fillCircle(foodX, floatY, radius * 1.4);
   g.fillStyle(0xcc6600, 0.95);
   g.fillCircle(foodX, floatY + 1, radius);
   g.fillStyle(0xff8800, 1);
@@ -338,9 +336,7 @@ export function drawVariedFood(
   const pulse = 1.0 + Math.sin(frameCount * 0.1) * 0.08;
   const radius = baseRadius * pulse;
   const rotation = frameCount * 0.02;
-  g.fillStyle(foodType.glowColor, 0.18);
-  g.fillCircle(foodX, floatY, radius * 2.2);
-  g.fillStyle(foodType.glowColor, 0.12);
+  g.fillStyle(foodType.glowColor, 0.06);
   g.fillCircle(foodX, floatY, radius * 1.6);
   drawFoodShape(g, foodX, floatY + 1, radius, darkenColor(foodType.bodyColor, 0.7), 0.9, foodType.shape, rotation);
   drawFoodShape(g, foodX, floatY, radius, foodType.bodyColor, 1.0, foodType.shape, rotation);

@@ -66,11 +66,8 @@ export const drawGrowthPopups = (
     const size = 10 + popup.amount * 2;
     const scaledSize = Math.round(size * scale);
 
-    g.fillStyle(glow, alpha * 0.4);
-    g.fillCircle(popup.x, popup.y, scaledSize + 6);
-
-    g.fillStyle(glow, alpha * 0.2);
-    g.fillCircle(popup.x, popup.y, scaledSize + 14);
+    g.fillStyle(glow, alpha * 0.15);
+    g.fillCircle(popup.x, popup.y, scaledSize + 4);
 
     const text = `+${popup.amount}`;
     drawText(g, text, popup.x - scaledSize * 0.5, popup.y - scaledSize * 0.4, scaledSize, color, alpha);

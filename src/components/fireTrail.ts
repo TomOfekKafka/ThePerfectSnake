@@ -193,25 +193,15 @@ function drawFlame(g: Phaser.GameObjects.Graphics, p: FireParticle): void {
   const t = p.life / p.maxLife;
   const alpha = t * p.heat;
 
-  g.fillStyle(FIRE_DEEP, alpha * 0.15);
-  g.fillCircle(p.x, p.y, p.size * 2.8);
-
-  g.fillStyle(FIRE_OUTER, alpha * 0.3);
-  g.fillCircle(p.x, p.y, p.size * 2.2);
-
-  g.fillStyle(FIRE_MID, alpha * 0.5);
+  g.fillStyle(FIRE_MID, alpha * 0.25);
   g.fillCircle(p.x, p.y, p.size * 1.5);
 
-  g.fillStyle(FIRE_INNER, alpha * 0.7);
-  g.fillCircle(p.x, p.y, p.size * 0.9);
+  g.fillStyle(FIRE_INNER, alpha * 0.5);
+  g.fillCircle(p.x, p.y, p.size * 0.8);
 
-  if (t > 0.4) {
-    g.fillStyle(FIRE_CORE, alpha * 0.8);
-    g.fillCircle(p.x, p.y, p.size * 0.4);
-  }
-  if (t > 0.7) {
-    g.fillStyle(FIRE_WHITE, alpha * 0.4);
-    g.fillCircle(p.x, p.y, p.size * 0.15);
+  if (t > 0.5) {
+    g.fillStyle(FIRE_CORE, alpha * 0.5);
+    g.fillCircle(p.x, p.y, p.size * 0.3);
   }
 }
 
@@ -268,18 +258,13 @@ export function drawFireGlow(
     const progress = len > 1 ? i / (len - 1) : 0;
 
     const pulse = 0.7 + Math.sin(frameCount * 0.08 + progress * 4) * 0.3;
-    const glowSize = cellSize * (0.8 + (1 - progress) * 0.4) * pulse;
+    const glowSize = cellSize * (0.5 + (1 - progress) * 0.3) * pulse;
 
     const headHeat = 1 - progress;
     const glowColor = headHeat > 0.7 ? FIRE_CORE : headHeat > 0.3 ? FIRE_INNER : FIRE_MID;
-    const glowAlpha = (0.06 + headHeat * 0.08) * pulse;
+    const glowAlpha = (0.03 + headHeat * 0.04) * pulse;
 
     g.fillStyle(glowColor, glowAlpha);
     g.fillCircle(sx, sy, glowSize);
-
-    if (headHeat > 0.5) {
-      g.fillStyle(FIRE_OUTER, glowAlpha * 0.4);
-      g.fillCircle(sx, sy, glowSize * 1.4);
-    }
   }
 }
