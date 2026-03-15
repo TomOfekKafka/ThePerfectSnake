@@ -2477,8 +2477,7 @@ export class SnakeScene extends Phaser.Scene {
       this.screenFlashAlpha = 0.25;
       this.chromaticIntensity = 1.5;
       this.energyFieldPulse = 1.0;
-      spawnDramaRings(this.cleanEffects, headX, headY);
-      spawnPulseGlow(this.pulseGlow, headX, headY, 1.0, this.hueOffset);
+      spawnRipple(this.cleanEffects, headX, headY);
       triggerCombo(this.comboStreak, headX, headY, this.frameCount);
       const foodPx = state.food.x * CELL_SIZE + CELL_SIZE / 2;
       const foodPy = state.food.y * CELL_SIZE + CELL_SIZE / 2;
@@ -3038,12 +3037,10 @@ export class SnakeScene extends Phaser.Scene {
         this.currentState.gameOver
       );
       if (laserHit) {
-        spawnPulseGlow(this.pulseGlow, laserFoodX, laserFoodY, 0.6, this.hueOffset);
         triggerScreenShake(this.cleanEffects, 5);
         this.screenFlashAlpha = Math.max(this.screenFlashAlpha, 0.15);
         const flagDestroyed = damageFlagLifeBar(this.flagLifeBar, laserFoodX, laserFoodY);
         if (flagDestroyed) {
-          spawnPulseGlow(this.pulseGlow, laserFoodX, laserFoodY, 1.5, this.hueOffset);
           this.screenFlashAlpha = 0.4;
           triggerSkullDrop(this.skullDrop, laserFoodX, laserFoodY);
         }
@@ -3092,7 +3089,6 @@ export class SnakeScene extends Phaser.Scene {
     if (!this.currentState) return;
 
     drawRipples(g, this.cleanEffects);
-    drawDramaRings(g, this.cleanEffects);
     drawGravityWells(g, this.gravityWells, this.frameCount);
 
     const food = this.currentState.food;
@@ -3120,9 +3116,7 @@ export class SnakeScene extends Phaser.Scene {
     drawSkullDrop(g, this.skullDrop, CELL_SIZE, this.frameCount);
     drawQuotePopup(g, this.keanuDisplay, this.frameCount, this.drawText.bind(this));
     drawSnitchWings(g, this.wizardEffects, foodX, foodY, CELL_SIZE);
-    drawFoodOrbits(g, this.cleanEffects, foodX, foodY, CELL_SIZE);
     drawHoloFood(g, this.sciFi, foodX, foodY, CELL_SIZE);
-    drawFood3DEffect(g, foodX, foodY, CELL_SIZE, this.frameCount, this.depth3d);
     drawFoodPrison(g, this.foodPrison, foodX, foodY, CELL_SIZE, this.frameCount);
 
     drawObstacles(g, this.obstacleRender, this.currentState.obstacles || [], CELL_SIZE, this.frameCount);

@@ -501,8 +501,6 @@ export function drawMotes(
     const pulse = 0.5 + Math.sin(mote.pulsePhase) * 0.5;
     const alpha = mote.alpha * pulse;
 
-    g.fillStyle(CLEAN_COLORS.mote, alpha * 0.3);
-    g.fillCircle(mote.x, mote.y, mote.size * 2);
     g.fillStyle(CLEAN_COLORS.mote, alpha);
     g.fillCircle(mote.x, mote.y, mote.size);
   }
@@ -515,9 +513,6 @@ export function drawRipples(
   for (const ripple of state.ripples) {
     g.lineStyle(ripple.thickness, CLEAN_COLORS.ripple, ripple.alpha);
     g.strokeCircle(ripple.x, ripple.y, ripple.radius);
-
-    g.lineStyle(ripple.thickness * 0.5, 0xccaaff, ripple.alpha * 0.5);
-    g.strokeCircle(ripple.x, ripple.y, ripple.radius * 0.8);
   }
 }
 
