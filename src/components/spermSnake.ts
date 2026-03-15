@@ -36,7 +36,7 @@ function gridToPixel(gx: number, gy: number, cellSize: number): Vec2 {
 export function buildSplinePoints(
   snake: { x: number; y: number }[],
   cellSize: number,
-  frameCount: number
+  _frameCount: number
 ): Vec2[] {
   const len = snake.length;
   if (len === 0) return [];
@@ -70,23 +70,6 @@ export function buildSplinePoints(
     for (let s = startT; s <= stepsPerSegment; s++) {
       const t = s / stepsPerSegment;
       const pt = catmullRom(p0, p1, p2, p3, t);
-
-      const globalProgress = (i + t) / (len - 1);
-
-      const headRegion = globalProgress < 0.15;
-      const waveAmp = headRegion
-        ? cellSize * 0.01 * globalProgress / 0.15
-        : cellSize * 0.06 * (0.2 + globalProgress * 0.8);
-      const waveFreq = 4.5;
-      const wavePhase = frameCount * 0.08;
-      const wave = Math.sin(globalProgress * Math.PI * waveFreq + wavePhase) * waveAmp;
-
-      const dx = p2.x - p0.x;
-      const dy = p2.y - p0.y;
-      const mag = Math.sqrt(dx * dx + dy * dy) || 1;
-      pt.x += (-dy / mag) * wave;
-      pt.y += (dx / mag) * wave;
-
       result.push(pt);
     }
   }
@@ -100,22 +83,27 @@ export function getWidthAtProgress(
   _snakeLen: number,
   widthMultiplier = 1.0
 ): number {
-  const headWidth = cellSize * 0.85;
-  const neckWidth = cellSize * 0.5;
-  const tailWidth = cellSize * 0.15;
+  const bodyWidth = cellSize * 0.55;
+  const noseWidth = cellSize * 0.08;
+  const nozzleWidth = cellSize * 0.35;
 
   let w: number;
-  if (progress < 0.04) {
-    const t = progress / 0.04;
-    w = headWidth * t;
-  } else if (progress < 0.12) {
-    w = headWidth;
-  } else if (progress < 0.22) {
-    const t = (progress - 0.12) / 0.10;
-    w = headWidth - (headWidth - neckWidth) * t;
+  if (progress < 0.02) {
+    w = noseWidth + (bodyWidth - noseWidth) * (progress / 0.02);
+  } else if (progress < 0.08) {
+    w = bodyWidth;
+  } else if (progress < 0.85) {
+    w = bodyWidth - (bodyWidth - nozzleWidth) * ((progress - 0.08) / 0.77) * 0.15;
+  } else if (progress < 0.92) {
+    const t = (progress - 0.85) / 0.07;
+    w = bodyWidth * 0.85 - (bodyWidth * 0.85 - nozzleWidth) * t;
   } else {
-    const tailProgress = (progress - 0.22) / 0.78;
-    w = neckWidth - (neckWidth - tailWidth) * Math.pow(tailProgress, 0.6);
+    const t = (progress - 0.92) / 0.08;
+    const flare = nozzleWidth * (1.0 + t * 0.3);
+    w = nozzleWidth + (flare - nozzleWidth) * Math.sin(t * Math.PI);
+    if (t > 0.7) {
+      w *= 1 - (t - 0.7) / 0.3 * 0.6;
+    }
   }
 
   return w * widthMultiplier;
@@ -139,14 +127,23 @@ export function getNormalAt(points: Vec2[], index: number): Vec2 {
   return { x: -dy / mag, y: dx / mag };
 }
 
-const S_HIGHLIGHT = THEME.snake.highlight;
-const S_HEAD = THEME.snake.head;
-const S_GLOW = THEME.snake.glow;
-const S_BODY = THEME.snake.body;
-const S_TAIL = THEME.snake.tail;
-const S_EDGE = THEME.snake.edge;
+const M_NOSE = THEME.snake.head;
+const M_BODY = THEME.snake.body;
+const M_TAIL = THEME.snake.tail;
+const M_HIGHLIGHT = THEME.snake.highlight;
+const M_EDGE = THEME.snake.edge;
+const M_GLOW = THEME.snake.glow;
 
-function getSnakeColors(
+const MISSILE_WHITE = 0xd8dde3;
+const MISSILE_BAND_RED = 0xcc2222;
+const MISSILE_BAND_YELLOW = 0xddaa22;
+const MISSILE_RIVET = 0x556070;
+const MISSILE_PANEL_LINE = 0x3a4858;
+const EXHAUST_CORE = 0xffdd44;
+const EXHAUST_MID = 0xff6622;
+const EXHAUST_OUTER = 0xff3311;
+
+function getMissileColors(
   progress: number
 ): { base: number; highlight: number; edge: number; alpha: number } {
   let base: number;
@@ -154,29 +151,23 @@ function getSnakeColors(
   let edge: number;
   let alpha: number;
 
-  if (progress < 0.2) {
-    base = lerpColor(S_HEAD, S_GLOW, progress / 0.2);
-    highlight = S_HIGHLIGHT;
-    edge = S_BODY;
+  if (progress < 0.08) {
+    base = lerpColor(M_NOSE, M_BODY, progress / 0.08);
+    highlight = M_HIGHLIGHT;
+    edge = M_EDGE;
+    alpha = 0.97;
+  } else if (progress < 0.85) {
+    const t = (progress - 0.08) / 0.77;
+    base = lerpColor(M_BODY, M_TAIL, t * 0.3);
+    highlight = M_HIGHLIGHT;
+    edge = M_EDGE;
     alpha = 0.95;
-  } else if (progress < 0.5) {
-    const t = (progress - 0.2) / 0.3;
-    base = lerpColor(S_GLOW, S_BODY, t);
-    highlight = lerpColor(S_HIGHLIGHT, S_HEAD, t);
-    edge = lerpColor(S_BODY, S_TAIL, t);
-    alpha = 0.92;
-  } else if (progress < 0.8) {
-    const t = (progress - 0.5) / 0.3;
-    base = lerpColor(S_BODY, S_TAIL, t);
-    highlight = lerpColor(S_HEAD, S_GLOW, t);
-    edge = S_EDGE;
-    alpha = 0.85;
   } else {
-    const t = (progress - 0.8) / 0.2;
-    base = lerpColor(S_TAIL, S_EDGE, t);
-    highlight = S_BODY;
-    edge = S_EDGE;
-    alpha = 0.7 - t * 0.2;
+    const t = (progress - 0.85) / 0.15;
+    base = lerpColor(M_TAIL, M_EDGE, t);
+    highlight = lerpColor(M_HIGHLIGHT, M_TAIL, t);
+    edge = M_EDGE;
+    alpha = 0.92 - t * 0.15;
   }
 
   return { base, highlight, edge, alpha: Math.max(0.25, alpha) };
@@ -194,7 +185,7 @@ export function drawSpermSnake(
 
   if (len === 1) {
     const pt = gridToPixel(snake[0].x, snake[0].y, cellSize);
-    drawSingleCellHead(g, pt, cellSize, frameCount, widthMultiplier);
+    drawSingleCellMissile(g, pt, cellSize, frameCount, widthMultiplier);
     return;
   }
 
@@ -212,36 +203,39 @@ export function drawSpermSnake(
     rightEdge.push({ x: points[i].x - n.x * w, y: points[i].y - n.y * w });
   }
 
-  drawSnakeBody(g, points, leftEdge, rightEdge, len, frameCount);
-  drawSnakeStripes(g, points, leftEdge, rightEdge, cellSize, frameCount);
-  drawSnakeHeadShape(g, points, leftEdge, rightEdge, cellSize, frameCount, widthMultiplier);
-  drawSnakeEyes(g, points, cellSize, frameCount, widthMultiplier);
+  drawMissileBody(g, points, leftEdge, rightEdge, len, frameCount);
+  drawPanelLines(g, points, leftEdge, rightEdge, cellSize, frameCount);
+  drawWarheadNose(g, points, leftEdge, rightEdge, cellSize, frameCount, widthMultiplier);
+  drawWarningBands(g, points, leftEdge, rightEdge, cellSize, frameCount);
+  drawTailFins(g, points, leftEdge, rightEdge, cellSize, frameCount);
+  drawExhaustFlame(g, points, cellSize, frameCount, widthMultiplier);
+  drawTargetingSensor(g, points, cellSize, frameCount, widthMultiplier);
 }
 
-function drawSingleCellHead(
+function drawSingleCellMissile(
   g: Phaser.GameObjects.Graphics,
   pt: Vec2,
   cellSize: number,
   frameCount: number,
   widthMultiplier = 1.0
 ): void {
-  const radius = cellSize * 0.45 * widthMultiplier;
-  const pulse = 1.0 + Math.sin(frameCount * 0.05) * 0.03;
-  const r = radius * pulse;
-
-  g.fillStyle(S_HEAD, 0.95);
-  g.fillCircle(pt.x, pt.y, r);
-
-  drawSnakeEyesAt(g, pt.x, pt.y, r, frameCount);
+  const radius = cellSize * 0.35 * widthMultiplier;
+  g.fillStyle(M_BODY, 0.95);
+  g.fillCircle(pt.x, pt.y, radius);
+  g.fillStyle(M_NOSE, 0.9);
+  g.fillCircle(pt.x, pt.y - radius * 0.3, radius * 0.5);
+  g.fillStyle(M_HIGHLIGHT, 0.3);
+  g.fillCircle(pt.x - radius * 0.2, pt.y - radius * 0.2, radius * 0.25);
+  drawSensorAt(g, pt.x, pt.y, radius, frameCount);
 }
 
-function drawSnakeBody(
+function drawMissileBody(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   leftEdge: Vec2[],
   rightEdge: Vec2[],
   _snakeLen: number,
-  frameCount: number
+  _frameCount: number
 ): void {
   const segmentCount = Math.max(1, Math.floor(points.length / 3));
 
@@ -254,7 +248,7 @@ function drawSnakeBody(
     if (startIdx >= endIdx) continue;
 
     const midProgress = ((startIdx + endIdx) / 2) / (points.length - 1);
-    const colors = getSnakeColors(midProgress);
+    const colors = getMissileColors(midProgress);
 
     g.beginPath();
     g.moveTo(leftEdge[startIdx].x, leftEdge[startIdx].y);
@@ -268,15 +262,104 @@ function drawSnakeBody(
     g.fillStyle(colors.base, colors.alpha);
     g.fillPath();
 
-    if (midProgress < 0.4) {
-      g.lineStyle(1, colors.edge, colors.alpha * 0.4);
-      g.strokePath();
-    }
+    g.lineStyle(1, colors.edge, colors.alpha * 0.5);
+    g.strokePath();
+  }
 
+  for (let i = 0; i < points.length; i++) {
+    const progress = i / (points.length - 1);
+    if (progress < 0.1 || progress > 0.9) continue;
+    const n = getNormalAt(points, i);
+    const w = getWidthAtProgress(progress, 1, 1) * 0.5;
+    const highlightAlpha = 0.12 + 0.05 * Math.sin(progress * 20);
+    g.fillStyle(M_HIGHLIGHT, highlightAlpha);
+    const hx = points[i].x + n.x * w * 0.6;
+    const hy = points[i].y + n.y * w * 0.6;
+    if (i % 2 === 0) {
+      g.fillCircle(hx, hy, 0.8);
+    }
   }
 }
 
-function drawSnakeStripes(
+function drawPanelLines(
+  g: Phaser.GameObjects.Graphics,
+  points: Vec2[],
+  leftEdge: Vec2[],
+  rightEdge: Vec2[],
+  _cellSize: number,
+  _frameCount: number
+): void {
+  const totalPts = points.length;
+  if (totalPts < 4) return;
+
+  g.lineStyle(0.5, MISSILE_PANEL_LINE, 0.3);
+  g.beginPath();
+  g.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < totalPts; i++) {
+    g.lineTo(points[i].x, points[i].y);
+  }
+  g.strokePath();
+
+  const crossStep = Math.max(3, Math.floor(totalPts / 8));
+  for (let i = crossStep; i < totalPts - crossStep; i += crossStep) {
+    const progress = i / (totalPts - 1);
+    if (progress < 0.12 || progress > 0.88) continue;
+    g.lineStyle(0.5, MISSILE_PANEL_LINE, 0.25);
+    g.lineBetween(leftEdge[i].x, leftEdge[i].y, rightEdge[i].x, rightEdge[i].y);
+  }
+
+  const rivetStep = Math.max(4, Math.floor(totalPts / 12));
+  for (let i = rivetStep; i < totalPts - rivetStep; i += rivetStep) {
+    const progress = i / (totalPts - 1);
+    if (progress < 0.12 || progress > 0.88) continue;
+    g.fillStyle(MISSILE_RIVET, 0.4);
+    g.fillCircle(leftEdge[i].x, leftEdge[i].y, 1.0);
+    g.fillCircle(rightEdge[i].x, rightEdge[i].y, 1.0);
+  }
+}
+
+function drawWarheadNose(
+  g: Phaser.GameObjects.Graphics,
+  points: Vec2[],
+  leftEdge: Vec2[],
+  rightEdge: Vec2[],
+  _cellSize: number,
+  _frameCount: number,
+  _widthMultiplier = 1.0
+): void {
+  const headEnd = Math.min(
+    Math.floor(points.length * 0.10),
+    points.length - 1
+  );
+
+  g.beginPath();
+  g.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i <= headEnd; i++) {
+    g.lineTo(leftEdge[i].x, leftEdge[i].y);
+  }
+  for (let i = headEnd; i >= 1; i--) {
+    g.lineTo(rightEdge[i].x, rightEdge[i].y);
+  }
+  g.closePath();
+
+  g.fillStyle(M_NOSE, 0.95);
+  g.fillPath();
+
+  g.lineStyle(1.0, M_EDGE, 0.5);
+  g.strokePath();
+
+  const tipIdx = Math.min(2, points.length - 1);
+  g.fillStyle(0xff6644, 0.5);
+  g.fillCircle(points[0].x, points[0].y, 2.5);
+  g.fillStyle(MISSILE_WHITE, 0.6);
+  g.fillCircle(
+    points[tipIdx].x + (leftEdge[tipIdx].x - points[tipIdx].x) * 0.3,
+    points[tipIdx].y + (leftEdge[tipIdx].y - points[tipIdx].y) * 0.3,
+    1.5
+  );
+}
+
+function drawWarningBands(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   leftEdge: Vec2[],
@@ -285,66 +368,171 @@ function drawSnakeStripes(
   frameCount: number
 ): void {
   const totalPts = points.length;
-  if (totalPts < 4) return;
+  if (totalPts < 10) return;
 
-  const shimmer = 0.15 + Math.sin(frameCount * 0.03) * 0.04;
+  const bandPositions = [0.12, 0.75];
+  const bandWidth = 3;
 
-  g.lineStyle(0.6, S_HIGHLIGHT, shimmer * 0.5);
-  g.beginPath();
-  g.moveTo(points[0].x, points[0].y);
-  for (let i = 1; i < totalPts; i++) {
-    g.lineTo(points[i].x, points[i].y);
-  }
-  g.strokePath();
+  for (const bandPos of bandPositions) {
+    const centerIdx = Math.floor(bandPos * (totalPts - 1));
+    const startIdx = Math.max(0, centerIdx - bandWidth);
+    const endIdx = Math.min(totalPts - 1, centerIdx + bandWidth);
 
-  const crossStep = Math.max(3, Math.floor(totalPts / 10));
-  for (let i = crossStep; i < totalPts; i += crossStep) {
-    const progress = i / (totalPts - 1);
-    if (progress < 0.1) continue;
+    const flash = 0.7 + Math.sin(frameCount * 0.06 + bandPos * 10) * 0.15;
 
-    const life = 1 - progress * 0.3;
-    g.lineStyle(0.5, S_GLOW, shimmer * life * 0.5);
-    g.lineBetween(leftEdge[i].x, leftEdge[i].y, rightEdge[i].x, rightEdge[i].y);
+    g.beginPath();
+    g.moveTo(leftEdge[startIdx].x, leftEdge[startIdx].y);
+    for (let i = startIdx + 1; i <= endIdx; i++) {
+      g.lineTo(leftEdge[i].x, leftEdge[i].y);
+    }
+    for (let i = endIdx; i >= startIdx; i--) {
+      g.lineTo(rightEdge[i].x, rightEdge[i].y);
+    }
+    g.closePath();
+
+    const bandColor = bandPos < 0.5 ? MISSILE_BAND_RED : MISSILE_BAND_YELLOW;
+    g.fillStyle(bandColor, flash);
+    g.fillPath();
   }
 }
 
-
-function drawSnakeHeadShape(
+function drawTailFins(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
-  leftEdge: Vec2[],
-  rightEdge: Vec2[],
+  _leftEdge: Vec2[],
+  _rightEdge: Vec2[],
+  cellSize: number,
+  _frameCount: number
+): void {
+  const totalPts = points.length;
+  if (totalPts < 6) return;
+
+  const finIdx = Math.floor(totalPts * 0.88);
+  if (finIdx >= totalPts - 1 || finIdx < 1) return;
+
+  const finPt = points[finIdx];
+  const n = getNormalAt(points, finIdx);
+
+  let dx = 0;
+  let dy = -1;
+  if (finIdx < totalPts - 1) {
+    dx = points[finIdx + 1].x - points[finIdx].x;
+    dy = points[finIdx + 1].y - points[finIdx].y;
+    const mag = Math.sqrt(dx * dx + dy * dy) || 1;
+    dx /= mag;
+    dy /= mag;
+  }
+
+  const finLen = cellSize * 0.6;
+  const finWidth = cellSize * 0.12;
+
+  g.fillStyle(M_TAIL, 0.9);
+
+  const tipLx = finPt.x + n.x * finLen + dx * finWidth;
+  const tipLy = finPt.y + n.y * finLen + dy * finWidth;
+  g.fillTriangle(
+    finPt.x + n.x * cellSize * 0.15, finPt.y + n.y * cellSize * 0.15,
+    tipLx, tipLy,
+    finPt.x + dx * finWidth * 2 + n.x * cellSize * 0.05,
+    finPt.y + dy * finWidth * 2 + n.y * cellSize * 0.05
+  );
+
+  const tipRx = finPt.x - n.x * finLen + dx * finWidth;
+  const tipRy = finPt.y - n.y * finLen + dy * finWidth;
+  g.fillTriangle(
+    finPt.x - n.x * cellSize * 0.15, finPt.y - n.y * cellSize * 0.15,
+    tipRx, tipRy,
+    finPt.x + dx * finWidth * 2 - n.x * cellSize * 0.05,
+    finPt.y + dy * finWidth * 2 - n.y * cellSize * 0.05
+  );
+
+  g.lineStyle(0.8, M_EDGE, 0.5);
+  g.lineBetween(
+    finPt.x + n.x * cellSize * 0.15, finPt.y + n.y * cellSize * 0.15,
+    tipLx, tipLy
+  );
+  g.lineBetween(
+    finPt.x - n.x * cellSize * 0.15, finPt.y - n.y * cellSize * 0.15,
+    tipRx, tipRy
+  );
+}
+
+function drawExhaustFlame(
+  g: Phaser.GameObjects.Graphics,
+  points: Vec2[],
   cellSize: number,
   frameCount: number,
-  widthMultiplier = 1.0
+  _widthMultiplier: number
 ): void {
-  const headEnd = Math.min(
-    Math.floor(points.length * 0.18),
-    points.length - 1
+  const totalPts = points.length;
+  if (totalPts < 3) return;
+
+  const tailPt = points[totalPts - 1];
+  const preTail = points[totalPts - 2];
+  let dx = tailPt.x - preTail.x;
+  let dy = tailPt.y - preTail.y;
+  const mag = Math.sqrt(dx * dx + dy * dy) || 1;
+  dx /= mag;
+  dy /= mag;
+
+  const flicker = 0.7 + Math.sin(frameCount * 0.25) * 0.3;
+  const flicker2 = 0.6 + Math.sin(frameCount * 0.4 + 1.5) * 0.4;
+  const flameLen = cellSize * (0.8 + flicker * 0.5);
+  const flameWidth = cellSize * 0.2;
+
+  const n = getNormalAt(points, totalPts - 1);
+
+  g.fillStyle(EXHAUST_OUTER, 0.25 * flicker);
+  g.fillCircle(
+    tailPt.x + dx * flameLen * 0.4,
+    tailPt.y + dy * flameLen * 0.4,
+    flameWidth * 2.5 * flicker2
   );
 
   g.beginPath();
-  g.moveTo(leftEdge[0].x, leftEdge[0].y);
-  for (let i = 1; i <= headEnd; i++) {
-    g.lineTo(leftEdge[i].x, leftEdge[i].y);
-  }
-  for (let i = headEnd; i >= 0; i--) {
-    g.lineTo(rightEdge[i].x, rightEdge[i].y);
-  }
+  g.moveTo(tailPt.x + n.x * flameWidth, tailPt.y + n.y * flameWidth);
+  g.lineTo(
+    tailPt.x + dx * flameLen * flicker2,
+    tailPt.y + dy * flameLen * flicker2
+  );
+  g.lineTo(tailPt.x - n.x * flameWidth, tailPt.y - n.y * flameWidth);
   g.closePath();
-
-  g.fillStyle(S_HEAD, 0.95);
+  g.fillStyle(EXHAUST_OUTER, 0.6 * flicker);
   g.fillPath();
 
-  g.lineStyle(1, S_TAIL, 0.4);
-  g.strokePath();
+  const innerLen = flameLen * 0.65;
+  const innerWidth = flameWidth * 0.6;
 
-  const headPt = points[0];
-  const headW = getWidthAtProgress(0, cellSize, 1, widthMultiplier) / 2;
+  g.beginPath();
+  g.moveTo(tailPt.x + n.x * innerWidth, tailPt.y + n.y * innerWidth);
+  g.lineTo(
+    tailPt.x + dx * innerLen * flicker,
+    tailPt.y + dy * innerLen * flicker
+  );
+  g.lineTo(tailPt.x - n.x * innerWidth, tailPt.y - n.y * innerWidth);
+  g.closePath();
+  g.fillStyle(EXHAUST_MID, 0.7 * flicker);
+  g.fillPath();
 
+  const coreLen = flameLen * 0.35;
+  const coreWidth = flameWidth * 0.3;
+
+  g.beginPath();
+  g.moveTo(tailPt.x + n.x * coreWidth, tailPt.y + n.y * coreWidth);
+  g.lineTo(
+    tailPt.x + dx * coreLen * flicker2,
+    tailPt.y + dy * coreLen * flicker2
+  );
+  g.lineTo(tailPt.x - n.x * coreWidth, tailPt.y - n.y * coreWidth);
+  g.closePath();
+  g.fillStyle(EXHAUST_CORE, 0.85);
+  g.fillPath();
+
+  g.fillStyle(0xffffff, 0.6 * flicker);
+  g.fillCircle(tailPt.x + dx * 2, tailPt.y + dy * 2, coreWidth * 0.8);
 }
 
-function drawSnakeEyes(
+function drawTargetingSensor(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   cellSize: number,
@@ -352,63 +540,35 @@ function drawSnakeEyes(
   widthMultiplier = 1.0
 ): void {
   const headPt = points[0];
+  const sensorIdx = Math.min(Math.floor(points.length * 0.04) + 1, points.length - 1);
+  const sensorPt = points[sensorIdx];
   const headW = getWidthAtProgress(0.06, cellSize, 1, widthMultiplier) / 2;
-  drawSnakeEyesAt(g, headPt.x, headPt.y, headW, frameCount);
+  drawSensorAt(g, sensorPt.x, sensorPt.y, headW, frameCount);
 }
 
-function drawSnakeEyesAt(
+function drawSensorAt(
   g: Phaser.GameObjects.Graphics,
   x: number,
   y: number,
   headW: number,
   frameCount: number
 ): void {
-  const eyeSpacing = headW * 0.45;
-  const eyeW = headW * 0.35;
-  const eyeH = headW * 0.5;
-  const squint = Math.sin(frameCount * 0.02) * 0.08;
+  const sensorR = headW * 0.35;
+  const scanPulse = 0.5 + Math.sin(frameCount * 0.08) * 0.3;
 
-  const leftEyeX = x - eyeSpacing;
-  const rightEyeX = x + eyeSpacing;
-  const eyeY = y - headW * 0.05;
+  g.fillStyle(0x112233, 0.9);
+  g.fillCircle(x, y, sensorR + 1);
 
-  g.fillStyle(S_EDGE, 0.9);
-  drawAngledEye(g, leftEyeX, eyeY, eyeW + 1.5, eyeH + 1.5, -0.15 + squint);
-  drawAngledEye(g, rightEyeX, eyeY, eyeW + 1.5, eyeH + 1.5, 0.15 - squint);
+  g.fillStyle(0x003344, 0.95);
+  g.fillCircle(x, y, sensorR);
 
-  g.fillStyle(0xffffff, 0.95);
-  drawAngledEye(g, leftEyeX, eyeY, eyeW, eyeH, -0.15 + squint);
-  drawAngledEye(g, rightEyeX, eyeY, eyeW, eyeH, 0.15 - squint);
+  g.fillStyle(0x00ff88, scanPulse * 0.6);
+  g.fillCircle(x, y, sensorR * 0.6);
 
-  const pupilSize = eyeW * 0.35;
-  g.fillStyle(THEME.snake.pupil, 0.9);
-  g.fillCircle(leftEyeX + 0.5, eyeY + 0.3, pupilSize);
-  g.fillCircle(rightEyeX + 0.5, eyeY + 0.3, pupilSize);
+  g.fillStyle(0x00ffaa, scanPulse * 0.9);
+  g.fillCircle(x, y, sensorR * 0.25);
 
-  g.fillStyle(S_HIGHLIGHT, 0.6);
-  g.fillCircle(leftEyeX - pupilSize * 0.3, eyeY - pupilSize * 0.3, pupilSize * 0.3);
-  g.fillCircle(rightEyeX - pupilSize * 0.3, eyeY - pupilSize * 0.3, pupilSize * 0.3);
-}
-
-function drawAngledEye(
-  g: Phaser.GameObjects.Graphics,
-  cx: number,
-  cy: number,
-  w: number,
-  h: number,
-  angle: number
-): void {
-  const steps = 8;
-  g.beginPath();
-  for (let i = 0; i <= steps; i++) {
-    const t = (i / steps) * Math.PI * 2;
-    const px = Math.cos(t) * w;
-    const py = Math.sin(t) * h;
-    const rx = px * Math.cos(angle) - py * Math.sin(angle);
-    const ry = px * Math.sin(angle) + py * Math.cos(angle);
-    if (i === 0) g.moveTo(cx + rx, cy + ry);
-    else g.lineTo(cx + rx, cy + ry);
-  }
-  g.closePath();
-  g.fillPath();
+  g.lineStyle(0.5, 0x00ff88, scanPulse * 0.4);
+  g.lineBetween(x - sensorR * 0.8, y, x + sensorR * 0.8, y);
+  g.lineBetween(x, y - sensorR * 0.8, x, y + sensorR * 0.8);
 }

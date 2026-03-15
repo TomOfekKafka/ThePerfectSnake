@@ -13,14 +13,14 @@ export const THEME = {
   },
 
   snake: {
-    head: 0x00e8ff,
-    body: 0x0099cc,
-    tail: 0x006688,
-    glow: 0x00ccff,
-    highlight: 0x66eeff,
+    head: 0xcc2222,
+    body: 0x708090,
+    tail: 0x4a5568,
+    glow: 0xff4444,
+    highlight: 0xc0c8d0,
     eye: 0xeeffff,
-    pupil: 0x002233,
-    edge: 0x004466,
+    pupil: 0x111111,
+    edge: 0x2d3748,
   },
 
   food: {
@@ -75,10 +75,10 @@ export const THEME = {
   },
 
   segments: [
-    { primary: 0x00ccee, secondary: 0x44ddff },
-    { primary: 0x0088aa, secondary: 0x22bbdd },
-    { primary: 0x00ccee, secondary: 0x44ddff },
-    { primary: 0x0088aa, secondary: 0x22bbdd },
+    { primary: 0x708090, secondary: 0x8899a8 },
+    { primary: 0x5a6a7a, secondary: 0x7a8a9a },
+    { primary: 0x708090, secondary: 0x8899a8 },
+    { primary: 0x5a6a7a, secondary: 0x7a8a9a },
   ],
 } as const;
 
