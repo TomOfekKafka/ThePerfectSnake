@@ -335,6 +335,13 @@ import {
   drawFoodProtest,
 } from './foodProtest';
 import {
+  TetrisRainState,
+  createTetrisRainState,
+  spawnTetrisPiece,
+  updateTetrisRain,
+  drawTetrisRain,
+} from './tetrisRain';
+import {
   PatronusTrailState,
   createPatronusTrailState,
 } from './patronusTrail';
@@ -893,6 +900,7 @@ export class SnakeScene extends Phaser.Scene {
   private foodProtest: FoodProtestState = createFoodProtestState();
   private depth3d: Depth3DState = createDepth3D();
   private magnetEffect: MagnetEffectState = createMagnetEffectState();
+  private tetrisRain: TetrisRainState = createTetrisRainState();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2488,6 +2496,7 @@ export class SnakeScene extends Phaser.Scene {
       this.hugeHead = triggerChomp(this.hugeHead);
       spawnFireHearts(this.fireHearts, headX, headY);
       spawnProtestSigns(this.foodProtest, headX, headY, 5 + Math.floor(Math.random() * 3));
+      spawnTetrisPiece(this.tetrisRain, 1 + Math.floor(Math.random() * 2));
     }
     this.lastSnakeLength = state.snake.length;
 
@@ -2942,6 +2951,7 @@ export class SnakeScene extends Phaser.Scene {
       CELL_SIZE
     );
     updateDepth3D(this.depth3d, this.frameCount);
+    updateTetrisRain(this.tetrisRain);
     updateOuroboros(this.ouroboros);
 
     {
@@ -3084,6 +3094,7 @@ export class SnakeScene extends Phaser.Scene {
     drawSciFiGrid(g, this.sciFi, width, height, CELL_SIZE, GRID_SIZE);
     drawCrownBeam(g, this.cosmicCrown.beam);
     drawSilkWeave(g, this.silk, CELL_SIZE, GRID_SIZE, this.frameCount);
+    drawTetrisRain(g, this.tetrisRain, width, height, this.frameCount);
     drawMotes(g, this.cleanEffects);
 
     if (!this.currentState) return;
