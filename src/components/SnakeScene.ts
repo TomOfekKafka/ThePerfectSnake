@@ -245,6 +245,13 @@ import {
   createTitleScreenState,
 } from './titleScreen';
 import {
+  TutorialOverlayState,
+  createTutorialOverlay,
+  updateTutorialOverlay,
+  dismissTutorial,
+  drawTutorialOverlay,
+} from './tutorialOverlay';
+import {
   DeathCinematicState,
   createDeathCinematicState,
   triggerDeathCinematic,
@@ -901,6 +908,7 @@ export class SnakeScene extends Phaser.Scene {
   private depth3d: Depth3DState = createDepth3D();
   private magnetEffect: MagnetEffectState = createMagnetEffectState();
   private tetrisRain: TetrisRainState = createTetrisRainState();
+  private tutorialOverlay: TutorialOverlayState = createTutorialOverlay();
 
   constructor() {
     super({ key: 'SnakeScene' });
@@ -2898,6 +2906,8 @@ export class SnakeScene extends Phaser.Scene {
   update(): void {
     this.frameCount++;
     this.cleanEffects.frameCount = this.frameCount;
+
+    updateTutorialOverlay(this.tutorialOverlay);
 
     this.snakeWidthMultiplier += (this.snakeWidthTarget - this.snakeWidthMultiplier) * 0.08;
 
