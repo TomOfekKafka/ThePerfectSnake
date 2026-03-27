@@ -47,13 +47,15 @@ import {
 import {
   createKeanuDisplayState,
   advanceKeanu,
-  drawKeanuLabel,
   KeanuDisplayState,
 } from './countryFlags';
 import {
-  createPortraitTextures,
-  drawPortraitFood,
-} from './keanuPortraits';
+  EmojiFoodState,
+  createEmojiFoodState,
+  advanceEmoji,
+  drawEmojiFood,
+  hideEmojiFood,
+} from './emojiFood';
 import {
   DeathCinematicState,
   createDeathCinematicState,
@@ -181,6 +183,7 @@ export class SnakeScene extends Phaser.Scene {
   private faceState: FaceState = createFaceState();
   private snakeDirection: FaceDirection = 'RIGHT';
   private keanuDisplay: KeanuDisplayState = createKeanuDisplayState();
+  private emojiFood: EmojiFoodState = createEmojiFoodState();
   private deathCinematic: DeathCinematicState = createDeathCinematicState();
   private ouroboros: OuroborosState = createOuroborosState();
   private deathDelayFrames = 0;
@@ -210,7 +213,6 @@ export class SnakeScene extends Phaser.Scene {
 
   create(): void {
     this.graphics = this.add.graphics();
-    createPortraitTextures(this);
     const width = GRID_SIZE * CELL_SIZE;
     const height = GRID_SIZE * CELL_SIZE;
     initMathSymbols(this.mathParticles, width, height);
@@ -323,8 +325,7 @@ export class SnakeScene extends Phaser.Scene {
     const foodY = food.y * CELL_SIZE + CELL_SIZE / 2 + idleOff.dy;
 
     drawFoodIdle(g, this.foodIdle, foodX, foodY, CELL_SIZE, this.frameCount);
-    drawPortraitFood(this, g, this.keanuDisplay.currentKeanu, foodX, foodY, CELL_SIZE, this.frameCount);
-    drawKeanuLabel(g, this.keanuDisplay.currentKeanu, foodX, foodY, CELL_SIZE, this.frameCount, this.drawText.bind(this));
+    drawEmojiFood(this, g, this.emojiFood, foodX, foodY, CELL_SIZE, this.frameCount);
 
     drawObstacles(g, this.obstacleRender, this.currentState.obstacles || [], CELL_SIZE, this.frameCount);
 
@@ -377,6 +378,7 @@ export class SnakeScene extends Phaser.Scene {
       const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
       spawnRipple(this.cleanEffects, headX, headY);
       advanceKeanu(this.keanuDisplay, headX, headY);
+      advanceEmoji(this.emojiFood);
       const points = (state.score || 0) - this.lastHudScore;
       spawnScoreBurst(this.mathParticles, headX, headY - CELL_SIZE, points > 0 ? points : 10);
     }
@@ -422,6 +424,8 @@ export class SnakeScene extends Phaser.Scene {
       this.deathCinematic = createDeathCinematicState();
       this.ouroboros = createOuroborosState();
       this.dropDeath = createDropDeathState();
+      hideEmojiFood(this.emojiFood);
+      this.emojiFood = createEmojiFoodState();
       this.deathDelayActive = false;
       this.deathDelayFrames = 0;
     }
