@@ -3,7 +3,7 @@ import { GameBoard } from './components/GameBoard';
 import './App.css';
 
 function App() {
-  const { gameState, resetGame, changeDirection, gridSize, isEmbedded } = useSnakeGame();
+  const { gameState, resetGame, changeDirection, gridSize, isEmbedded, onSparkTrigger } = useSnakeGame();
 
   // When embedded, render only the game board (platform handles UI)
   if (isEmbedded) {

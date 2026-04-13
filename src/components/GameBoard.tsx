@@ -6,6 +6,7 @@ import type { GameState, PowerUpType } from '../game/types';
 interface GameBoardProps {
   gameState: GameState;
   gridSize: number;
+  onSparkTrigger?: (cb: (direction: string) => void) => void;
 }
 
 const CELL_SIZE = 20;
@@ -869,7 +870,7 @@ function drawCanvas2D(canvas: HTMLCanvasElement, gameState: GameState): void {
   ctx.restore();
 }
 
-export function GameBoard({ gameState, gridSize }: GameBoardProps) {
+export function GameBoard({ gameState, gridSize, onSparkTrigger }: GameBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SnakeScene | null>(null);
@@ -1002,6 +1003,15 @@ export function GameBoard({ gameState, gridSize }: GameBoardProps) {
   useEffect(() => {
     pushState();
   }, [pushState]);
+
+  useEffect(() => {
+    if (!onSparkTrigger) return;
+    onSparkTrigger((direction: string) => {
+      if (sceneRef.current) {
+        sceneRef.current.handleSameDirection(direction);
+      }
+    });
+  }, [onSparkTrigger]);
 
   return (
     <div className="canvas-wrapper" ref={wrapperRef}>

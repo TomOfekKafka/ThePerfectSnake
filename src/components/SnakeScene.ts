@@ -121,6 +121,13 @@ import {
   updatePoliceVisuals,
   drawPoliceVisuals,
 } from './policeVisuals';
+import {
+  LaserState,
+  createLaserState,
+  fireLaser,
+  updateLaser,
+  drawLaser,
+} from './laserBeam';
 
 function dirToFaceDirection(dx: number, dy: number): FaceDirection {
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -198,6 +205,7 @@ export class SnakeScene extends Phaser.Scene {
   private lastPoliceCaughtFlash = 0;
   private upgradeState: UpgradeState = createUpgradeState();
   private upgradeHud: UpgradeHudState = createUpgradeHudState();
+  private laser: LaserState = createLaserState();
   private lastFoodEaten = 0;
   private snakeWidthMultiplier = 1.0;
   private snakeWidthTarget = 1.0;
@@ -261,6 +269,7 @@ export class SnakeScene extends Phaser.Scene {
       CELL_SIZE
     );
     updateDepth3D(this.depth3d, this.frameCount);
+    updateLaser(this.laser);
     updateOuroboros(this.ouroboros);
 
     {
@@ -334,6 +343,7 @@ export class SnakeScene extends Phaser.Scene {
     drawSnake3DHighlights(g, this.currentState.snake, CELL_SIZE, this.frameCount, this.depth3d.headPulse);
 
     drawSameDirectionExplosion(g, this.sameDirectionExplosion, width, height);
+    drawLaser(g, this.laser, width, height, this.frameCount);
     drawScoreBursts(g, this.mathParticles, this.drawDigit.bind(this));
 
     {
@@ -455,6 +465,7 @@ export class SnakeScene extends Phaser.Scene {
     const dir = dirMap[direction] || { x: 0, y: -1 };
 
     triggerSameDirectionExplosion(this.sameDirectionExplosion, headX, headY, dir.x, dir.y);
+    fireLaser(this.laser, headX, headY, dir.x, dir.y);
   }
 
   private spawnGameOverEffects(): void {
