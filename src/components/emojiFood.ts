@@ -20,6 +20,13 @@ export interface EmojiFoodState {
   currentEmoji: string;
   glowColor: number;
   textObject: Phaser.GameObjects.Text | null;
+  spawnFrame: number;
+  baseFontSize: number;
+}
+
+function emojiIndexFromPosition(x: number, y: number): number {
+  const hash = ((x * 73856093) ^ (y * 19349663)) >>> 0;
+  return hash % EMOJI_POOL.length;
 }
 
 export function createEmojiFoodState(): EmojiFoodState {
@@ -28,13 +35,17 @@ export function createEmojiFoodState(): EmojiFoodState {
     currentEmoji: EMOJI_POOL[idx],
     glowColor: GLOW_COLORS[idx % GLOW_COLORS.length],
     textObject: null,
+    spawnFrame: 0,
+    baseFontSize: 0,
   };
 }
 
-export function advanceEmoji(state: EmojiFoodState): void {
-  const idx = Math.floor(Math.random() * EMOJI_POOL.length);
+export function advanceEmoji(state: EmojiFoodState, foodX: number, foodY: number, frameCount: number): void {
+  const idx = emojiIndexFromPosition(foodX, foodY);
   state.currentEmoji = EMOJI_POOL[idx];
   state.glowColor = GLOW_COLORS[idx % GLOW_COLORS.length];
+  state.spawnFrame = frameCount;
+  state.baseFontSize = 0;
   if (state.textObject) {
     state.textObject.setText(state.currentEmoji);
   }
@@ -49,10 +60,15 @@ export function drawEmojiFood(
   cellSize: number,
   frameCount: number
 ): void {
+  const spawnAge = frameCount - state.spawnFrame;
+  const spawnScale = spawnAge < 15
+    ? 0.3 + 0.7 * Math.min(1, spawnAge / 10) * (1.0 + Math.max(0, 1 - spawnAge / 15) * 0.4)
+    : 1.0;
+
   const hover = Math.sin(frameCount * 0.08) * 3;
   const floatY = foodY + hover;
-  const pulse = 1.0 + Math.sin(frameCount * 0.1) * 0.1;
-  const displaySize = cellSize * 1.6 * pulse;
+  const pulse = 1.0 + Math.sin(frameCount * 0.1) * 0.05;
+  const displaySize = cellSize * 1.6;
 
   const shadowScale = 1.0 - hover / 20;
   const shadowAlpha = 0.3 * Math.max(0.3, shadowScale);
@@ -61,14 +77,17 @@ export function drawEmojiFood(
 
   const glowPulse = 0.2 + Math.sin(frameCount * 0.08) * 0.1;
   g.fillStyle(state.glowColor, glowPulse * 0.3);
-  g.fillCircle(foodX, floatY, displaySize * 1.1);
+  g.fillCircle(foodX, floatY, displaySize * 1.1 * spawnScale);
   g.fillStyle(state.glowColor, glowPulse);
-  g.fillCircle(foodX, floatY, displaySize * 0.7);
+  g.fillCircle(foodX, floatY, displaySize * 0.7 * spawnScale);
 
-  const fontSize = Math.round(displaySize * 0.85);
+  if (!state.baseFontSize) {
+    state.baseFontSize = Math.round(displaySize * 0.85);
+  }
+
   if (!state.textObject) {
     state.textObject = scene.add.text(foodX, floatY, state.currentEmoji, {
-      fontSize: `${fontSize}px`,
+      fontSize: `${state.baseFontSize}px`,
       padding: { x: 2, y: 2 },
     });
     state.textObject.setOrigin(0.5, 0.5);
@@ -76,11 +95,10 @@ export function drawEmojiFood(
   }
 
   state.textObject.setPosition(foodX, floatY);
-  state.textObject.setFontSize(fontSize);
-  state.textObject.setScale(pulse);
+  state.textObject.setScale(pulse * spawnScale);
   state.textObject.setVisible(true);
 
-  const spin = Math.sin(frameCount * 0.06) * 8;
+  const spin = Math.sin(frameCount * 0.06) * 4;
   state.textObject.setAngle(spin);
 
   const angle = frameCount * 0.04;
@@ -92,7 +110,15 @@ export function drawEmojiFood(
     const sy = floatY + Math.sin(a) * r;
     const sparkAlpha = 0.4 + Math.sin(frameCount * 0.15 + i * 1.5) * 0.3;
     g.fillStyle(state.glowColor, sparkAlpha);
-    g.fillCircle(sx, sy, 2);
+    g.fillCircle(sx, sy, 2 * spawnScale);
+  }
+
+  if (spawnAge < 20) {
+    const burstProgress = spawnAge / 20;
+    const burstRadius = displaySize * (0.5 + burstProgress * 1.5);
+    const burstAlpha = 0.6 * (1 - burstProgress);
+    g.lineStyle(3 * (1 - burstProgress), state.glowColor, burstAlpha);
+    g.strokeCircle(foodX, floatY, burstRadius);
   }
 
   const ringAlpha = 0.25 + Math.sin(frameCount * 0.1) * 0.15;

@@ -10,13 +10,23 @@ describe('emojiFood', () => {
     expect(state.textObject).toBeNull();
   });
 
-  it('advances to a new emoji', () => {
+  it('advances to a new emoji deterministically by position', () => {
     const state = createEmojiFoodState();
+    advanceEmoji(state, 5, 10, 0);
     const first = state.currentEmoji;
+    advanceEmoji(state, 5, 10, 100);
+    expect(state.currentEmoji).toBe(first);
+    advanceEmoji(state, 7, 3, 200);
+    const different = state.currentEmoji;
+    advanceEmoji(state, 7, 3, 300);
+    expect(state.currentEmoji).toBe(different);
+  });
+
+  it('produces varied emojis across different positions', () => {
+    const state = createEmojiFoodState();
     const seen = new Set<string>();
-    seen.add(first);
     for (let i = 0; i < 20; i++) {
-      advanceEmoji(state);
+      advanceEmoji(state, i, i * 3, 0);
       seen.add(state.currentEmoji);
     }
     expect(seen.size).toBeGreaterThan(1);

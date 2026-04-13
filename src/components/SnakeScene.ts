@@ -378,7 +378,7 @@ export class SnakeScene extends Phaser.Scene {
       const headY = head.y * CELL_SIZE + CELL_SIZE / 2;
       spawnRipple(this.cleanEffects, headX, headY);
       advanceKeanu(this.keanuDisplay, headX, headY);
-      advanceEmoji(this.emojiFood);
+      advanceEmoji(this.emojiFood, state.food.x, state.food.y, this.frameCount);
       const points = (state.score || 0) - this.lastHudScore;
       spawnScoreBurst(this.mathParticles, headX, headY - CELL_SIZE, points > 0 ? points : 10);
     }
