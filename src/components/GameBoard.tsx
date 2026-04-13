@@ -87,7 +87,7 @@ interface TrailSegment {
   size: number;
 }
 let snakeTrail: TrailSegment[] = [];
-const MAX_TRAIL = 20;
+const MAX_TRAIL = 8;
 
 // Food pulse animation
 let foodPulsePhase = 0;
@@ -217,8 +217,8 @@ function updateEffects(gameState: GameState): void {
 
   // Fade trail
   for (const t of snakeTrail) {
-    t.alpha *= 0.92;
-    t.size *= 0.97;
+    t.alpha *= 0.85;
+    t.size *= 0.94;
   }
   snakeTrail = snakeTrail.filter(t => t.alpha > 0.02);
 

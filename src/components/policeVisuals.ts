@@ -41,7 +41,7 @@ export const createPoliceVisualsState = (): PoliceVisualsState => ({
 
 const SIREN_SPEED = 0.15;
 const MAX_SIREN_PARTICLES = 40;
-const MAX_TRAIL = 30;
+const MAX_TRAIL = 12;
 
 const hslToHex = (h: number, s: number, l: number): number => {
   h = h / 360;
