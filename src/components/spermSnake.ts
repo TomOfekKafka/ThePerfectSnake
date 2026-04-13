@@ -84,29 +84,26 @@ export function getWidthAtProgress(
   widthMultiplier = 1.0
 ): number {
   const bodyWidth = cellSize * 0.55;
-  const noseWidth = cellSize * 0.08;
-  const nozzleWidth = cellSize * 0.35;
+  const noseWidth = cellSize * 0.12;
+  const tailWidth = cellSize * 0.18;
 
   let w: number;
-  if (progress < 0.02) {
-    w = noseWidth + (bodyWidth - noseWidth) * (progress / 0.02);
-  } else if (progress < 0.08) {
-    w = bodyWidth;
+  if (progress < 0.04) {
+    const t = progress / 0.04;
+    w = noseWidth + (bodyWidth - noseWidth) * smoothstep(t);
   } else if (progress < 0.85) {
-    w = bodyWidth - (bodyWidth - nozzleWidth) * ((progress - 0.08) / 0.77) * 0.15;
-  } else if (progress < 0.92) {
-    const t = (progress - 0.85) / 0.07;
-    w = bodyWidth * 0.85 - (bodyWidth * 0.85 - nozzleWidth) * t;
+    w = bodyWidth;
   } else {
-    const t = (progress - 0.92) / 0.08;
-    const flare = nozzleWidth * (1.0 + t * 0.3);
-    w = nozzleWidth + (flare - nozzleWidth) * Math.sin(t * Math.PI);
-    if (t > 0.7) {
-      w *= 1 - (t - 0.7) / 0.3 * 0.6;
-    }
+    const t = (progress - 0.85) / 0.15;
+    w = bodyWidth + (tailWidth - bodyWidth) * smoothstep(t);
   }
 
   return w * widthMultiplier;
+}
+
+function smoothstep(t: number): number {
+  const c = Math.max(0, Math.min(1, t));
+  return c * c * (3 - 2 * c);
 }
 
 export function getNormalAt(points: Vec2[], index: number): Vec2 {
@@ -127,50 +124,41 @@ export function getNormalAt(points: Vec2[], index: number): Vec2 {
   return { x: -dy / mag, y: dx / mag };
 }
 
-const M_NOSE = THEME.snake.head;
-const M_BODY = THEME.snake.body;
-const M_TAIL = THEME.snake.tail;
-const M_HIGHLIGHT = THEME.snake.highlight;
-const M_EDGE = THEME.snake.edge;
-const M_GLOW = THEME.snake.glow;
+const HEAD_COLOR = THEME.snake.head;
+const BODY_COLOR = THEME.snake.body;
+const TAIL_COLOR = THEME.snake.tail;
+const HIGHLIGHT_COLOR = THEME.snake.highlight;
+const EDGE_COLOR = THEME.snake.edge;
+const GLOW_COLOR = THEME.snake.glow;
 
-const MISSILE_WHITE = 0xd8dde3;
-const MISSILE_BAND_RED = 0xcc2222;
-const MISSILE_BAND_YELLOW = 0xddaa22;
-const MISSILE_RIVET = 0x556070;
-const MISSILE_PANEL_LINE = 0x3a4858;
-const EXHAUST_CORE = 0xffdd44;
-const EXHAUST_MID = 0xff6622;
-const EXHAUST_OUTER = 0xff3311;
-
-function getMissileColors(
+function getBodyColor(
   progress: number
 ): { base: number; highlight: number; edge: number; alpha: number } {
-  let base: number;
-  let highlight: number;
-  let edge: number;
-  let alpha: number;
-
-  if (progress < 0.08) {
-    base = lerpColor(M_NOSE, M_BODY, progress / 0.08);
-    highlight = M_HIGHLIGHT;
-    edge = M_EDGE;
-    alpha = 0.97;
-  } else if (progress < 0.85) {
-    const t = (progress - 0.08) / 0.77;
-    base = lerpColor(M_BODY, M_TAIL, t * 0.3);
-    highlight = M_HIGHLIGHT;
-    edge = M_EDGE;
-    alpha = 0.95;
-  } else {
-    const t = (progress - 0.85) / 0.15;
-    base = lerpColor(M_TAIL, M_EDGE, t);
-    highlight = lerpColor(M_HIGHLIGHT, M_TAIL, t);
-    edge = M_EDGE;
-    alpha = 0.92 - t * 0.15;
+  if (progress < 0.06) {
+    const t = progress / 0.06;
+    return {
+      base: lerpColor(HEAD_COLOR, BODY_COLOR, t),
+      highlight: HIGHLIGHT_COLOR,
+      edge: EDGE_COLOR,
+      alpha: 1.0,
+    };
   }
-
-  return { base, highlight, edge, alpha: Math.max(0.25, alpha) };
+  if (progress < 0.85) {
+    const t = (progress - 0.06) / 0.79;
+    return {
+      base: lerpColor(BODY_COLOR, TAIL_COLOR, t * 0.4),
+      highlight: HIGHLIGHT_COLOR,
+      edge: EDGE_COLOR,
+      alpha: 0.97 - t * 0.05,
+    };
+  }
+  const t = (progress - 0.85) / 0.15;
+  return {
+    base: lerpColor(TAIL_COLOR, EDGE_COLOR, t * 0.5),
+    highlight: lerpColor(HIGHLIGHT_COLOR, TAIL_COLOR, t),
+    edge: EDGE_COLOR,
+    alpha: 0.92 - t * 0.2,
+  };
 }
 
 export function drawSpermSnake(
@@ -185,7 +173,7 @@ export function drawSpermSnake(
 
   if (len === 1) {
     const pt = gridToPixel(snake[0].x, snake[0].y, cellSize);
-    drawSingleCellMissile(g, pt, cellSize, frameCount, widthMultiplier);
+    drawSingleCell(g, pt, cellSize, frameCount, widthMultiplier);
     return;
   }
 
@@ -203,52 +191,53 @@ export function drawSpermSnake(
     rightEdge.push({ x: points[i].x - n.x * w, y: points[i].y - n.y * w });
   }
 
-  drawMissileBody(g, points, leftEdge, rightEdge, len, frameCount);
-  drawPanelLines(g, points, leftEdge, rightEdge, cellSize, frameCount);
-  drawWarheadNose(g, points, leftEdge, rightEdge, cellSize, frameCount, widthMultiplier);
-  drawWarningBands(g, points, leftEdge, rightEdge, cellSize, frameCount);
-  drawTailFins(g, points, leftEdge, rightEdge, cellSize, frameCount);
-  drawExhaustFlame(g, points, cellSize, frameCount, widthMultiplier);
-  drawTargetingSensor(g, points, cellSize, frameCount, widthMultiplier);
+  drawBody(g, points, leftEdge, rightEdge);
+  drawEdgeLines(g, leftEdge, rightEdge);
+  drawSpecularStrip(g, points, leftEdge, cellSize);
+  drawHeadCap(g, points, leftEdge, rightEdge, cellSize, widthMultiplier);
+  drawTailGlow(g, points, cellSize, frameCount, widthMultiplier);
 }
 
-function drawSingleCellMissile(
+function drawSingleCell(
   g: Phaser.GameObjects.Graphics,
   pt: Vec2,
   cellSize: number,
-  frameCount: number,
+  _frameCount: number,
   widthMultiplier = 1.0
 ): void {
   const radius = cellSize * 0.35 * widthMultiplier;
-  g.fillStyle(M_BODY, 0.95);
+
+  g.fillStyle(EDGE_COLOR, 0.4);
+  g.fillCircle(pt.x, pt.y + 1, radius + 1);
+
+  g.fillStyle(BODY_COLOR, 0.97);
   g.fillCircle(pt.x, pt.y, radius);
-  g.fillStyle(M_NOSE, 0.9);
-  g.fillCircle(pt.x, pt.y - radius * 0.3, radius * 0.5);
-  g.fillStyle(M_HIGHLIGHT, 0.3);
-  g.fillCircle(pt.x - radius * 0.2, pt.y - radius * 0.2, radius * 0.25);
-  drawSensorAt(g, pt.x, pt.y, radius, frameCount);
+
+  g.fillStyle(HEAD_COLOR, 0.85);
+  g.fillCircle(pt.x, pt.y - radius * 0.15, radius * 0.65);
+
+  g.fillStyle(HIGHLIGHT_COLOR, 0.25);
+  g.fillCircle(pt.x - radius * 0.2, pt.y - radius * 0.25, radius * 0.3);
 }
 
-function drawMissileBody(
+function drawBody(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   leftEdge: Vec2[],
-  rightEdge: Vec2[],
-  _snakeLen: number,
-  _frameCount: number
+  rightEdge: Vec2[]
 ): void {
-  const segmentCount = Math.max(1, Math.floor(points.length / 3));
+  const segCount = Math.max(1, Math.floor(points.length / 4));
 
-  for (let seg = 0; seg < segmentCount; seg++) {
-    const startIdx = Math.floor((seg / segmentCount) * points.length);
+  for (let seg = 0; seg < segCount; seg++) {
+    const startIdx = Math.floor((seg / segCount) * points.length);
     const endIdx = Math.min(
-      Math.floor(((seg + 1) / segmentCount) * points.length),
+      Math.floor(((seg + 1) / segCount) * points.length),
       points.length - 1
     );
     if (startIdx >= endIdx) continue;
 
     const midProgress = ((startIdx + endIdx) / 2) / (points.length - 1);
-    const colors = getMissileColors(midProgress);
+    const colors = getBodyColor(midProgress);
 
     g.beginPath();
     g.moveTo(leftEdge[startIdx].x, leftEdge[startIdx].y);
@@ -261,76 +250,64 @@ function drawMissileBody(
     g.closePath();
     g.fillStyle(colors.base, colors.alpha);
     g.fillPath();
-
-    g.lineStyle(1, colors.edge, colors.alpha * 0.5);
-    g.strokePath();
-  }
-
-  for (let i = 0; i < points.length; i++) {
-    const progress = i / (points.length - 1);
-    if (progress < 0.1 || progress > 0.9) continue;
-    const n = getNormalAt(points, i);
-    const w = getWidthAtProgress(progress, 1, 1) * 0.5;
-    const highlightAlpha = 0.12 + 0.05 * Math.sin(progress * 20);
-    g.fillStyle(M_HIGHLIGHT, highlightAlpha);
-    const hx = points[i].x + n.x * w * 0.6;
-    const hy = points[i].y + n.y * w * 0.6;
-    if (i % 2 === 0) {
-      g.fillCircle(hx, hy, 0.8);
-    }
   }
 }
 
-function drawPanelLines(
+function drawEdgeLines(
+  g: Phaser.GameObjects.Graphics,
+  leftEdge: Vec2[],
+  rightEdge: Vec2[]
+): void {
+  g.lineStyle(1.2, EDGE_COLOR, 0.35);
+
+  g.beginPath();
+  g.moveTo(leftEdge[0].x, leftEdge[0].y);
+  for (let i = 1; i < leftEdge.length; i++) {
+    g.lineTo(leftEdge[i].x, leftEdge[i].y);
+  }
+  g.strokePath();
+
+  g.beginPath();
+  g.moveTo(rightEdge[0].x, rightEdge[0].y);
+  for (let i = 1; i < rightEdge.length; i++) {
+    g.lineTo(rightEdge[i].x, rightEdge[i].y);
+  }
+  g.strokePath();
+}
+
+function drawSpecularStrip(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   leftEdge: Vec2[],
-  rightEdge: Vec2[],
-  _cellSize: number,
-  _frameCount: number
+  _cellSize: number
 ): void {
   const totalPts = points.length;
   if (totalPts < 4) return;
 
-  g.lineStyle(0.5, MISSILE_PANEL_LINE, 0.3);
-  g.beginPath();
-  g.moveTo(points[0].x, points[0].y);
-  for (let i = 1; i < totalPts; i++) {
-    g.lineTo(points[i].x, points[i].y);
-  }
-  g.strokePath();
-
-  const crossStep = Math.max(3, Math.floor(totalPts / 8));
-  for (let i = crossStep; i < totalPts - crossStep; i += crossStep) {
+  for (let i = 1; i < totalPts - 1; i += 2) {
     const progress = i / (totalPts - 1);
-    if (progress < 0.12 || progress > 0.88) continue;
-    g.lineStyle(0.5, MISSILE_PANEL_LINE, 0.25);
-    g.lineBetween(leftEdge[i].x, leftEdge[i].y, rightEdge[i].x, rightEdge[i].y);
-  }
+    if (progress < 0.05 || progress > 0.92) continue;
 
-  const rivetStep = Math.max(4, Math.floor(totalPts / 12));
-  for (let i = rivetStep; i < totalPts - rivetStep; i += rivetStep) {
-    const progress = i / (totalPts - 1);
-    if (progress < 0.12 || progress > 0.88) continue;
-    g.fillStyle(MISSILE_RIVET, 0.4);
-    g.fillCircle(leftEdge[i].x, leftEdge[i].y, 1.0);
-    g.fillCircle(rightEdge[i].x, rightEdge[i].y, 1.0);
+    const hx = points[i].x + (leftEdge[i].x - points[i].x) * 0.55;
+    const hy = points[i].y + (leftEdge[i].y - points[i].y) * 0.55;
+
+    const alpha = 0.18 * (1 - Math.abs(progress - 0.4) * 1.2);
+    if (alpha <= 0) continue;
+
+    g.fillStyle(HIGHLIGHT_COLOR, Math.max(0, alpha));
+    g.fillCircle(hx, hy, 1.2);
   }
 }
 
-function drawWarheadNose(
+function drawHeadCap(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   leftEdge: Vec2[],
   rightEdge: Vec2[],
-  _cellSize: number,
-  _frameCount: number,
-  _widthMultiplier = 1.0
+  cellSize: number,
+  _widthMultiplier: number
 ): void {
-  const headEnd = Math.min(
-    Math.floor(points.length * 0.10),
-    points.length - 1
-  );
+  const headEnd = Math.min(Math.floor(points.length * 0.08), points.length - 1);
 
   g.beginPath();
   g.moveTo(points[0].x, points[0].y);
@@ -342,122 +319,22 @@ function drawWarheadNose(
   }
   g.closePath();
 
-  g.fillStyle(M_NOSE, 0.95);
+  g.fillStyle(HEAD_COLOR, 0.9);
   g.fillPath();
 
-  g.lineStyle(1.0, M_EDGE, 0.5);
+  g.lineStyle(1.0, EDGE_COLOR, 0.3);
   g.strokePath();
 
   const tipIdx = Math.min(2, points.length - 1);
-  g.fillStyle(0xff6644, 0.5);
-  g.fillCircle(points[0].x, points[0].y, 2.5);
-  g.fillStyle(MISSILE_WHITE, 0.6);
+  g.fillStyle(HIGHLIGHT_COLOR, 0.35);
   g.fillCircle(
     points[tipIdx].x + (leftEdge[tipIdx].x - points[tipIdx].x) * 0.3,
     points[tipIdx].y + (leftEdge[tipIdx].y - points[tipIdx].y) * 0.3,
-    1.5
+    1.8
   );
 }
 
-function drawWarningBands(
-  g: Phaser.GameObjects.Graphics,
-  points: Vec2[],
-  leftEdge: Vec2[],
-  rightEdge: Vec2[],
-  _cellSize: number,
-  frameCount: number
-): void {
-  const totalPts = points.length;
-  if (totalPts < 10) return;
-
-  const bandPositions = [0.12, 0.75];
-  const bandWidth = 3;
-
-  for (const bandPos of bandPositions) {
-    const centerIdx = Math.floor(bandPos * (totalPts - 1));
-    const startIdx = Math.max(0, centerIdx - bandWidth);
-    const endIdx = Math.min(totalPts - 1, centerIdx + bandWidth);
-
-    const flash = 0.7 + Math.sin(frameCount * 0.06 + bandPos * 10) * 0.15;
-
-    g.beginPath();
-    g.moveTo(leftEdge[startIdx].x, leftEdge[startIdx].y);
-    for (let i = startIdx + 1; i <= endIdx; i++) {
-      g.lineTo(leftEdge[i].x, leftEdge[i].y);
-    }
-    for (let i = endIdx; i >= startIdx; i--) {
-      g.lineTo(rightEdge[i].x, rightEdge[i].y);
-    }
-    g.closePath();
-
-    const bandColor = bandPos < 0.5 ? MISSILE_BAND_RED : MISSILE_BAND_YELLOW;
-    g.fillStyle(bandColor, flash);
-    g.fillPath();
-  }
-}
-
-function drawTailFins(
-  g: Phaser.GameObjects.Graphics,
-  points: Vec2[],
-  _leftEdge: Vec2[],
-  _rightEdge: Vec2[],
-  cellSize: number,
-  _frameCount: number
-): void {
-  const totalPts = points.length;
-  if (totalPts < 6) return;
-
-  const finIdx = Math.floor(totalPts * 0.88);
-  if (finIdx >= totalPts - 1 || finIdx < 1) return;
-
-  const finPt = points[finIdx];
-  const n = getNormalAt(points, finIdx);
-
-  let dx = 0;
-  let dy = -1;
-  if (finIdx < totalPts - 1) {
-    dx = points[finIdx + 1].x - points[finIdx].x;
-    dy = points[finIdx + 1].y - points[finIdx].y;
-    const mag = Math.sqrt(dx * dx + dy * dy) || 1;
-    dx /= mag;
-    dy /= mag;
-  }
-
-  const finLen = cellSize * 0.6;
-  const finWidth = cellSize * 0.12;
-
-  g.fillStyle(M_TAIL, 0.9);
-
-  const tipLx = finPt.x + n.x * finLen + dx * finWidth;
-  const tipLy = finPt.y + n.y * finLen + dy * finWidth;
-  g.fillTriangle(
-    finPt.x + n.x * cellSize * 0.15, finPt.y + n.y * cellSize * 0.15,
-    tipLx, tipLy,
-    finPt.x + dx * finWidth * 2 + n.x * cellSize * 0.05,
-    finPt.y + dy * finWidth * 2 + n.y * cellSize * 0.05
-  );
-
-  const tipRx = finPt.x - n.x * finLen + dx * finWidth;
-  const tipRy = finPt.y - n.y * finLen + dy * finWidth;
-  g.fillTriangle(
-    finPt.x - n.x * cellSize * 0.15, finPt.y - n.y * cellSize * 0.15,
-    tipRx, tipRy,
-    finPt.x + dx * finWidth * 2 - n.x * cellSize * 0.05,
-    finPt.y + dy * finWidth * 2 - n.y * cellSize * 0.05
-  );
-
-  g.lineStyle(0.8, M_EDGE, 0.5);
-  g.lineBetween(
-    finPt.x + n.x * cellSize * 0.15, finPt.y + n.y * cellSize * 0.15,
-    tipLx, tipLy
-  );
-  g.lineBetween(
-    finPt.x - n.x * cellSize * 0.15, finPt.y - n.y * cellSize * 0.15,
-    tipRx, tipRy
-  );
-}
-
-function drawExhaustFlame(
+function drawTailGlow(
   g: Phaser.GameObjects.Graphics,
   points: Vec2[],
   cellSize: number,
@@ -475,100 +352,20 @@ function drawExhaustFlame(
   dx /= mag;
   dy /= mag;
 
-  const flicker = 0.7 + Math.sin(frameCount * 0.25) * 0.3;
-  const flicker2 = 0.6 + Math.sin(frameCount * 0.4 + 1.5) * 0.4;
-  const flameLen = cellSize * (0.8 + flicker * 0.5);
-  const flameWidth = cellSize * 0.2;
+  const pulse = 0.3 + Math.sin(frameCount * 0.08) * 0.12;
+  const trailLen = cellSize * 0.5;
 
-  const n = getNormalAt(points, totalPts - 1);
-
-  g.fillStyle(EXHAUST_OUTER, 0.25 * flicker);
+  g.fillStyle(GLOW_COLOR, pulse * 0.15);
   g.fillCircle(
-    tailPt.x + dx * flameLen * 0.4,
-    tailPt.y + dy * flameLen * 0.4,
-    flameWidth * 2.5 * flicker2
+    tailPt.x + dx * trailLen * 0.3,
+    tailPt.y + dy * trailLen * 0.3,
+    cellSize * 0.25
   );
 
-  g.beginPath();
-  g.moveTo(tailPt.x + n.x * flameWidth, tailPt.y + n.y * flameWidth);
-  g.lineTo(
-    tailPt.x + dx * flameLen * flicker2,
-    tailPt.y + dy * flameLen * flicker2
+  g.fillStyle(GLOW_COLOR, pulse * 0.08);
+  g.fillCircle(
+    tailPt.x + dx * trailLen * 0.6,
+    tailPt.y + dy * trailLen * 0.6,
+    cellSize * 0.15
   );
-  g.lineTo(tailPt.x - n.x * flameWidth, tailPt.y - n.y * flameWidth);
-  g.closePath();
-  g.fillStyle(EXHAUST_OUTER, 0.6 * flicker);
-  g.fillPath();
-
-  const innerLen = flameLen * 0.65;
-  const innerWidth = flameWidth * 0.6;
-
-  g.beginPath();
-  g.moveTo(tailPt.x + n.x * innerWidth, tailPt.y + n.y * innerWidth);
-  g.lineTo(
-    tailPt.x + dx * innerLen * flicker,
-    tailPt.y + dy * innerLen * flicker
-  );
-  g.lineTo(tailPt.x - n.x * innerWidth, tailPt.y - n.y * innerWidth);
-  g.closePath();
-  g.fillStyle(EXHAUST_MID, 0.7 * flicker);
-  g.fillPath();
-
-  const coreLen = flameLen * 0.35;
-  const coreWidth = flameWidth * 0.3;
-
-  g.beginPath();
-  g.moveTo(tailPt.x + n.x * coreWidth, tailPt.y + n.y * coreWidth);
-  g.lineTo(
-    tailPt.x + dx * coreLen * flicker2,
-    tailPt.y + dy * coreLen * flicker2
-  );
-  g.lineTo(tailPt.x - n.x * coreWidth, tailPt.y - n.y * coreWidth);
-  g.closePath();
-  g.fillStyle(EXHAUST_CORE, 0.85);
-  g.fillPath();
-
-  g.fillStyle(0xffffff, 0.6 * flicker);
-  g.fillCircle(tailPt.x + dx * 2, tailPt.y + dy * 2, coreWidth * 0.8);
-}
-
-function drawTargetingSensor(
-  g: Phaser.GameObjects.Graphics,
-  points: Vec2[],
-  cellSize: number,
-  frameCount: number,
-  widthMultiplier = 1.0
-): void {
-  const headPt = points[0];
-  const sensorIdx = Math.min(Math.floor(points.length * 0.04) + 1, points.length - 1);
-  const sensorPt = points[sensorIdx];
-  const headW = getWidthAtProgress(0.06, cellSize, 1, widthMultiplier) / 2;
-  drawSensorAt(g, sensorPt.x, sensorPt.y, headW, frameCount);
-}
-
-function drawSensorAt(
-  g: Phaser.GameObjects.Graphics,
-  x: number,
-  y: number,
-  headW: number,
-  frameCount: number
-): void {
-  const sensorR = headW * 0.35;
-  const scanPulse = 0.5 + Math.sin(frameCount * 0.08) * 0.3;
-
-  g.fillStyle(0x112233, 0.9);
-  g.fillCircle(x, y, sensorR + 1);
-
-  g.fillStyle(0x003344, 0.95);
-  g.fillCircle(x, y, sensorR);
-
-  g.fillStyle(0x00ff88, scanPulse * 0.6);
-  g.fillCircle(x, y, sensorR * 0.6);
-
-  g.fillStyle(0x00ffaa, scanPulse * 0.9);
-  g.fillCircle(x, y, sensorR * 0.25);
-
-  g.lineStyle(0.5, 0x00ff88, scanPulse * 0.4);
-  g.lineBetween(x - sensorR * 0.8, y, x + sensorR * 0.8, y);
-  g.lineBetween(x, y - sensorR * 0.8, x, y + sensorR * 0.8);
 }

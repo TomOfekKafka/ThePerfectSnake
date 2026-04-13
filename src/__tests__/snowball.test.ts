@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   spawnSnowballEdge,
   updateSnowballs,
@@ -80,6 +80,7 @@ describe('updateSnowballs', () => {
   });
 
   it('removes snowballs that leave the screen', () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.999);
     const state = createCleanEffectsState();
     state.snowballs.push({
       x: -50, y: 200, vx: -1, vy: 0,
@@ -88,6 +89,7 @@ describe('updateSnowballs', () => {
 
     updateSnowballs(state, 400, 400);
     expect(state.snowballs.length).toBe(0);
+    randomSpy.mockRestore();
   });
 
   it('does not exceed max snowball count', () => {
